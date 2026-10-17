@@ -19,6 +19,8 @@ Nền tảng giám sát và đảm bảo độ tin cậy thời gian thực cho 
 ---
 
 ## Tài liệu dự án
-- [Ý tưởng & Thiết kế kiến trúc](docs/IDEA.md)
-- [Thể lệ & Yêu cầu Hackathon](docs/REQUIREMENT.md)
-- [Kế hoạch Dataset & Simulator](docs/DATASET.md)
+Toàn bộ thiết kế nằm trong [`docs/`](docs/README.md). Nên bắt đầu từ:
+- [Tầm nhìn sản phẩm — Reflex](docs/10-product/vision.md)
+- [Kịch bản sự cố trình diễn](docs/10-product/incident-scenarios.md)
+- [Kiến trúc hệ thống](docs/20-architecture/system-architecture.md)
+- [Kế hoạch hiện thực](docs/70-delivery/implementation-plan.md)

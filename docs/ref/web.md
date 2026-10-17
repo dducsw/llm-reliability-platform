@@ -1,0 +1,1 @@
+website: https://mini-hackathon-sep-2026.mugvn.com/#prizes
