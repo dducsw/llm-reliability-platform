@@ -21,14 +21,14 @@ docs/
 | Bạn muốn… | Đọc |
 | :--- | :--- |
 | Hiểu ý tưởng trong 5 phút | [vision](10-product/vision.md) → [Silent Brownout](10-product/incident-scenarios.md#1-scenario-chính--the-silent-brownout-) |
-| Biết vì sao đổi so với bản nháp | [draft-review](00-strategy/draft-review.md) |
+| Biết vì sao đổi so với bản nháp | [draft-review](00-strategy/draft-review.md) → [design-review-v1](00-strategy/design-review-v1.md) |
 | Đối chiếu với thể lệ | [competition-strategy](00-strategy/competition-strategy.md) |
 | Hiểu kiến trúc | [system-architecture](20-architecture/system-architecture.md) → [ADRs](20-architecture/adr/README.md) |
 | Làm phần MongoDB | [data model](30-data/mongodb-data-model.md) → [aggregation catalog](30-data/aggregation-catalog.md) |
 | Làm phần Datadog | [architecture](40-observability/datadog-architecture.md) → [monitors & SLOs](40-observability/monitors-and-slos.md) → [dashboards](40-observability/dashboards.md) |
 | Làm gateway và recovery | [slo](50-reliability/slo-and-error-budget.md) → [recovery engine](50-reliability/recovery-engine.md) |
 | Làm AI agent | [cortex](50-reliability/cortex-agent.md) → [incident memory](50-reliability/incident-memory.md) |
-| Bắt đầu code | [repository-structure](70-delivery/repository-structure.md) → [implementation-plan](70-delivery/implementation-plan.md) |
+| Bắt đầu code | [repository-structure](70-delivery/repository-structure.md) → [implementation-plan](70-delivery/implementation-plan.md) → [team-plan](70-delivery/team-plan.md) |
 | Chuẩn bị nộp bài | [submission-kit](70-delivery/submission-kit.md) |
 
 ## Bảng thuật ngữ

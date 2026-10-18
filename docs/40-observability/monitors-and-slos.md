@@ -13,6 +13,8 @@ Datadog SLO là **ledger thứ hai** bên cạnh Sentinel. Hai ledger được �
 | Delivered latency — `chat.reply` (<2000ms) | metric-based ⚠ | đếm request có latency dưới ngưỡng. Gateway phát thêm count `reflex.request.under_threshold{route,threshold:2000}` vì SLO metric-based cần count | `reflex.request.count{route:chat.reply,outcome:ok}` | 99% |
 | Provider quality — per target | metric-based | `reflex.attempt.count{outcome:ok,attempt_kind:primary}` theo `target` | primary attempt không bị cancel | 99% |
 
+> ⚠ Datadog SLO chỉ có timeframe 7d/30d/90d, nên SLO window 6h của profile demo chỉ tồn tại ở Sentinel. Burn rate alert không bị ảnh hưởng vì burn là tỉ lệ. Dashboard D2 đối chiếu dual-ledger theo **good/total trên cùng khoảng thời gian**, không đối chiếu budget ([review F7](../00-strategy/design-review-v1.md#f7)).
+
 > Provider SLO được đặt **thấp hơn** Delivered SLO. Thông điệp sản phẩm nằm ngay ở đây: vendor chỉ hứa 99%, nhưng nhờ Reflex, người dùng nhận được 99,5%.
 
 ## 2. Danh mục Monitor
@@ -21,7 +23,7 @@ Datadog SLO là **ledger thứ hai** bên cạnh Sentinel. Hai ledger được �
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **M1** | Delivered availability fast burn | SLO burn rate alert | burn(long=1h, short=5m) ≥ 14.4 *(demo: 5m/1m)* | P1 | Detect | webhook → incident |
 | **M2** | Delivered availability slow burn | SLO burn rate alert | burn(6h/30m) ≥ 6 | P2 | Detect | webhook |
-| **M3** | Provider quality fast burn | metric alert | `(1 - ok/total)` của quality theo `target`, 5m **và** 1m, ≥ 14.4 × budget | P1 | Detect | webhook |
+| **M3** | Provider quality fast burn | metric alert ×2 + composite | `(1 - pass/total)` của quality **group by `{target, route}`** ([review F1](../00-strategy/design-review-v1.md#f1)), cửa sổ dài **và** ngắn (demo 3m/30s, Datadog làm tròn lên 1m), ≥ 14.4 × budget | P1 | Detect | webhook |
 | **M4** | TTFT SLO burn — interactive | SLO burn rate | trên SLO TTFT của `chat.reply` | P2 | Detect | webhook |
 | **M5** | TTFT p99 anomaly | anomaly | `anomalies(p99:reflex.attempt.latency{attempt_kind:primary} by {target}, 'agile', 3)` ⚠ | P3 | Detect sớm | Cortex (warning) |
 | **M6** | Probe silence | metric, `notify_no_data` | `sum:reflex.probe.result{*} by {target,path}.as_count()` không có dữ liệu trong 3 phút | P2 | Detect (blindness) | webhook |

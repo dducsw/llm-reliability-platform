@@ -51,7 +51,8 @@ stateDiagram-v2
 | Không retry | 400/401/403/404/422, context length exceeded |
 | Sang target nào | **Target khác** (điểm cao kế tiếp). Chỉ retry cùng target khi chỉ còn một target eligible và lỗi là transient |
 | Backoff | full jitter `rand(0, min(cap, base·2^n))`, base 100ms, cap 2s |
-| Retry budget | token bucket: retry ≤ `budget_ratio` (10%) của request trong 10s gần nhất cho mỗi route. Hết budget thì fail fast |
+| Retry budget (transient) | token bucket: retry do 5xx/timeout/429 ≤ `retry.budget_ratio` (10%) của request trong 10s gần nhất cho mỗi route. Hết budget thì fail fast. Mục đích: chặn thundering herd |
+| Rescue budget (quality) | quality retry **luôn sang target khác**, nên không dồn tải lên vendor đang hỏng. Giới hạn bằng **chi phí**: chi phí rescue ≤ `rescue.max_extra_cost_ratio` (mặc định 0.6) × chi phí route trong 5 phút. Không dùng chung budget với retry transient ([review F3](../00-strategy/design-review-v1.md#f3)) |
 | Deadline | `deadline_ms` của route được truyền xuống mọi attempt; attempt mới chỉ được bắn nếu `remaining > p50(target)` |
 
 ### 1.4. Hedged requests (tail latency)
@@ -115,9 +116,15 @@ Action chỉ được thực thi khi qua mọi guardrail. Kết quả của từ
 **Câu hỏi:** "SLI sau action có quay về mức bình thường chưa, và chắc đến đâu?"
 
 1. **Cửa sổ:** `baseline` = 15 phút *trước* `first_bad_at`. `after` = `[applied_at + settle, applied_at + settle + observe]` (demo: settle 30s, observe 3 phút).
-2. **Dữ liệu:** A16 trên **delivered SLI** của route bị ảnh hưởng. Với provider-side action, lấy thêm cả provider SLI của đích.
+2. **Dữ liệu ([review F6](../00-strategy/design-review-v1.md#f6)):** vì rescue của Reflex đã giữ Delivered SLI gần mức bình thường *trước* khi có action, chỉ so Delivered trước và sau thì không chứng minh được action có tác dụng. Verifier đo ba đại lượng bằng A16:
+   - **(a) No-regression:** Delivered SLI của route.
+   - **(b) Primary health:** SLI của *primary attempt* trên route (scope `target_route` của target đang nhận traffic chính).
+   - **(c) Rescue dependency:** rescue rate (request cần quality retry), so với trong sự cố.
+
+   `PASS = (a) ∧ ((b) ∨ (c))`. Cả ba đại lượng đều được ghi vào `actions.verification`.
 3. **Kiểm định:**
-   - Tỉ lệ (availability, quality): Wilson 95% CI cho `p_after`. **PASS** nếu `CI_low ≥ objective` **hoặc** (two-proportion z-test không bác bỏ `p_after ≥ p_baseline − δ`, với δ = 0.2 × budget). **FAIL** nếu `CI_high < objective`. Các trường hợp còn lại là **INCONCLUSIVE**: kéo dài cửa sổ observe tối đa 2 lần.
+   - Tỉ lệ (a), (b): Wilson 95% CI cho `p_after`. **PASS** nếu `CI_low ≥ objective` **hoặc** (two-proportion z-test không bác bỏ `p_after ≥ p_baseline − δ`, với δ = 0.2 × budget). **FAIL** nếu `CI_high < objective`. Các trường hợp còn lại là **INCONCLUSIVE**: kéo dài cửa sổ observe tối đa 2 lần.
+   - (c): two-proportion z-test một phía, `rescue_after < rescue_during`.
    - Latency: so sánh tỉ lệ dưới ngưỡng bằng cách trên, kèm p95 ước lượng từ histogram để hiển thị.
    - Cỡ mẫu tối thiểu: `n_after ≥ 200`, nếu không đủ thì INCONCLUSIVE.
 4. **Ghi:** `actions.verification`, Datadog Event `reflex.recovery.proof`, incident chuyển sang `mitigated` khi PASS.

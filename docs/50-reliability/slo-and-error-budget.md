@@ -16,10 +16,10 @@
 
 | SLI | Good event | Valid event (mẫu số) | Ghi chú |
 | :--- | :--- | :--- | :--- |
-| **Availability** | `outcome == ok` | mọi request, trừ lỗi client 4xx (trừ 429) và trừ `shed` ở route P2 | 429 tính là bad: vendor không phục vụ được |
+| **Availability** | `outcome ∈ {ok, quality_fail}` (served) | mọi request, trừ lỗi client 4xx (trừ 429) và trừ `shed` ở route P2 | 429 tính là bad: vendor không phục vụ được |
 | **Latency** | `ok ∧ latency_ms < T` (T trùng biên bucket) | `ok` | SLO dạng tỉ lệ, không dạng "p95 ≤ X" |
 | **TTFT** | `ok ∧ ttft_ms < T` | `ok ∧ stream` | Riêng cho route interactive |
-| **Quality** | `ok ∧ quality.pass` | `ok ∧ route có validator` | Validator theo route, xem §3 |
+| **Quality** | `served ∧ quality.pass` | `served ∧ route có validator` | Validator theo route, xem §3 |
 
 ## 3. Quality validators
 
@@ -49,6 +49,11 @@ Kết quả validator đi vào ba nơi: attempt event (Mongo), metric `reflex.qu
 | `route:ticket.summarize:latency` | 95% | < 12000ms | 30d / 6h |
 | `target:*:availability` | 99% | — | 30d / 6h |
 | `target:*:quality` | 99% | — | 30d / 6h |
+| `target_route:*:quality` | 99% | — | 30d / 6h |
+
+Dòng có `*` là **template**. Seed và migrate bung template thành một document cho mỗi target (và mỗi target × route), xem [review F5](../00-strategy/design-review-v1.md#f5).
+
+> **Availability nghĩa là "có response"; quality nghĩa là "response dùng được".** Response bị validator đánh trượt vẫn tính là available ([review F2](../00-strategy/design-review-v1.md#f2)). Nhờ vậy hai SLI độc lập với nhau, và lỗi im lặng chỉ hiện ở quality.
 
 ## 5. Burn-rate alerting
 
@@ -60,7 +65,7 @@ Kết quả validator đi vào ba nơi: attempt event (Mongo), metric `reflex.qu
 | ticket | 6h | 30m | 6 | 5% budget mất trong 6h | Incident P2; Cortex điều tra, action cần duyệt |
 | notice | 3d | 6h | 1 | Đang dùng budget đúng tốc độ "hết vào cuối kỳ" | Ghi nhận, không mở incident |
 
-Profile demo: window 6h; page = 5m/1m; ticket = 30m/5m. Thêm điều kiện `min_samples` ở short window (mặc định 30).
+Profile demo: window 6h; page = **3m/30s**; ticket = 30m/5m. Cửa sổ ≤ 1 phút tính trên raw TS ([A4](../30-data/aggregation-catalog.md#a4)). Thời điểm alert của mỗi scenario được tính bằng `tools/burn_calc.py`, không ước lượng tay ([review F4](../00-strategy/design-review-v1.md#f4)). Thêm điều kiện `min_samples` ở short window (mặc định 30).
 
 ## 6. Error budget policy (tự động hóa)
 

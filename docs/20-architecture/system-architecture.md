@@ -37,7 +37,7 @@ flowchart TB
     UI[console<br/>React SPA]
 
     subgraph MDB["MongoDB Atlas"]
-        TS[(Time Series<br/>requests_ts · probes_ts · bench_ts)]
+        TS[(Time Series<br/>requests_ts · attempts_ts<br/>probes_ts · bench_ts)]
         WARM[(sli_1m · sli_1h)]
         OPS[(targets · slos · policies<br/>health_state · incidents<br/>actions · investigations)]
         VS[[Vector Search index<br/>incidents.signature]]

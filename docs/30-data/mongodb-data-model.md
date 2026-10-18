@@ -140,7 +140,7 @@ db.createCollection("bench_ts", {
 ```js
 {
   _id: ObjectId(),
-  scope: "target",                 // target | route | probe
+  scope: "target",                 // target | route | target_route | probe  (target_route: review F1)
   key: "vendorA:large",            // target id, route name, hoặc "vendorA:large|direct"
   env: "demo",
   ts: ISODate("2026-10-20T10:15:00Z"),   // đầu phút
@@ -231,7 +231,8 @@ db.sli_1m.createIndex({ ts: 1 }, { expireAfterSeconds: 3888000 })      // 45 ng�
   ],
   scoring: { w_health: 0.35, w_budget: 0.25, w_cost: 0.15, w_quality: 0.20, w_capacity: 0.05, temperature: 0.15 },
   breaker: { window_s: 20, min_requests: 20, open_error_ratio: 0.5, open_base_s: 10, open_max_s: 120, half_open_probes: 3 },
-  retry: { max_attempts: 3, budget_ratio: 0.10, on: ["5xx", "timeout", "rate_limited", "quality"], respect_retry_after: true },
+  retry: { max_attempts: 3, budget_ratio: 0.10, on: ["5xx", "timeout", "rate_limited"], respect_retry_after: true },
+  rescue: { enabled: true, on: ["quality"], cross_target_only: true, max_extra_cost_ratio: 0.6 },   // review F3
   hedge: { enabled: false, after: "p95_ttft", max_extra_cost_ratio: 0.05 },
   validators: ["not_empty", "json_schema:order_v2", "no_truncation"],
   deadline_ms: 8000,
