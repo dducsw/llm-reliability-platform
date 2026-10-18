@@ -1,6 +1,6 @@
 # Kế hoạch hiện thực
 
-> Kế hoạch sắp theo **phụ thuộc kỹ thuật**, không theo lịch. Theo yêu cầu, tài liệu chưa chia task cho từng thành viên.
+> Kế hoạch sắp theo **phụ thuộc kỹ thuật**, không theo lịch. Phân công cho từng thành viên (DE và SE, hai làn song song) nằm ở [team-plan](team-plan.md). Trước khi code, đọc [design-review-v1](../00-strategy/design-review-v1.md) (F1–F11).
 >
 > ⚠ **Ràng buộc thể lệ:** *"Phần giải pháp cốt lõi phải được xây dựng trong giai đoạn build (17/10 – 31/10/2026)"*. Tài liệu thiết kế viết trước là hợp lệ. **Code của sản phẩm chỉ bắt đầu commit từ 17/10.** Spike (thử API) trước ngày đó phải để ngoài repo và bỏ đi sau khi xong.
 
@@ -112,7 +112,7 @@ Kiểm tra lại toàn bộ bảng [competition-strategy §3](../00-strategy/com
 | 4.6 | Load shedding + brownout | Header và metric `sheds` |
 | 4.7 | `health_sync`: gateway đọc `health_state` mỗi 10s làm input cho router | — |
 
-**Done khi:** chạy S1 thì Delivered quality ≥ 99% *ngay cả khi chưa có control plane action*, nhờ quality retry. Chạy S2 thì amplification ≤ 1.2.
+**Done khi:** chạy S1 thì Delivered quality ≥ 99% *ngay cả khi chưa có control plane action*, nhờ quality rescue có budget riêng ([review F3](../00-strategy/design-review-v1.md#f3)). Chạy S2 thì amplification ≤ 1.2.
 
 ---
 

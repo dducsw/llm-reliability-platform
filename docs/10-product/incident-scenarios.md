@@ -4,11 +4,11 @@
 
 ## 0. Thang thời gian demo
 
-SLO thật dùng cửa sổ 30 ngày. Không thể demo 30 ngày, nên mọi scenario chạy với **`time_scale`**, một cấu hình nằm trong `slos` và `scenarios`:
+SLO thật dùng cửa sổ 30 ngày. Không thể demo 30 ngày, nên mọi scenario chạy với một **SLO profile** (`standard` hoặc `demo`), khai báo trong `slos` và trong scenario YAML:
 
-- `slo_window = 30d / time_scale`. Mặc định cho demo: `time_scale = 720`, nghĩa là cửa sổ 1 giờ.
-- Các cửa sổ burn rate được nén theo cùng tỉ lệ: `1h → 5s`, `5m → 0.4s`… Không thực tế ở mức này, nên demo dùng **profile riêng `demo`**: SLO window 6h, các burn window 5m/1m (fast) và 30m/5m (slow).
-- Dashboard và Console luôn hiển thị nhãn **"DEMO TIME (×N)"** để minh bạch với giám khảo.
+- Profile `demo`: SLO window 6h, burn window **3m/30s** (fast) và 30m/5m (slow). Cửa sổ ≤ 1 phút được tính trên raw TS ([review F4](../00-strategy/design-review-v1.md#f4)).
+- Thời điểm alert trong timeline bên dưới được tính bằng `tools/burn_calc.py`, không ước lượng tay.
+- Dashboard và Console luôn hiển thị nhãn **"DEMO PROFILE"** kèm các cửa sổ đang dùng để minh bạch với giám khảo.
 
 Hệ số burn rate (14.4×, 6×) giữ nguyên vì nó là tỉ lệ, không phụ thuộc thang thời gian.
 
@@ -31,13 +31,13 @@ Hệ số burn rate (14.4×, 6×) giữ nguyên vì nó là tỉ lệ, không ph
 | T−10m | Baseline | traffic-gen | Mọi SLO xanh; Delivered = Provider ≈ 99,9% |
 | **T+0** | Chaos Proxy bật fault `truncate(p=0.35, route=order.extract, target=vendorA:large)` và `ttft_shift(+180ms)` | chaos | — |
 | T+0..2s | Validator `json_schema` fail → **Reflex** retry *quality-aware* sang target điểm cao thứ 2 (`vendorB:large`) | gateway | Span `reflex.attempt[2]` có `retry_reason=quality.schema_invalid` |
-| T+30s | Sentinel: Provider Quality SLI của `vendorA:large` burn 23× (5m) và 16× (1m) | control-plane | `health_state.vendorA:large.quality_burn` |
-| T+60s | **Datadog Monitor M3** "Quality SLO fast burn" bắn alert. Composite **M9** = M3 ∧ (probe quality của vendorA cũng fail) → kết luận **provider-side** | Datadog | Alert kèm tag `target`, `route`, `diagnosis:provider_side` |
-| T+61s | Webhook → control-plane → mở incident `INC-…` (dedup với detector nội bộ). Change Stream → Cortex | control-plane | Console: thẻ incident nhấp nháy |
-| T+62s..2m | **Cortex** điều tra: (1) context pack, (2) `$vectorSearch` tìm 2 incident tương tự, sim 0.91, (3) query Datadog Logs `@finish_reason:length` tăng 40×, (4) so sánh token output P50 giảm từ 180 xuống 64 → giả thuyết H1 "*vendorA:large cắt output sớm (server-side max_tokens regression)*", confidence 0.86 | cortex | Investigation doc có 6 evidence item, mỗi item link tới query/log/trace |
-| T+2m | Cortex đề xuất `shift_weight(route=order.extract, from=vendorA:large, to=vendorB:large, pct=90)` kèm dự báo chi phí +62%/giờ. Policy engine thấy blast radius thấp, có thể đảo ngược, trong cost ceiling → **auto-approve** | cortex → actuator | `actions` doc: `proposed → approved(auto)` |
-| T+2m05s | Actuator ghi `policies` version mới → Change Stream → mọi gateway hot-reload trong <1s | actuator | Datadog Event "Policy v17 applied" phủ lên mọi graph |
-| T+2m..5m | **Verifier** so sánh delivered quality SLI 3 phút sau với baseline: Wilson CI + two-proportion test | control-plane | Recovery Proof `PASS`: valid 99,4% [99,1–99,7] so với baseline 99,6% |
+| T+5..15s | Router: `Q(vendorA:large, order.extract)` (EWMA) giảm, softmax tự dời một phần traffic sang target khác | gateway | Metric `reflex.router.weight` bắt đầu lệch |
+| ≈T+80s | **Sentinel**: Provider Quality SLI của `vendorA:large\|order.extract` burn ≈15× (3m) và ≈35× (30s) ≥ 14.4 → mở incident `INC-…`. Change Stream → Cortex | control-plane | `health_state`; Console: thẻ incident nhấp nháy |
+| ≈T+1m50s | **Datadog Monitor M3** bắn alert (chậm hơn khoảng 30s vì `evaluation_delay` và độ trễ ingest). Composite **M9** = M3 ∧ (probe quality direct của vendorA cũng fail) → kết luận **provider-side**. Webhook gộp vào incident đã mở (dedup) | Datadog → control-plane | Alert kèm tag `target`, `route`, `diagnosis:provider_side`; `incident.signals` có 2 nguồn, Sentinel đến trước |
+| T+82s..2m20s | **Cortex** điều tra: (1) context pack, (2) `$vectorSearch` tìm 2 incident tương tự, sim 0.91, (3) query Datadog Logs `@finish_reason:length` tăng 40×, (4) so sánh token output P50 giảm từ 180 xuống 64 → giả thuyết H1 "*vendorA:large cắt output sớm (server-side max_tokens regression)*", confidence 0.86 | cortex | Investigation doc có 6 evidence item, mỗi item link tới query/log/trace |
+| T+2m20s | Cortex đề xuất `shift_weight(route=order.extract, from=vendorA:large, to=vendorB:large, pct=90)` kèm dự báo chi phí +62%/giờ. Policy engine thấy blast radius thấp, có thể đảo ngược, trong cost ceiling → **auto-approve** | cortex → actuator | `actions` doc: `proposed → approved(auto)` |
+| T+2m25s | Actuator ghi `policies` version mới → Change Stream → mọi gateway hot-reload trong <1s | actuator | Datadog Event "Policy v17 applied" phủ lên mọi graph |
+| T+3m..6m | **Verifier**: (a) Delivered quality không suy giảm, (b) primary quality của route trở lại ≥ objective, (c) rescue rate giảm. Wilson CI + two-proportion test | control-plane | Recovery Proof `PASS`: delivered 99,4% [99,1–99,7]; rescue rate 31% → 3% |
 | T+15m | Chaos tắt fault. Probe thấy vendorA phục hồi | chaos / prober | Probe quality xanh 10 phút liên tục |
 | T+25m | **Staged failback** 10% → 50% → 100%, mỗi bước có gate | actuator | 3 action con, mỗi action có proof riêng |
 | T+40m | Incident `resolved`. Cortex soạn postmortem; signature vector được lưu vào Incident Memory | cortex | Console: postmortem với timeline tự động |
@@ -107,7 +107,9 @@ phases:
 expectations:       # dùng làm e2e test & checklist khi quay video
   - monitor: M3_quality_fast_burn
     state: Alert
-    within: 90s
+    within: 150s          # burn_calc: ≈110s
+  - incident: { route: order.extract, opened_by: sentinel }
+    within: 100s          # burn_calc: ≈80s
   - incident: { route: order.extract, status: resolved }
     within: 45m
   - delivered_sli: { route: order.extract, sli: quality, min: 0.99 }

@@ -38,11 +38,11 @@ db.attempts_ts.aggregate([
   { $match: { outcome: { $ne: "cancelled" } } },                            // hedge thua không vào SLI
   { $set: {
       minute: { $dateTrunc: { date: "$ts", unit: "minute" } },
-      ok: { $eq: ["$outcome", "ok"] },
-      lb: { $cond: [ { $eq: ["$outcome", "ok"] },
+      ok: { $in: ["$outcome", ["ok", "quality_fail"]] },                   // served = availability-good (review F2)
+      lb: { $cond: [ "$ok",
                      { $size: { $filter: { input: BOUNDS, cond: { $lte: ["$$this", "$latency_ms"] } } } },
                      -1 ] },
-      tb: { $cond: [ { $eq: ["$outcome", "ok"] },
+      tb: { $cond: [ "$ok",
                      { $size: { $filter: { input: BOUNDS, cond: { $lte: ["$$this", "$ttft_ms"] } } } },
                      -1 ] }
   } },
@@ -80,12 +80,16 @@ db.attempts_ts.aggregate([
 ])
 ```
 
+**Scope `target_route` ([review F1](../00-strategy/design-review-v1.md#f1)):** A1 ghi hai scope trong cùng một lần quét, dùng `$facet` với hai nhánh `$group`: `scope: "target"` (key = target) và `scope: "target_route"` (key = `"<target>|<route>"`). Không có scope `target_route` thì một fault chỉ xảy ra trên một route sẽ bị pha loãng bởi traffic của các route khác, và Provider SLO không bao giờ chạm ngưỡng page.
+
+**Availability và quality ([review F2](../00-strategy/design-review-v1.md#f2)):** response bị validator đánh trượt vẫn là *served*. Nó tính vào availability-good và chỉ là quality-bad. Nhờ vậy S1 không làm bẩn availability SLI, và kênh `c1` của signature vector đúng bằng 0.
+
 **Ghi chú:** `$percentile` bỏ qua giá trị không phải số (attempt lỗi có `latency_ms: null`). `$push` tạo mảng tối đa vài trăm phần tử mỗi phút, an toàn. Ở tải cao hơn thì đổi sang `$group` hai tầng theo `(key, minute, bucket)`.
 
 <a id="a2"></a>
 ## A2 — Request rollup (Delivered SLO)
 
-Giống A1, khác ở các điểm: nguồn là `requests_ts`; `scope: "route"`, `key: "$meta.route"`; `ok` = `outcome == "ok"`; thêm `sheds`, `deadline`. **`quality_fail` được tính là bad** cho quality SLI, và `shed` được tính là bad cho availability SLI của route P0. Riêng P2, shed là hành vi theo thiết kế: SLO của route P2 loại shed khỏi mẫu số và báo cáo shed thành một chỉ số riêng.
+Giống A1, khác ở các điểm: nguồn là `requests_ts`; `scope: "route"`, `key: "$meta.route"`; `ok` = `outcome ∈ {ok, quality_fail}` (served, như A1); thêm `sheds`, `deadline`. **`quality_fail` được tính là bad** cho quality SLI (không phải cho availability), và `shed` được tính là bad cho availability SLI của route P0. Riêng P2, shed là hành vi theo thiết kế: SLO của route P2 loại shed khỏi mẫu số và báo cáo shed thành một chỉ số riêng.
 
 <a id="a3"></a>
 ## A3 — Hourly rollup có cộng histogram
@@ -148,6 +152,10 @@ db.sli_1m.aggregate([
   } }
 ])
 ```
+
+**Cửa sổ ngắn ([review F4](../00-strategy/design-review-v1.md#f4)):** các cửa sổ ≤ 1 phút (profile demo: 30s) **không** lấy từ `sli_1m`, vì độ phân giải phút làm chậm phát hiện. Chúng được tính bằng một nhánh `$unionWith` trên raw `attempts_ts`/`requests_ts`: `$match` theo `meta` + `ts ≥ NOW−60s`, rồi `$dateTrunc` với `{unit: "second", binSize: 10}`. Lượng dữ liệu nhỏ (8 rps × 60s) và vẫn bucket-skip.
+
+**SLO đã materialize ([review F5](../00-strategy/design-review-v1.md#f5)):** `$lookup` join theo `key` cụ thể, nên `slos` không được chứa key wildcard. SLO template `target:*:quality` được migrate/seed bung ra thành một document cho mỗi target và mỗi target × route.
 
 **Quy tắc alert** (ở tầng app): tier `page` bắn khi `burn[long] ≥ factor AND burn[short] ≥ factor AND samples[short] ≥ min_samples`. Điều kiện `min_samples` chống false positive khi traffic thấp, vì 1 lỗi trên 2 request đã là burn 500 lần. `$lookup` trên `slos` (vài chục document) chi phí không đáng kể.
 
