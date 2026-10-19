@@ -4,6 +4,7 @@
 
 ```
 docs/
+├── v1-compact/         Bản tóm tắt rút gọn (dành cho đọc nhanh & team 2 người)
 ├── 00-strategy/        Tại sao thiết kế như vậy — rubric, review bản nháp
 ├── 10-product/         Sản phẩm là gì — tầm nhìn, kịch bản sự cố
 ├── 20-architecture/    Hệ thống trông thế nào — kiến trúc, triển khai, chaos, ADR
@@ -20,6 +21,7 @@ docs/
 
 | Bạn muốn… | Đọc |
 | :--- | :--- |
+| **Đọc nhanh toàn bộ dự án trong 10 phút** | **[Bản tóm tắt rút gọn](v1-compact/README.md)** |
 | Hiểu ý tưởng trong 5 phút | [vision](10-product/vision.md) → [Silent Brownout](10-product/incident-scenarios.md#1-scenario-chính--the-silent-brownout-) |
 | Biết vì sao đổi so với bản nháp | [draft-review](00-strategy/draft-review.md) → [design-review-v1](00-strategy/design-review-v1.md) |
 | Đối chiếu với thể lệ | [competition-strategy](00-strategy/competition-strategy.md) |
