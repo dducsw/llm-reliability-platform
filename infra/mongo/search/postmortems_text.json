@@ -1,0 +1,17 @@
+{
+  "name": "postmortems_text",
+  "type": "search",
+  "collection": "postmortems",
+  "definition": {
+    "analyzer": "lucene.standard",
+    "mappings": {
+      "dynamic": false,
+      "fields": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "body_md": { "type": "string" },
+        "tags": { "type": "token" }
+      }
+    }
+  }
+}

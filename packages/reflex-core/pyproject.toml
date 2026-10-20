@@ -1,0 +1,16 @@
+[project]
+name = "reflex-core"
+version = "0.1.0"
+description = "Pure domain: router, breaker, retry, SLI math, histogram, validators, contracts. Không I/O."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.9",
+    "fastjsonschema>=2.20",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reflex_core"]

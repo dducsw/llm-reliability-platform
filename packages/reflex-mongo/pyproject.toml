@@ -1,0 +1,21 @@
+[project]
+name = "reflex-mongo"
+version = "0.1.0"
+description = "MongoDB access: client, repos, aggregation pipelines A1–A18, change streams, migrations"
+requires-python = ">=3.12"
+dependencies = [
+    "reflex-core",
+    "pymongo>=4.10",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+reflex-mongo = "reflex_mongo.migrate.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reflex_mongo"]

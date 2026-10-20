@@ -1,0 +1,30 @@
+# Collection `policies` — một policy mỗi route. Các field không khai báo lấy default từ reflex_core.policy
+- _id: order.extract
+  version: 1
+  candidates:
+    - { target: vendorA:large, weight: 0.9, role: primary }
+    - { target: vendorB:large, weight: 0.1, role: secondary }
+    - { target: vendorA:small, weight: 0.0, role: brownout }
+  validators: [not_empty, "json_schema:order_v2", no_truncation]
+  deadline_ms: 8000
+- _id: chat.reply
+  version: 1
+  candidates:
+    - { target: vendorA:large, weight: 0.9, role: primary }
+    - { target: vendorB:large, weight: 0.1, role: secondary }
+  validators: [not_empty, no_truncation, refusal, lang]
+  deadline_ms: 10000
+- _id: support.triage
+  version: 1
+  candidates:
+    - { target: vendorA:small, weight: 0.8, role: primary }
+    - { target: vendorB:large, weight: 0.2, role: secondary }
+  validators: [not_empty, "json_schema:triage_v1"]
+  deadline_ms: 6000
+- _id: cortex.reason
+  version: 1
+  candidates:
+    - { target: vendorB:large, weight: 0.7, role: primary }
+    - { target: vendorA:large, weight: 0.3, role: secondary }
+  validators: [not_empty, "json_schema:cortex_output"]
+  deadline_ms: 60000

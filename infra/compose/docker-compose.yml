@@ -1,0 +1,131 @@
+# Toàn bộ stack local — `task up`. docs/20-architecture/deployment.md
+name: reflex
+
+x-python: &python
+  env_file:
+    - path: ../../.env
+      required: false
+  environment: &pyenv
+    REFLEX_ENV: ${REFLEX_ENV:-local}
+    MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/?directConnection=true}
+    DD_AGENT_HOST: datadog-agent
+    DD_ENV: ${REFLEX_ENV:-local}
+    DD_VERSION: ${REFLEX_VERSION:-0.1.0}
+  depends_on:
+    mongo: { condition: service_healthy }
+  restart: unless-stopped
+
+x-dd-labels: &dd-labels
+  com.datadoghq.tags.env: ${REFLEX_ENV:-local}
+  com.datadoghq.tags.version: ${REFLEX_VERSION:-0.1.0}
+
+services:
+  mongo:
+    image: mongodb/mongodb-atlas-local:8.0
+    ports: ["27017:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1})"]
+      interval: 5s
+      retries: 20
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: ${DD_SITE}
+      DD_ENV: ${REFLEX_ENV:-local}
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_CONTAINER_EXCLUDE_LOGS: "name:datadog-agent"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+
+  mock-llm:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/simulation/Dockerfile }
+    command: ["ddtrace-run", "reflex-sim", "mock-llm", "--port", "8060"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-mock-llm }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-mock-llm
+      com.datadoghq.ad.logs: '[{"source":"python","service":"reflex-mock-llm"}]'
+
+  chaos-proxy:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/simulation/Dockerfile }
+    command: ["ddtrace-run", "reflex-sim", "chaos-proxy", "--port", "8070"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-chaos-proxy }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-chaos-proxy
+      com.datadoghq.ad.logs: '[{"source":"python","service":"reflex-chaos-proxy"}]'
+
+  gateway-1: &gateway
+    <<: *python
+    build: { context: ../.., dockerfile: apps/gateway/Dockerfile }
+    ports: ["8080:8080"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-gateway, GATEWAY_ID: gw-1 }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-gateway
+      com.datadoghq.ad.logs: '[{"source":"python","service":"reflex-gateway"}]'
+
+  gateway-2:
+    <<: *gateway
+    ports: ["8081:8080"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-gateway, GATEWAY_ID: gw-2 }
+
+  control-plane:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/control-plane/Dockerfile }
+    ports: ["8090:8090"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-control-plane }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-control-plane
+      com.datadoghq.ad.logs: '[{"source":"python","service":"reflex-control-plane"}]'
+
+  cortex:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/cortex/Dockerfile }
+    environment:
+      <<: *pyenv
+      DD_SERVICE: reflex-cortex
+      DD_LLMOBS_ENABLED: "true"
+      DD_LLMOBS_ML_APP: reflex-cortex
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-cortex
+      com.datadoghq.ad.logs: '[{"source":"python","service":"reflex-cortex"}]'
+
+  prober:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/simulation/Dockerfile }
+    command: ["ddtrace-run", "reflex-sim", "prober"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-prober }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-prober
+
+  traffic-gen:
+    <<: *python
+    build: { context: ../.., dockerfile: apps/simulation/Dockerfile }
+    command: ["ddtrace-run", "reflex-sim", "traffic", "--rps", "8"]
+    environment: { <<: *pyenv, DD_SERVICE: reflex-traffic }
+    labels:
+      <<: *dd-labels
+      com.datadoghq.tags.service: reflex-traffic
+    profiles: [traffic]
+
+  console:
+    build: { context: ../../apps/console }
+    ports: ["5173:80"]
+
+volumes:
+  mongo-data:

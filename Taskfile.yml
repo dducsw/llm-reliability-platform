@@ -1,0 +1,100 @@
+# https://taskfile.dev — `task --list` để xem toàn bộ lệnh
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  COMPOSE: docker compose -f infra/compose/docker-compose.yml
+  COMPOSE_DEMO: docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.demo.yml
+
+tasks:
+  install:
+    desc: Cài dependency Python (uv) và Console (pnpm)
+    cmds:
+      - uv sync --all-packages
+      - pnpm --dir apps/console install
+
+  up:
+    desc: Khởi động toàn bộ stack local
+    cmds:
+      - "{{.COMPOSE}} up -d --build"
+
+  down:
+    desc: Tắt stack
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  logs:
+    desc: Theo dõi log, vd `task logs -- gateway-1`
+    cmds:
+      - "{{.COMPOSE}} logs -f {{.CLI_ARGS}}"
+
+  seed:
+    desc: Migrate Mongo + seed catalog/slos/policies + import bench_ts + incident history
+    cmds:
+      - uv run reflex-mongo migrate
+      - uv run reflex-mongo seed --dir seeds
+      - uv run reflex-sim bench import --days 60
+
+  migrate:
+    desc: Tạo collections, TS, index, TTL, validators, search indexes (idempotent)
+    cmds:
+      - uv run reflex-mongo migrate
+
+  lint:
+    cmds:
+      - uv run ruff check .
+      - uv run ruff format --check .
+      - uv run mypy packages/reflex-core
+      - uv run lint-imports
+
+  fmt:
+    cmds:
+      - uv run ruff check --fix .
+      - uv run ruff format .
+
+  test:
+    desc: Unit tests
+    cmds:
+      - uv run pytest -m "not integration and not e2e" {{.CLI_ARGS}}
+
+  test:integration:
+    cmds:
+      - uv run pytest -m integration {{.CLI_ARGS}}
+
+  test:e2e:
+    cmds:
+      - uv run pytest -m e2e tests/e2e {{.CLI_ARGS}}
+
+  scenario:
+    desc: Chạy scenario, vd `task scenario -- silent-brownout`
+    cmds:
+      - uv run reflex-sim run {{.CLI_ARGS}} --seed 42
+
+  schemas:
+    desc: Export JSON Schema (Mongo validators) + sinh TS types cho Console
+    cmds:
+      - uv run python tools/export_schemas.py
+      - pnpm --dir apps/console gen:api
+
+  infra:datadog:plan:
+    dir: infra/terraform
+    cmds:
+      - terraform init -upgrade
+      - terraform plan
+
+  infra:datadog:apply:
+    dir: infra/terraform
+    cmds:
+      - terraform init -upgrade
+      - terraform apply
+
+  demo:up:
+    desc: Stack demo (Atlas, nginx TLS, vendor thật)
+    cmds:
+      - "{{.COMPOSE_DEMO}} up -d --build"
+
+  demo:record:
+    desc: Chạy scenario chính ở chế độ quay video
+    cmds:
+      - uv run python tools/record_demo.py {{.CLI_ARGS}}

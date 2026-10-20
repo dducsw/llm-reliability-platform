@@ -1,0 +1,34 @@
+# S1 — The Silent Brownout (docs/10-product/incident-scenarios.md §1)
+name: silent-brownout
+profile: demo
+seed: 42
+traffic:
+  rps: 8
+  mix: { chat.reply: 0.5, order.extract: 0.35, support.triage: 0.15 }
+  diurnal: { amplitude: 0.3, period: 10m }
+phases:
+  - at: 0s # warm-up baseline
+    duration: 10m
+  - at: 10m
+    duration: 15m
+    faults:
+      - target: vendorA:large
+        route: order.extract
+        type: truncate
+        params: { probability: 0.35, keep_ratio: [0.2, 0.5] }
+      - target: vendorA:large
+        type: ttft_shift
+        params: { add_ms: 180, jitter_ms: 60 }
+  - at: 25m
+    duration: 20m # recovery + failback observation
+expectations:
+  - monitor: M3_quality_fast_burn
+    state: Alert
+    within: 150s
+  - incident: { route: order.extract, opened_by: sentinel }
+    within: 100s
+  - incident: { route: order.extract, status: resolved }
+    within: 45m
+  - delivered_sli: { route: order.extract, sli: quality, min: 0.99 }
+    window: [12m, 25m]
+ground_truth: { side: provider, cause_class: output_truncation }

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cortex_output",
+  "type": "object",
+  "required": ["hypotheses", "recommendation"],
+  "properties": {
+    "hypotheses": { "type": "array" },
+    "recommendation": { "type": "object" }
+  }
+}
