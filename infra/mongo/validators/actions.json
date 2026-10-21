@@ -1,0 +1,393 @@
+{
+  "$jsonSchema": {
+    "$defs": {
+      "ActionState": {
+        "enum": [
+          "proposed",
+          "approved",
+          "awaiting_approval",
+          "rejected",
+          "executing",
+          "verifying",
+          "succeeded",
+          "failed",
+          "rolled_back"
+        ],
+        "title": "ActionState",
+        "type": "string"
+      },
+      "ActionType": {
+        "enum": [
+          "shift_weight",
+          "open_circuit_global",
+          "enable_hedging",
+          "set_concurrency",
+          "shed_priority",
+          "downgrade_tier",
+          "failback_step",
+          "rollback_flag",
+          "page_human"
+        ],
+        "title": "ActionType",
+        "type": "string"
+      },
+      "Decision": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "guardrails": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/GuardrailResult"
+            },
+            "title": "Guardrails",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "by",
+          "at"
+        ],
+        "title": "Decision",
+        "type": "object"
+      },
+      "Execution": {
+        "additionalProperties": false,
+        "properties": {
+          "policy_id": {
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "version_before": {
+            "title": "Version Before",
+            "type": "integer"
+          },
+          "version_after": {
+            "title": "Version After",
+            "type": "integer"
+          },
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_id",
+          "version_before",
+          "version_after",
+          "applied_at"
+        ],
+        "title": "Execution",
+        "type": "object"
+      },
+      "GuardrailResult": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pass": {
+            "title": "Pass",
+            "type": "boolean"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          }
+        },
+        "required": [
+          "name",
+          "pass"
+        ],
+        "title": "GuardrailResult",
+        "type": "object"
+      },
+      "Proportion": {
+        "additionalProperties": false,
+        "properties": {
+          "good": {
+            "title": "Good",
+            "type": "integer"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "good",
+          "n"
+        ],
+        "title": "Proportion",
+        "type": "object"
+      },
+      "ProposedBy": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Investigation Id"
+          }
+        },
+        "required": [
+          "actor"
+        ],
+        "title": "ProposedBy",
+        "type": "object"
+      },
+      "Verdict": {
+        "enum": [
+          "PASS",
+          "FAIL",
+          "INCONCLUSIVE"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      },
+      "VerificationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "window": {
+            "additionalProperties": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Window",
+            "type": "object"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "baseline": {
+            "$ref": "#/$defs/Proportion"
+          },
+          "after": {
+            "$ref": "#/$defs/Proportion"
+          },
+          "method": {
+            "default": "wilson+two_proportion",
+            "title": "Method",
+            "type": "string"
+          },
+          "after_ci": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "After Ci",
+            "type": "array"
+          },
+          "p_value": {
+            "title": "P Value",
+            "type": "number"
+          },
+          "verdict": {
+            "$ref": "#/$defs/Verdict"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "metric",
+          "baseline",
+          "after",
+          "after_ci",
+          "p_value",
+          "verdict",
+          "decided_at"
+        ],
+        "title": "VerificationResult",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Id"
+      },
+      "incident_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Incident Id"
+      },
+      "parent_action_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Parent Action Id"
+      },
+      "type": {
+        "$ref": "#/$defs/ActionType"
+      },
+      "params": {
+        "additionalProperties": true,
+        "title": "Params",
+        "type": "object"
+      },
+      "state": {
+        "$ref": "#/$defs/ActionState",
+        "default": "proposed"
+      },
+      "proposed_by": {
+        "$ref": "#/$defs/ProposedBy"
+      },
+      "decision": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Decision"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "execution": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Execution"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "verification": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/VerificationResult"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "ttr_s": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Ttr S"
+      },
+      "created_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Created At"
+      },
+      "updated_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Updated At"
+      }
+    },
+    "required": [
+      "type",
+      "params",
+      "proposed_by"
+    ],
+    "title": "Action",
+    "type": "object"
+  }
+}
