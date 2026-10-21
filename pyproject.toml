@@ -45,6 +45,8 @@ strict = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Nhiều thư mục tests/ có __init__.py trùng tên module → dùng importlib mode
+addopts = "--import-mode=importlib"
 testpaths = ["packages", "apps", "tests"]
 markers = [
     "integration: cần mongodb-atlas-local",

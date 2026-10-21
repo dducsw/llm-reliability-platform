@@ -6,7 +6,13 @@ from reflex_core.validators.base import CheckResult, NormalizedResponse
 
 
 class TruncationValidator:
-    name = "truncation"
+    name = "no_truncation"
 
     def check(self, response: NormalizedResponse) -> CheckResult:
-        raise NotImplementedError
+        if response.finish_reason == "length":
+            return CheckResult(
+                name=self.name,
+                passed=False,
+                reason="Response was truncated by provider (finish_reason=length)",
+            )
+        return CheckResult(name=self.name, passed=True)

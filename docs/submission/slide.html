@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realtime Monitoring — Hackathon</title>
+<style>
+:root{--bg:#090c12;--panel:#101722;--line:#263244;--text:#edf3fc;--muted:#8d9bb0;--green:#b8ff70;--cyan:#68e5ff;--mono:Consolas,"SFMono-Regular",monospace;--sans:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#05070b;color:var(--text);font-family:var(--sans)}
+.slide{width:min(1120px,calc(100vw - 32px));aspect-ratio:16/9;margin:24px auto;padding:clamp(26px,5vw,58px);display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;background:radial-gradient(ellipse at 90% 5%,#14202b 0,transparent 35%),var(--bg);border:1px solid #202b3b;border-radius:12px}
+.top,.foot{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:10px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.brand{color:var(--green)}.eyebrow{color:var(--cyan);font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px}
+h1{font-size:clamp(42px,6vw,76px);line-height:.98;letter-spacing:-.06em;margin:0 0 20px}
+h2{font-size:clamp(29px,4vw,45px);line-height:1.05;letter-spacing:-.045em;margin:0 0 16px}
+h3{font-size:16px;margin:0 0 8px}p{color:var(--muted);line-height:1.6;font-size:14px;max-width:620px;margin:0}
+.green{color:var(--green)}.cyan{color:var(--cyan)}.content{max-width:850px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}.chip{border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:#c9d5e5;font:11px var(--mono)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:20px}.label{font:10px var(--mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.num{font:30px var(--mono);color:var(--green);margin-bottom:10px}
+.flow{display:flex;align-items:center;gap:10px;margin-top:24px}.node{flex:1;padding:17px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}.node b{display:block;font:12px var(--mono);margin:7px 0}.node small{color:var(--muted);font-size:11px}.arrow{color:var(--cyan);font:18px var(--mono)}
+.code{background:#080d14;border:1px solid #29374b;border-radius:9px;overflow:hidden}.bar{padding:11px 14px;background:#111a27;border-bottom:1px solid #29374b;color:var(--muted);font:11px var(--mono)}pre{padding:18px;margin:0;overflow:auto;color:#dce7f5;font:clamp(10px,1.1vw,13px)/1.7 var(--mono)}.pink{color:#ff83c8}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}.metric{border-left:2px solid var(--green);padding:5px 0 5px 14px}.value{font:clamp(23px,3vw,36px) var(--mono)}.caption{font:10px var(--mono);color:var(--muted);margin-top:7px;text-transform:uppercase}
+.chart{width:100%;height:105px;display:block;margin-top:12px}.gridline{stroke:#263244;stroke-dasharray:3 5}.line{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-linejoin:round}
+ul{list-style:none;margin:0;padding:0}li{padding:10px 0;border-bottom:1px solid #202b3b;color:#cbd6e5;font-size:13px}li::before{content:"→";color:var(--green);margin-right:9px;font-family:var(--mono)}
+.foot{margin-top:22px}.page{color:#5e6d81}
+@media(max-width:700px){.slide{aspect-ratio:auto;min-height:620px;padding:24px}.grid2,.grid{grid-template-columns:1fr}.flow{flex-direction:column;align-items:stretch}.arrow{transform:rotate(90deg);align-self:center}.metrics{gap:7px}.card{padding:15px}}
+@media print{body{background:#fff}.slide{width:100vw;height:56.25vw;margin:0;border-radius:0;break-after:page;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style>
+</head>
+<body>
+
+<section class="slide">
+  <div class="top"><span class="brand">● HACKATHON / OBSERVABILITY</span><span>01 / 05</span></div>
+  <div class="content">
+    <div class="eyebrow">REAL-TIME SYSTEMS</div>
+    <h1>Realtime<br><span class="green">Monitoring</span></h1>
+    <p>Quan sát hệ thống theo thời gian thực, phát hiện bất thường và phản hồi nhanh hơn.</p>
+    <div class="chips"><span class="chip">MongoDB</span><span class="chip">Datadog</span><span class="chip">Real-time events</span></div>
+  </div>
+  <div class="foot"><span>TEAM NAME</span><span class="page">01 / 05</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><span class="brand">● THE PROBLEM</span><span>02 / 05</span></div>
+  <div>
+    <div class="eyebrow">WHY MONITORING?</div>
+    <h2>Phát hiện sự cố<br><span class="green">trước khi quá muộn.</span></h2>
+    <p>Log rời rạc và thiếu cảnh báo khiến việc tìm nguyên nhân mất thời gian.</p>
+  </div>
+  <div class="grid">
+    <article class="card"><div class="label">01 / DETECTION</div><h3>Phát hiện chậm</h3><p>Chỉ nhận ra vấn đề khi dịch vụ đã ảnh hưởng người dùng.</p></article>
+    <article class="card"><div class="label">02 / VISIBILITY</div><h3>Thiếu ngữ cảnh</h3><p>Metrics, logs và dữ liệu nghiệp vụ phân tán.</p></article>
+    <article class="card"><div class="label">03 / RESPONSE</div><h3>Khó phản hồi</h3><p>Không có cảnh báo rõ ràng theo ngưỡng.</p></article>
+  </div>
+  <div class="foot"><span>PROBLEM STATEMENT</span><span class="page">02 / 05</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><span class="brand">● ARCHITECTURE</span><span>03 / 05</span></div>
+  <div>
+    <div class="eyebrow">DATA FLOW</div>
+    <h2>Từ sự kiện đến <span class="green">hành động.</span></h2>
+    <p>Thu thập sự kiện, chuyển thành telemetry và hiển thị trên một dashboard tập trung.</p>
+    <div class="flow">
+      <div class="node"><span class="cyan">01</span><b>Application</b><small>Requests / errors</small></div><div class="arrow">→</div>
+      <div class="node"><span class="cyan">02</span><b>MongoDB</b><small>Events / state</small></div><div class="arrow">→</div>
+      <div class="node"><span class="cyan">03</span><b>Collector</b><small>Stream / metrics</small></div><div class="arrow">→</div>
+      <div class="node"><span class="cyan">04</span><b>Datadog</b><small>Dashboard / alerts</small></div>
+    </div>
+  </div>
+  <div class="foot"><span>SYSTEM OVERVIEW</span><span class="page">03 / 05</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><span class="brand">● IMPLEMENTATION</span><span>04 / 05</span></div>
+  <div class="grid2">
+    <div>
+      <div class="eyebrow">CODE SNAPSHOT</div>
+      <h2>Theo dõi thay đổi<br><span class="green">theo thời gian thực.</span></h2>
+      <p>Ví dụ minh họa MongoDB Change Streams. Bổ sung xử lý lỗi, retry và cấu hình telemetry trước khi triển khai production.</p>
+    </div>
+    <div class="code">
+      <div class="bar">monitor.js</div>
+<pre><span class="pink">const</span> stream = db
+  .collection(<span class="green">"events"</span>)
+  .watch();
+
+stream.on(<span class="green">"change"</span>, change => {
+  publishMetric(
+    <span class="green">"app.db.change"</span>,
+    1,
+    {
+      service: <span class="green">"orders-api"</span>,
+      operation: change.operationType
+    }
+  );
+});</pre>
+    </div>
+  </div>
+  <div class="foot"><span>CODE EXAMPLE</span><span class="page">04 / 05</span></div>
+</section>
+
+<section class="slide">
+  <div class="top"><span class="brand">● DEMO & IMPACT</span><span>05 / 05</span></div>
+  <div>
+    <div class="eyebrow">DASHBOARD PREVIEW</div>
+    <h2>Một góc nhìn.<br><span class="green">Các tín hiệu quan trọng.</span></h2>
+    <div class="metrics">
+      <div class="metric"><div class="value">124<span class="cyan">ms</span></div><div class="caption">API latency p95</div></div>
+      <div class="metric"><div class="value">0.18<span class="cyan">%</span></div><div class="caption">Error rate</div></div>
+      <div class="metric"><div class="value">1.2<span class="cyan">k</span></div><div class="caption">Events / min</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="label">LATENCY / MOCK DATA</div>
+        <svg class="chart" viewBox="0 0 420 105" preserveAspectRatio="none" aria-label="Biểu đồ latency minh họa">
+          <path class="gridline" d="M0 20H420 M0 50H420 M0 80H420"/>
+          <path class="line" d="M0 75 L30 68 L60 73 L90 45 L120 55 L150 35 L180 44 L210 63 L240 51 L270 55 L300 29 L330 40 L360 22 L390 34 L420 18"/>
+        </svg>
+      </div>
+      <div class="card"><div class="label">MVP CHECKLIST</div><ul><li>MongoDB event stream</li><li>Datadog dashboard</li><li>Alert theo ngưỡng</li><li>Demo lỗi end-to-end</li></ul></div>
+    </div>
+  </div>
+  <div class="foot"><span>THANK YOU / Q&A · SỐ LIỆU MINH HỌA</span><span class="page">05 / 05</span></div>
+</section>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];let current=0;
+function goTo(i){current=Math.max(0,Math.min(slides.length-1,i));slides[current].scrollIntoView({behavior:'smooth',block:'start'});}
+document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown'].includes(e.key))goTo(current+1);if(['ArrowLeft','PageUp'].includes(e.key))goTo(current-1);if(e.key==='Home')goTo(0);if(e.key==='End')goTo(slides.length-1);});
+const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)current=slides.indexOf(e.target)}),{threshold:.55});
+slides.forEach(s=>observer.observe(s));
+</script>
+</body>
+</html>

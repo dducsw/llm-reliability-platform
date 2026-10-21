@@ -108,8 +108,63 @@ class ActionSpec(_Model):
     human_only: bool = False
 
 
-CATALOG: dict[ActionType, ActionSpec] = {}
-"""Điền ở P5. Key = ActionType."""
+CATALOG: dict[ActionType, ActionSpec] = {
+    ActionType.SHIFT_WEIGHT: ActionSpec(
+        type=ActionType.SHIFT_WEIGHT,
+        params_model=ShiftWeightParams,
+        blast_radius=BlastRadius.ROUTE,
+        reversible=True,
+    ),
+    ActionType.OPEN_CIRCUIT_GLOBAL: ActionSpec(
+        type=ActionType.OPEN_CIRCUIT_GLOBAL,
+        params_model=OpenCircuitGlobalParams,
+        blast_radius=BlastRadius.TARGET,
+        reversible=True,
+    ),
+    ActionType.ENABLE_HEDGING: ActionSpec(
+        type=ActionType.ENABLE_HEDGING,
+        params_model=EnableHedgingParams,
+        blast_radius=BlastRadius.ROUTE,
+        reversible=True,
+    ),
+    ActionType.SET_CONCURRENCY: ActionSpec(
+        type=ActionType.SET_CONCURRENCY,
+        params_model=SetConcurrencyParams,
+        blast_radius=BlastRadius.TARGET,
+        reversible=True,
+    ),
+    ActionType.SHED_PRIORITY: ActionSpec(
+        type=ActionType.SHED_PRIORITY,
+        params_model=ShedPriorityParams,
+        blast_radius=BlastRadius.SERVICE,
+        reversible=True,
+    ),
+    ActionType.DOWNGRADE_TIER: ActionSpec(
+        type=ActionType.DOWNGRADE_TIER,
+        params_model=DowngradeTierParams,
+        blast_radius=BlastRadius.ROUTE,
+        reversible=True,
+    ),
+    ActionType.FAILBACK_STEP: ActionSpec(
+        type=ActionType.FAILBACK_STEP,
+        params_model=FailbackStepParams,
+        blast_radius=BlastRadius.ROUTE,
+        reversible=True,
+    ),
+    ActionType.ROLLBACK_FLAG: ActionSpec(
+        type=ActionType.ROLLBACK_FLAG,
+        params_model=RollbackFlagParams,
+        blast_radius=BlastRadius.SERVICE,
+        reversible=True,
+    ),
+    ActionType.PAGE_HUMAN: ActionSpec(
+        type=ActionType.PAGE_HUMAN,
+        params_model=PageHumanParams,
+        blast_radius=BlastRadius.NONE,
+        reversible=False,
+        human_only=True,
+    ),
+}
 
 
 # --- runtime document --------------------------------------------------------
@@ -179,13 +234,25 @@ class Action(_Model):
     updated_at: datetime | None = None
 
 
-TRANSITIONS: dict[ActionState, set[ActionState]] = {}
-"""State machine hợp lệ. Điền ở P5."""
+TRANSITIONS: dict[ActionState, set[ActionState]] = {
+    ActionState.PROPOSED: {ActionState.APPROVED, ActionState.AWAITING_APPROVAL, ActionState.REJECTED},
+    ActionState.AWAITING_APPROVAL: {ActionState.APPROVED, ActionState.REJECTED},
+    ActionState.APPROVED: {ActionState.EXECUTING, ActionState.REJECTED},
+    ActionState.EXECUTING: {ActionState.VERIFYING, ActionState.SUCCEEDED, ActionState.FAILED},
+    ActionState.VERIFYING: {ActionState.SUCCEEDED, ActionState.FAILED, ActionState.ROLLED_BACK},
+    ActionState.SUCCEEDED: {ActionState.ROLLED_BACK},
+    ActionState.FAILED: {ActionState.ROLLED_BACK},
+    ActionState.REJECTED: set(),
+    ActionState.ROLLED_BACK: set(),
+}
 
 
 def can_transition(src: ActionState, dst: ActionState) -> bool:
-    raise NotImplementedError
+    return dst in TRANSITIONS.get(src, set())
 
 
 def validate_params(action_type: ActionType, params: dict[str, Any]) -> BaseModel:
-    raise NotImplementedError
+    spec = CATALOG.get(action_type)
+    if spec is None:
+        raise ValueError(f"Unknown action type: {action_type}")
+    return spec.params_model.model_validate(params)

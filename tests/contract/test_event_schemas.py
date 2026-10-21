@@ -1,9 +1,24 @@
-"""JSON Schema export của events khớp infra/mongo/validators."""
+"""JSON Schema export của models khớp infra/mongo/validators."""
 
-import pytest
+import json
+from pathlib import Path
 
-pytestmark = pytest.mark.skip(reason="chưa hiện thực")
+from reflex_core.actions import Action
+from reflex_core.incident import Incident
+from reflex_core.policy import Policy
 
 
-def test_placeholder() -> None:
-    ...
+def test_validator_schemas_match_models() -> None:
+    validator_dir = Path("infra/mongo/validators")
+    assert (validator_dir / "policies.json").exists()
+    assert (validator_dir / "incidents.json").exists()
+    assert (validator_dir / "actions.json").exists()
+
+    pol_data = json.loads((validator_dir / "policies.json").read_text(encoding="utf-8"))
+    assert pol_data["$jsonSchema"]["title"] == "Policy"
+
+    inc_data = json.loads((validator_dir / "incidents.json").read_text(encoding="utf-8"))
+    assert inc_data["$jsonSchema"]["title"] == "Incident"
+
+    act_data = json.loads((validator_dir / "actions.json").read_text(encoding="utf-8"))
+    assert act_data["$jsonSchema"]["title"] == "Action"

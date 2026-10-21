@@ -10,7 +10,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
+import hashlib
+import re
 from typing import Protocol
+import uuid
 
 Clock = Callable[[], datetime]
 """Trả về thời điểm hiện tại (UTC). Inject để test/replay deterministic."""
@@ -43,30 +46,33 @@ class SliKind(StrEnum):
 
 
 def target_id(vendor: str, tier: str) -> str:
-    raise NotImplementedError
+    return f"{vendor}:{tier}"
 
 
 def parse_target_id(target: str) -> tuple[str, str]:
-    raise NotImplementedError
+    parts = target.split(":", 1)
+    return (parts[0], parts[1]) if len(parts) == 2 else (parts[0], "")
 
 
 def slo_id(scope: Scope, key: str, sli: SliKind) -> str:
-    raise NotImplementedError
+    return f"{scope}:{key}:{sli}"
 
 
 def incident_key(at: datetime, seq: int) -> str:
-    raise NotImplementedError
+    return f"INC-{at.strftime('%Y%m%d')}-{seq:04d}"
 
 
 def dedup_key(slo: str, target: str | None, route: str | None) -> str:
     """sha1(slo_id|target|route) — dùng cho partial unique index trên incidents."""
-    raise NotImplementedError
+    raw = f"{slo}|{target or '*'}|{route or '*'}"
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
 
 def new_request_id() -> str:
-    raise NotImplementedError
+    return f"req-{uuid.uuid4().hex}"
 
 
 def normalize_tag(value: str) -> str:
     """Chuẩn hóa giá trị tag theo quy tắc Datadog (lowercase, ký tự hợp lệ)."""
-    raise NotImplementedError
+    val = value.lower()
+    return re.sub(r"[^a-z0-9_.:/-]", "_", val)

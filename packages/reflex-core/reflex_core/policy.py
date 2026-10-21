@@ -93,14 +93,36 @@ class Policy(_Model):
 
 
 def default_policy(route: str, candidates: list[Candidate]) -> Policy:
-    raise NotImplementedError
+    return Policy(
+        _id=route,
+        version=1,
+        candidates=candidates,
+    )
 
 
 def diff(before: Policy, after: Policy) -> dict[str, Any]:
     """Diff có cấu trúc để hiển thị trên Console (Approvals, Policies)."""
-    raise NotImplementedError
+    changes: dict[str, Any] = {}
+    if before.version != after.version:
+        changes["version"] = {"before": before.version, "after": after.version}
+    if before.deadline_ms != after.deadline_ms:
+        changes["deadline_ms"] = {"before": before.deadline_ms, "after": after.deadline_ms}
+    b_cand = {c.target: c.weight for c in before.candidates}
+    a_cand = {c.target: c.weight for c in after.candidates}
+    if b_cand != a_cand:
+        changes["weights"] = {"before": b_cand, "after": a_cand}
+    return changes
 
 
 def validate_policy(policy: Policy) -> list[str]:
     """Kiểm tra bất biến (tổng weight, target tồn tại…) trước khi gateway hot-reload."""
-    raise NotImplementedError
+    errors: list[str] = []
+    if not policy.candidates:
+        errors.append("Candidates list cannot be empty")
+    else:
+        total_weight = sum(c.weight for c in policy.candidates if c.role != CandidateRole.BROWNOUT)
+        if total_weight > 0 and abs(total_weight - 1.0) > 0.05:
+            errors.append(f"Total non-brownout weight must be approx 1.0, got {total_weight:.2f}")
+    if policy.deadline_ms <= 0:
+        errors.append("deadline_ms must be positive")
+    return errors

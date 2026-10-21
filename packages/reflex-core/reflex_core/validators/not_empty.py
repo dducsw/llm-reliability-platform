@@ -9,4 +9,5 @@ class NotEmptyValidator:
     name = "not_empty"
 
     def check(self, response: NormalizedResponse) -> CheckResult:
-        raise NotImplementedError
+        passed = bool(response.content and response.content.strip())
+        return CheckResult(name=self.name, passed=passed, reason=None if passed else "Content is empty")

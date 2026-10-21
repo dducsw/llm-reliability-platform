@@ -1,0 +1,508 @@
+{
+  "$jsonSchema": {
+    "$defs": {
+      "Diagnosis": {
+        "additionalProperties": false,
+        "properties": {
+          "side": {
+            "$ref": "#/$defs/Side"
+          },
+          "hypothesis": {
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "investigation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Investigation Id"
+          }
+        },
+        "required": [
+          "side",
+          "hypothesis",
+          "confidence",
+          "by"
+        ],
+        "title": "Diagnosis",
+        "type": "object"
+      },
+      "Impact": {
+        "additionalProperties": false,
+        "properties": {
+          "requests": {
+            "default": 0,
+            "title": "Requests",
+            "type": "integer"
+          },
+          "sessions": {
+            "default": 0,
+            "title": "Sessions",
+            "type": "integer"
+          },
+          "delivered_bad": {
+            "default": 0,
+            "title": "Delivered Bad",
+            "type": "integer"
+          },
+          "budget_consumed": {
+            "default": 0.0,
+            "title": "Budget Consumed",
+            "type": "number"
+          },
+          "extra_cost_usd": {
+            "default": 0.0,
+            "title": "Extra Cost Usd",
+            "type": "number"
+          }
+        },
+        "title": "Impact",
+        "type": "object"
+      },
+      "IncidentStatus": {
+        "enum": [
+          "detected",
+          "investigating",
+          "mitigating",
+          "mitigated",
+          "resolved",
+          "false_positive"
+        ],
+        "title": "IncidentStatus",
+        "type": "string"
+      },
+      "IncidentTimes": {
+        "additionalProperties": false,
+        "properties": {
+          "first_bad_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "First Bad At"
+          },
+          "detected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detected At"
+          },
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Acknowledged At"
+          },
+          "mitigated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mitigated At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resolved At"
+          }
+        },
+        "title": "IncidentTimes",
+        "type": "object"
+      },
+      "Severity": {
+        "enum": [
+          "critical",
+          "high",
+          "warning"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "Side": {
+        "enum": [
+          "provider",
+          "gateway",
+          "unknown"
+        ],
+        "title": "Side",
+        "type": "string"
+      },
+      "Signal": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "burn": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Burn"
+          },
+          "monitor_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Monitor Id"
+          },
+          "alert_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Alert Id"
+          },
+          "diagnosis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Diagnosis"
+          }
+        },
+        "required": [
+          "source",
+          "at"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "Signature": {
+        "additionalProperties": false,
+        "properties": {
+          "v": {
+            "default": 2,
+            "title": "V",
+            "type": "integer"
+          },
+          "vec": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Vec",
+            "type": "array"
+          },
+          "window": {
+            "additionalProperties": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "title": "Window",
+            "type": "object"
+          }
+        },
+        "required": [
+          "vec",
+          "window"
+        ],
+        "title": "Signature",
+        "type": "object"
+      },
+      "TimelineEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ref"
+          }
+        },
+        "required": [
+          "at",
+          "kind",
+          "actor"
+        ],
+        "title": "TimelineEntry",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Id"
+      },
+      "key": {
+        "title": "Key",
+        "type": "string"
+      },
+      "dedup_key": {
+        "title": "Dedup Key",
+        "type": "string"
+      },
+      "is_open": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": true,
+        "title": "Is Open"
+      },
+      "slo_id": {
+        "title": "Slo Id",
+        "type": "string"
+      },
+      "scope": {
+        "title": "Scope",
+        "type": "string"
+      },
+      "target": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Target"
+      },
+      "routes": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Routes",
+        "type": "array"
+      },
+      "sli": {
+        "title": "Sli",
+        "type": "string"
+      },
+      "severity": {
+        "$ref": "#/$defs/Severity"
+      },
+      "status": {
+        "$ref": "#/$defs/IncidentStatus",
+        "default": "detected"
+      },
+      "signals": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/Signal"
+        },
+        "title": "Signals",
+        "type": "array"
+      },
+      "t": {
+        "$ref": "#/$defs/IncidentTimes",
+        "default": {
+          "first_bad_at": null,
+          "detected_at": null,
+          "acknowledged_at": null,
+          "mitigated_at": null,
+          "resolved_at": null
+        }
+      },
+      "impact": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Impact"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "diagnosis": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Diagnosis"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "signature": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Signature"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "links": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "default": {},
+        "title": "Links",
+        "type": "object"
+      },
+      "timeline": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/TimelineEntry"
+        },
+        "title": "Timeline",
+        "type": "array"
+      },
+      "postmortem_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Postmortem Id"
+      },
+      "created_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Created At"
+      },
+      "updated_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Updated At"
+      }
+    },
+    "required": [
+      "key",
+      "dedup_key",
+      "slo_id",
+      "scope",
+      "sli",
+      "severity"
+    ],
+    "title": "Incident",
+    "type": "object"
+  }
+}
