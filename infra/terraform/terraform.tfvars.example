@@ -1,0 +1,5 @@
+dd_site       = "datadoghq.com"
+env           = "demo"
+profile       = "demo"
+webhook_url   = "https://reflex.example.com/hooks/datadog"
+# dd_api_key, dd_app_key, webhook_token: truyền qua TF_VAR_* — không commit

@@ -1,0 +1,45 @@
+# Collection `targets` — model ID thật nằm trong env, không hard-code
+- _id: vendorA:large
+  vendor: vendorA
+  kind: real
+  model_ref: { env_var: VENDOR_A_LARGE_MODEL }
+  adapter: openai_compat
+  base_url_ref: CHAOS_PROXY_URL/vendorA
+  price: { in_per_mtok: 3.0, out_per_mtok: 15.0, currency: USD }
+  capabilities: { json_mode: true, tools: true, streaming: true, max_context: 200000 }
+  tier: large
+  capacity_hint_rps: 30
+  enabled: true
+- _id: vendorA:small
+  vendor: vendorA
+  kind: real
+  model_ref: { env_var: VENDOR_A_SMALL_MODEL }
+  adapter: openai_compat
+  base_url_ref: CHAOS_PROXY_URL/vendorA
+  price: { in_per_mtok: 0.25, out_per_mtok: 1.25, currency: USD }
+  capabilities: { json_mode: true, tools: true, streaming: true, max_context: 128000 }
+  tier: small
+  capacity_hint_rps: 50
+  enabled: true
+- _id: vendorB:large
+  vendor: vendorB
+  kind: real
+  model_ref: { env_var: VENDOR_B_LARGE_MODEL }
+  adapter: anthropic
+  base_url_ref: CHAOS_PROXY_URL/vendorB
+  price: { in_per_mtok: 3.0, out_per_mtok: 15.0, currency: USD }
+  capabilities: { json_mode: true, tools: true, streaming: true, max_context: 200000 }
+  tier: large
+  capacity_hint_rps: 30
+  enabled: true
+- _id: mock:large
+  vendor: mock
+  kind: mock
+  model_ref: { env_var: "" }
+  adapter: mock
+  base_url_ref: CHAOS_PROXY_URL/mock
+  price: { in_per_mtok: 3.0, out_per_mtok: 15.0, currency: USD }
+  capabilities: { json_mode: true, tools: false, streaming: true, max_context: 200000 }
+  tier: large
+  capacity_hint_rps: 200
+  enabled: true

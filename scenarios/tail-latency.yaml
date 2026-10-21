@@ -1,0 +1,18 @@
+# S3 — Tail Latency in the Dark — TODO: điền phases/expectations theo docs/10-product/incident-scenarios.md
+name: tail-latency
+profile: demo
+seed: 42
+traffic:
+  rps: 8
+  mix: { chat.reply: 0.5, order.extract: 0.35, support.triage: 0.15 }
+phases:
+  - at: 0s
+    duration: 10m
+  - at: 10m
+    duration: 10m
+    faults:
+      - target: vendorA:large
+        type: latency
+        params: {}
+expectations: []
+ground_truth: { side: provider, cause_class: TODO }

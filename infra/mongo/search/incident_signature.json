@@ -1,0 +1,14 @@
+{
+  "name": "incident_signature",
+  "type": "vectorSearch",
+  "collection": "incidents",
+  "definition": {
+    "fields": [
+      { "type": "vector", "path": "signature.vec", "numDimensions": 64, "similarity": "cosine" },
+      { "type": "filter", "path": "sli" },
+      { "type": "filter", "path": "scope" },
+      { "type": "filter", "path": "status" },
+      { "type": "filter", "path": "signature.v" }
+    ]
+  }
+}

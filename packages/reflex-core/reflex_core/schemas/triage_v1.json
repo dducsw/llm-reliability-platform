@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "triage_v1",
+  "type": "object",
+  "required": ["urgency", "department"],
+  "properties": {
+    "urgency": { "enum": ["low", "medium", "high", "critical"] },
+    "department": { "type": "string" },
+    "summary": { "type": "string" }
+  }
+}

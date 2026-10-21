@@ -1,0 +1,7 @@
+# Golden prompts cho prober — input cố định, output kỳ vọng
+- id: "order.extract#1"
+  route: order.extract
+  messages:
+    - { role: user, content: "Cho mình 2 hộp khẩu trang màu xanh, giao về 10 Trần Hưng Đạo nhé." }
+  expect: { json_schema: order_v2 }
+# TODO: thêm golden cho chat.reply, support.triage

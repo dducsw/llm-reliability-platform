@@ -1,0 +1,13 @@
+"""Hedging: bắn attempt song song khi primary vượt p95 TTFT, giới hạn bằng chi phí."""
+
+from __future__ import annotations
+
+from reflex_core.policy import HedgeConfig
+
+
+def hedge_delay_ms(config: HedgeConfig, ttft_p95_ms: float | None) -> float | None:
+    raise NotImplementedError
+
+
+def should_hedge(config: HedgeConfig, spent_ratio: float) -> bool:
+    raise NotImplementedError

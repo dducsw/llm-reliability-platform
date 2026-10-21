@@ -1,0 +1,17 @@
+# Collection `slos` — threshold latency/ttft phải trùng biên histogram (reflex_core.hist.BOUNDS_MS)
+- _id: route:order.extract:quality
+  scope: route
+  key: order.extract
+  sli: quality
+  threshold_ms: null
+  objective: 0.995
+  window: { standard: 30d, demo: 6h }
+  alerts:
+    - { tier: page, long: 1h, short: 5m, factor: 14.4, severity: critical, hint: auto_mitigate }
+    - { tier: ticket, long: 6h, short: 30m, factor: 6, severity: high, hint: investigate }
+    - { tier: notice, long: 3d, short: 6h, factor: 1, severity: warning, hint: watch }
+  demo_alerts:
+    - { tier: page, long: 3m, short: 30s, factor: 14.4 }
+    - { tier: ticket, long: 30m, short: 5m, factor: 6 }
+  owner: team-shopmate
+# TODO: availability/latency/ttft cho từng route + Provider SLO theo target

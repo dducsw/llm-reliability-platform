@@ -1,0 +1,80 @@
+[project]
+name = "reflex-workspace"
+version = "0.1.0"
+description = "Reflex — LLM Monitor & Reliability Platform (uv workspace root)"
+requires-python = ">=3.12"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*", "apps/gateway", "apps/control-plane", "apps/cortex", "apps/simulation"]
+
+[tool.uv.sources]
+reflex-core = { workspace = true }
+reflex-mongo = { workspace = true }
+reflex-telemetry = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "hypothesis>=6.112",
+    "import-linter>=2.1",
+    "pre-commit>=3.8",
+    "openai>=1.50",  # contract test: SDK chính thức gọi vào gateway
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "reflex_core.*"
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "apps", "tests"]
+markers = [
+    "integration: cần mongodb-atlas-local",
+    "e2e: chạy scenario --fast trên compose",
+]
+
+# Ranh giới phụ thuộc — docs/70-delivery/repository-structure.md §3
+[tool.importlinter]
+root_packages = [
+    "reflex_core", "reflex_mongo", "reflex_telemetry",
+    "reflex_gateway", "reflex_cp", "reflex_cortex", "reflex_sim",
+]
+
+[[tool.importlinter.contracts]]
+name = "Apps không import lẫn nhau"
+type = "independence"
+modules = ["reflex_gateway", "reflex_cp", "reflex_cortex", "reflex_sim"]
+
+[[tool.importlinter.contracts]]
+name = "reflex-core là domain thuần (không I/O)"
+type = "forbidden"
+source_modules = ["reflex_core"]
+forbidden_modules = [
+    "reflex_mongo", "reflex_telemetry", "pymongo", "motor", "ddtrace", "datadog",
+    "httpx", "fastapi",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Packages không phụ thuộc apps"
+type = "forbidden"
+source_modules = ["reflex_core", "reflex_mongo", "reflex_telemetry"]
+forbidden_modules = ["reflex_gateway", "reflex_cp", "reflex_cortex", "reflex_sim"]

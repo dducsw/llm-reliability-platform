@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-packages
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy packages/reflex-core
+      - run: uv run lint-imports
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  unit:
+    needs: lint
+    runs-on: ubuntu-latest
+    env: { DD_TRACE_ENABLED: "false", REFLEX_ENV: ci }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-packages
+      - run: uv run pytest -m "not integration and not e2e"
+
+  integration:
+    needs: unit
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongodb/mongodb-atlas-local:8.0
+        ports: ["27017:27017"]
+    env:
+      DD_TRACE_ENABLED: "false"
+      REFLEX_ENV: ci
+      MONGODB_URI: mongodb://localhost:27017/?directConnection=true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-packages
+      - run: uv run reflex-mongo migrate
+      - run: uv run pytest -m integration
+
+  e2e:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    needs: integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: docker compose -f infra/compose/docker-compose.yml up -d --wait
+      - run: uv sync --all-packages
+      - run: uv run pytest -m e2e tests/e2e
+
+  console:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/console } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: apps/console/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint && pnpm typecheck && pnpm build
