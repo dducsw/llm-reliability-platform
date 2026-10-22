@@ -5,9 +5,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { subscribe, type StreamTopic } from "../stream/sse";
 import { applyEvent } from "../stream/store";
 import { apiGet, apiPost } from "./client";
-import type { Action, Incident, PipelineInfo, Policy, Pulse } from "./types";
+import type { Action, DualLedger, Incident, PipelineInfo, Policy, Pulse } from "./types";
 
 export const usePulse = () => useQuery({ queryKey: ["pulse"], queryFn: () => apiGet<Pulse>("/api/pulse") });
+
+export const useDualLedger = (route: string | undefined, minutes = 60) =>
+  useQuery({
+    queryKey: ["series", "dual", route, minutes],
+    queryFn: () => apiGet<DualLedger>(`/api/series/dual?route=${encodeURIComponent(route ?? "")}&minutes=${minutes}`),
+    enabled: Boolean(route),
+    refetchInterval: 15_000,
+  });
 
 export const useIncidents = () =>
   useQuery({

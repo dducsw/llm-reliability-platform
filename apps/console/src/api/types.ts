@@ -79,3 +79,19 @@ export interface Pulse {
   incidents: Incident[];
   policies: Policy[];
 }
+
+export interface LedgerPoint {
+  ts: string;
+  total: number;
+  ok: number;
+  q_eligible: number;
+  q_good: number;
+}
+
+export interface DualLedger {
+  route: string;
+  targets: string[];
+  delivered: LedgerPoint[];
+  provider: LedgerPoint[];
+  events: { ts: string; kind: string; label: string }[];
+}
