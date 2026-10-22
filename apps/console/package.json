@@ -1,6 +1,7 @@
 {
   "name": "reflex-console",
   "private": true,
+  "packageManager": "pnpm@10.24.0",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
