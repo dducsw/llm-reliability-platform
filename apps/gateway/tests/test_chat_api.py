@@ -52,3 +52,27 @@ def test_stream_ends_with_done(monkeypatch) -> None:  # type: ignore[no-untyped-
             json={"stream": True, "messages": [{"role": "user", "content": "hi"}]},
         )
     assert resp.text.rstrip().endswith("data: [DONE]")
+
+
+def test_shed_is_503_with_retry_after_for_both_modes(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("DD_TRACE_ENABLED", "false")
+    with _client() as client:
+        _mock_only(client, "chat.reply")
+        orch = client.app.state.orchestrator  # type: ignore[attr-defined]
+        for _ in range(30):
+            orch.state.on_attempt("mock:large", "chat.reply", ok=False, quality_ok=False)
+        for stream in (False, True):
+            resp = client.post(
+                "/v1/chat/completions",
+                headers={"x-reflex-route": "chat.reply", "x-priority": "2"},
+                json={"messages": [{"role": "user", "content": "hi"}], "stream": stream},
+            )
+            assert resp.status_code == 503
+            assert resp.headers["retry-after"] == "5"
+            assert resp.json()["error"]["reflex"]["reason"] == "shed"
+        ok = client.post(
+            "/v1/chat/completions",
+            headers={"x-reflex-route": "chat.reply", "x-priority": "0"},
+            json={"messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert ok.status_code == 200

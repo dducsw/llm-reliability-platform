@@ -34,3 +34,13 @@ def test_deadline_gates_new_attempts() -> None:
     assert not d.allows(400)
     t[0] = 5.0
     assert d.remaining_ms() == 0.0
+
+
+def test_latency_p95_needs_enough_samples() -> None:
+    st = LocalState()
+    for ms in range(1, 20):
+        st.record_latency("t", "r", float(ms))
+    assert st.latency_p95_ms("t", "r") is None
+    for ms in range(20, 101):
+        st.record_latency("t", "r", float(ms))
+    assert st.latency_p95_ms("t", "r") == 96.0

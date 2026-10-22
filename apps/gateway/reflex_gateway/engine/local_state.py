@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 
 EWMA_ALPHA = 0.1
 DEFAULT_LATENCY_MS = 500.0
+LATENCY_WINDOW = 100
+MIN_P95_SAMPLES = 20
 
 
 @dataclass(slots=True)
@@ -23,6 +26,7 @@ class _TargetStats:
     quality: _Ewma
     latency_ms: _Ewma
     inflight: int = 0
+    recent_ms: deque[float] = field(default_factory=lambda: deque(maxlen=LATENCY_WINDOW))
 
 
 class LocalState:
@@ -56,10 +60,19 @@ class LocalState:
             stats.quality.update(1.0 if quality_ok else 0.0)
 
     def record_latency(self, target: str, route: str, latency_ms: float) -> None:
-        self._get(target, route).latency_ms.update(latency_ms)
+        stats = self._get(target, route)
+        stats.latency_ms.update(latency_ms)
+        stats.recent_ms.append(latency_ms)
 
     def expected_latency_ms(self, target: str, route: str) -> float:
         return self._get(target, route).latency_ms.value
+
+    def latency_p95_ms(self, target: str, route: str) -> float | None:
+        """p95 trên cửa sổ gần nhất; chưa đủ mẫu thì None (không hedge theo số đoán)."""
+        samples = sorted(self._get(target, route).recent_ms)
+        if len(samples) < MIN_P95_SAMPLES:
+            return None
+        return samples[min(len(samples) - 1, int(len(samples) * 0.95))]
 
     def inflight_start(self, target: str, route: str) -> None:
         self._get(target, route).inflight += 1
