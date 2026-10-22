@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+from typing import Any
 
 SAMPLE_ORDERS = [
     {
@@ -28,7 +29,7 @@ SAMPLE_CHAT = [
 ]
 
 
-def generate(route: str, messages: list[dict], rng: random.Random) -> str:
+def generate(route: str, messages: list[dict[str, Any]], rng: random.Random) -> str:
     if route == "order.extract":
         return json.dumps(rng.choice(SAMPLE_ORDERS), ensure_ascii=False)
     elif route == "support.triage":

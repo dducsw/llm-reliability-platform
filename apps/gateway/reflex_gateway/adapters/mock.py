@@ -7,8 +7,9 @@ import random
 import time
 from collections.abc import AsyncIterator
 
+from reflex_core import mock_outputs as outputs
+
 from reflex_gateway.adapters.base import UpstreamResult
-from reflex_sim.mock_llm import outputs
 
 
 class MockAdapter:
