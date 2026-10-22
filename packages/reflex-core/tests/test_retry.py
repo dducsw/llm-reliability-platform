@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import pytest
 from reflex_core.policy import RescueConfig, RetryConfig
 from reflex_core.retry import (
     FailureClass,
@@ -23,6 +22,9 @@ class MockClock:
 
 
 class MockRng:
+    def random(self) -> float:
+        return 0.5
+
     def uniform(self, a: float, b: float) -> float:
         return (a + b) / 2.0
 

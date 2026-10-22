@@ -5,6 +5,7 @@ Catalog: docs/50-reliability/recovery-engine.md §3. Shape: mongodb-data-model.m
 
 from __future__ import annotations
 
+import builtins
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -102,7 +103,7 @@ class ActionSpec(_Model):
     """Định nghĩa tĩnh của một loại action trong catalog."""
 
     type: ActionType
-    params_model: type[BaseModel]
+    params_model: builtins.type[BaseModel]  # `type` bị field cùng tên che trong class body
     blast_radius: BlastRadius
     reversible: bool
     human_only: bool = False
@@ -235,7 +236,11 @@ class Action(_Model):
 
 
 TRANSITIONS: dict[ActionState, set[ActionState]] = {
-    ActionState.PROPOSED: {ActionState.APPROVED, ActionState.AWAITING_APPROVAL, ActionState.REJECTED},
+    ActionState.PROPOSED: {
+        ActionState.APPROVED,
+        ActionState.AWAITING_APPROVAL,
+        ActionState.REJECTED,
+    },
     ActionState.AWAITING_APPROVAL: {ActionState.APPROVED, ActionState.REJECTED},
     ActionState.APPROVED: {ActionState.EXECUTING, ActionState.REJECTED},
     ActionState.EXECUTING: {ActionState.VERIFYING, ActionState.SUCCEEDED, ActionState.FAILED},

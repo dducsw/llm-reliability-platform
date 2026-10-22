@@ -1,6 +1,5 @@
 """Unit tests cho reflex_core.stats."""
 
-import pytest
 from reflex_core import stats
 
 
