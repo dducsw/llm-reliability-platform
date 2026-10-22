@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+
 from reflex_gateway.engine.orchestrator import Orchestrator, RequestContext
 
 router = APIRouter()
@@ -24,7 +25,7 @@ async def chat_completions(request: Request) -> Response:
     try:
         payload = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from None
 
     route = request.headers.get("x-reflex-route") or payload.get("model")
     if not route:

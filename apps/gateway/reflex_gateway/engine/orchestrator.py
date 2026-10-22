@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import random
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import random
 from typing import Any
 
 from reflex_core.breaker import BreakerState, CircuitBreaker
@@ -23,9 +23,10 @@ from reflex_core.events import (
 from reflex_core.ids import Clock, Rng
 from reflex_core.policy import BreakerConfig, Policy
 from reflex_core.retry import FailureClass, RetryBudget, classify
-from reflex_core.routing import RouteDecision, TargetInputs, decide
+from reflex_core.routing import TargetInputs, decide
 from reflex_core.validators.base import NormalizedResponse
 from reflex_core.validators.registry import build_chain, run_chain
+
 from reflex_gateway.adapters.registry import get_adapter
 from reflex_gateway.engine.deadline import Deadline
 from reflex_gateway.engine.local_state import LocalState

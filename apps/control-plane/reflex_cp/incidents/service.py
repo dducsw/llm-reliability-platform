@@ -17,8 +17,6 @@ from reflex_core.incident import (
 )
 from reflex_mongo.collections import INCIDENTS
 
-from reflex_cp.incidents.lifecycle import can_transition
-
 logger = logging.getLogger(__name__)
 
 

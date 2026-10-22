@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
@@ -108,7 +108,7 @@ Hệ thống Reflex và Cortex đã thực thi các hành động bảo vệ:
         "title": title,
         "summary": summary,
         "body_md": body_md,
-        "tags": [target, sli] + routes,
+        "tags": [target, sli, *routes],
         "created_at": now,
         "updated_at": now,
     }

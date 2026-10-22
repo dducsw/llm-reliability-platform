@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import Depends, FastAPI
 from pymongo import AsyncMongoClient
 from reflex_telemetry.datadog_api import DatadogApi
-import uvicorn
 
 from reflex_cp.actuator.apply import Actuator
 from reflex_cp.api.actions import router as actions_router

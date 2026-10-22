@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 import time
+from collections.abc import AsyncIterator
 
 import httpx
+
 from reflex_gateway.adapters.base import UpstreamResult
 
 _STOP_REASONS = {

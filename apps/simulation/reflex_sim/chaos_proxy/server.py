@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import random
 import time
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+
 from reflex_sim.chaos_proxy import injector
 from reflex_sim.chaos_proxy.runs_watcher import ChaosRunsWatcher
 from reflex_sim.mock_llm import outputs

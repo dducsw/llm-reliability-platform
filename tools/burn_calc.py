@@ -113,7 +113,9 @@ def main() -> None:
         t = time_to_alert(args.fault, args.objective, args.rps, prof)
         tick = math.ceil(t / 10.0) * 10
         print(f"Profile: {prof.name}")
-        print(f"Fault: {args.fault * 100:.1f}%, Objective: {args.objective * 100:.1f}%, RPS: {args.rps}")
+        print(
+            f"Fault: {args.fault * 100:.1f}%, Objective: {args.objective * 100:.1f}%, RPS: {args.rps}"
+        )
         print(f"Exact alert time: {t:.1f}s -> Sentinel tick: {tick}s")
         return
 
@@ -122,7 +124,7 @@ def main() -> None:
     print("-" * 65)
     for res in calculate_scenarios(args.profile):
         print(
-            f"{res['scenario']:<25} | {float(res['fault_rate'])*100:>5.1f}% | {res['exact_sec']:>7.1f}s | {res['tick_sec']:>10.0f}s"
+            f"{res['scenario']:<25} | {float(res['fault_rate']) * 100:>5.1f}% | {res['exact_sec']:>7.1f}s | {res['tick_sec']:>10.0f}s"
         )
 
 

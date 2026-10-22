@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+
 from scipy import stats
 
 
@@ -13,12 +14,23 @@ def wilson_interval(good: int, n: int, confidence: float = 0.95) -> tuple[float,
     if good >= n:
         p = 1.0
         z = stats.norm.ppf(1.0 - (1.0 - confidence) / 2.0)
-        ci_low = max(0.0, float((1.0 + (z**2) / (2.0 * n) - z * math.sqrt((z**2) / (4.0 * n * n))) / (1.0 + (z**2) / n)))
+        ci_low = max(
+            0.0,
+            float(
+                (1.0 + (z**2) / (2.0 * n) - z * math.sqrt((z**2) / (4.0 * n * n)))
+                / (1.0 + (z**2) / n)
+            ),
+        )
         return ci_low, 1.0
     if good <= 0:
         p = 0.0
         z = stats.norm.ppf(1.0 - (1.0 - confidence) / 2.0)
-        ci_high = min(1.0, float(((z**2) / (2.0 * n) + z * math.sqrt((z**2) / (4.0 * n * n))) / (1.0 + (z**2) / n)))
+        ci_high = min(
+            1.0,
+            float(
+                ((z**2) / (2.0 * n) + z * math.sqrt((z**2) / (4.0 * n * n))) / (1.0 + (z**2) / n)
+            ),
+        )
         return 0.0, ci_high
 
     p = good / n

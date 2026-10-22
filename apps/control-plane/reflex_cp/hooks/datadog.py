@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from reflex_core.incident import Severity
+
 from reflex_cp.hooks.payload import DatadogWebhookPayload
 from reflex_cp.incidents.service import IncidentService
 

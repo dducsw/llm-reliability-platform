@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import AsyncIterator
 
 import httpx
+
 from reflex_gateway.adapters.base import UpstreamResult
 
 

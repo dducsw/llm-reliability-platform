@@ -155,4 +155,3 @@ async def test_e2e_import_bench_and_process(
     )
     assert len(incidents) == 1
     assert incidents[0]["_id"] == MODELS[0]
-

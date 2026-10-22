@@ -6,8 +6,8 @@ score(t) = w_h·H + w_b·B + w_q·Q + w_c·(1 − C) + w_k·K + log(weight_polic
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 from reflex_core.ids import Rng
 from reflex_core.policy import Candidate, Policy
@@ -102,7 +102,7 @@ def decide(policy: Policy, inputs: dict[str, TargetInputs], rng: Rng) -> RouteDe
         key=lambda t: scores[t],
         reverse=True,
     )
-    ordered = [primary] + fallbacks
+    ordered = [primary, *fallbacks]
 
     return RouteDecision(
         ordered=ordered,

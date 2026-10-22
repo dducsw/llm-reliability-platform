@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 
+import typer
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.incident import IncidentStatus
@@ -13,7 +14,6 @@ from reflex_mongo.collections import INCIDENTS
 from reflex_telemetry import setup as telemetry_setup
 from reflex_telemetry.datadog_api import DatadogApi
 from reflex_telemetry.tags import SVC_CORTEX
-import typer
 
 from reflex_cortex.agent import CortexAgent
 from reflex_cortex.settings import Settings

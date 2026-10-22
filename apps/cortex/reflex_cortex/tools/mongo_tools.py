@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import POLICY_HISTORY, SLI_1M

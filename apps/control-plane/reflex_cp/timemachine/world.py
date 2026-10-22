@@ -5,5 +5,5 @@ from __future__ import annotations
 
 class World:
     @classmethod
-    async def load(cls, incident_key: str) -> "World":
+    async def load(cls, incident_key: str) -> World:
         raise NotImplementedError

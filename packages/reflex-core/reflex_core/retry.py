@@ -31,13 +31,19 @@ def classify(
     ):
         return FailureClass.PERMANENT
 
-    if (
-        (http_status is not None and (http_status == 429 or http_status >= 500))
-        or error_class in ("timeout", "connect_error", "rate_limited", "server_error")
+    if (http_status is not None and (http_status == 429 or http_status >= 500)) or error_class in (
+        "timeout",
+        "connect_error",
+        "rate_limited",
+        "server_error",
     ):
         return FailureClass.TRANSIENT
 
-    return FailureClass.PERMANENT if http_status and 400 <= http_status < 500 else FailureClass.TRANSIENT
+    return (
+        FailureClass.PERMANENT
+        if http_status and 400 <= http_status < 500
+        else FailureClass.TRANSIENT
+    )
 
 
 def backoff_ms(attempt: int, rng: Rng, base_ms: int = 100, cap_ms: int = 2000) -> float:

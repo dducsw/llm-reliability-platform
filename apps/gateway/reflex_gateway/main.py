@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI
@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             try:
                 client = make_client(cfg.mongodb_uri, app_name=f"reflex-gateway-{cfg.gateway_id}")
                 db = get_db(client, cfg.mongodb_db)
-            except Exception as e:
+            except Exception:
                 pass
 
         target_catalog = TargetCatalog(db=db)

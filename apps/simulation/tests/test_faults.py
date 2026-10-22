@@ -1,4 +1,5 @@
 import random
+
 from reflex_sim.chaos_proxy import injector
 from reflex_sim.chaos_proxy.faults import Fault, FaultSelector, FaultType
 

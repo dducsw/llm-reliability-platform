@@ -1,4 +1,3 @@
-import pytest
 from reflex_cortex.rules import classify
 
 

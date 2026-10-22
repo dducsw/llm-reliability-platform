@@ -5,14 +5,12 @@ cost_ceiling, blast_radius, confidence, human_only (recovery-engine.md §3).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.actions import (
     CATALOG,
     Action,
     ActionState,
-    ActionType,
     GuardrailResult,
     validate_params,
 )
