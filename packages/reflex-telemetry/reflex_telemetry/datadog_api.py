@@ -15,10 +15,14 @@ class DatadogApi:
         self._app_key = app_key
         self._site = site
 
-    async def search_logs(self, query: str, frm: datetime, to: datetime, limit: int = 100) -> list[dict[str, Any]]:
+    async def search_logs(
+        self, query: str, frm: datetime, to: datetime, limit: int = 100
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError
 
-    async def search_spans(self, query: str, frm: datetime, to: datetime, limit: int = 100) -> list[dict[str, Any]]:
+    async def search_spans(
+        self, query: str, frm: datetime, to: datetime, limit: int = 100
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError
 
     async def query_metrics(self, query: str, frm: datetime, to: datetime) -> dict[str, Any]:
@@ -27,9 +31,24 @@ class DatadogApi:
     async def get_monitor(self, monitor_id: int) -> dict[str, Any]:
         raise NotImplementedError
 
-    async def send_event(self, title: str, text: str, tags: list[str], alert_type: str = "info") -> None:
+    async def send_event(
+        self, title: str, text: str, tags: list[str], alert_type: str = "info"
+    ) -> None:
         raise NotImplementedError
 
 
 def strip_chaos_fields(payload: Any) -> Any:
-    raise NotImplementedError
+    """Đệ quy bỏ mọi key `chaos.*` / `chaos_*` khỏi dict/list (kể cả key lồng trong tags dạng list)."""
+    if isinstance(payload, dict):
+        return {
+            k: strip_chaos_fields(v)
+            for k, v in payload.items()
+            if not (isinstance(k, str) and k.startswith(("chaos.", "chaos_")))
+        }
+    if isinstance(payload, list):
+        return [
+            strip_chaos_fields(v)
+            for v in payload
+            if not (isinstance(v, str) and v.startswith(("chaos.", "chaos_")))
+        ]
+    return payload
