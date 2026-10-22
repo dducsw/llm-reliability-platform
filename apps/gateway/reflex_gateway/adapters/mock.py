@@ -59,7 +59,9 @@ class MockAdapter:
         res = await self.complete(target, payload, timeout_s)
         # Yield single chunk or split chunk
         yield {
-            "choices": [{"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}]
+            "choices": [
+                {"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}
+            ]
         }
         yield {
             "choices": [{"delta": {}, "finish_reason": "stop"}],

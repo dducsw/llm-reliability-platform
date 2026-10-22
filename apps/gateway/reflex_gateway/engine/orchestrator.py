@@ -27,6 +27,8 @@ from reflex_core.routing import RouteDecision, TargetInputs, decide
 from reflex_core.validators.base import NormalizedResponse
 from reflex_core.validators.registry import build_chain, run_chain
 from reflex_gateway.adapters.registry import get_adapter
+from reflex_gateway.engine.deadline import Deadline
+from reflex_gateway.engine.local_state import LocalState
 from reflex_gateway.policy_store import PolicyStore
 from reflex_gateway.target_catalog import TargetCatalog
 from reflex_gateway.telemetry.queue import TelemetryQueue
@@ -79,6 +81,7 @@ class Orchestrator:
         self.env = env
         self.clock = clock
         self.rng = rng or SystemRng()
+        self.state = LocalState()
         self._breakers: dict[str, CircuitBreaker] = {}
         self._retry_budgets: dict[str, RetryBudget] = {}
 
@@ -103,6 +106,8 @@ class Orchestrator:
 
         # 1. Thu thập inputs cho routing
         target_inputs: dict[str, TargetInputs] = {}
+        local = self.state.router_inputs(ctx.route)
+        deadline = Deadline(ctx.deadline_ms)
         if policy and policy.candidates:
             for cand in policy.candidates:
                 t_info = self.target_catalog.get(cand.target)
@@ -110,9 +115,9 @@ class Orchestrator:
                 is_open = breaker.state == BreakerState.OPEN
                 target_inputs[cand.target] = TargetInputs(
                     target=cand.target,
-                    health=1.0 if not is_open else 0.0,
+                    health=0.0 if is_open else local.get(cand.target, {}).get("health", 1.0),
                     budget_headroom=1.0,
-                    quality=1.0,
+                    quality=local.get(cand.target, {}).get("quality", 1.0),
                     cost=0.5,
                     capacity=1.0,
                     breaker_open=is_open,
@@ -146,8 +151,17 @@ class Orchestrator:
             breaker = self._get_breaker(target_id, policy.breaker if policy else BreakerConfig())
             att_kind = AttemptKind.PRIMARY if att_idx == 1 else AttemptKind.RESCUE
 
-            timeout_s = min(float(ctx.deadline_ms) / 1000.0, 30.0)
-            up_res = await adapter.complete(target, payload, timeout_s=timeout_s)
+            if att_idx > 1 and not deadline.allows(
+                self.state.expected_latency_ms(target_id, ctx.route)
+            ):
+                break
+
+            timeout_s = min(deadline.remaining_ms() / 1000.0, 30.0)
+            self.state.inflight_start(target_id, ctx.route)
+            try:
+                up_res = await adapter.complete(target, payload, timeout_s=timeout_s)
+            finally:
+                self.state.inflight_end(target_id, ctx.route)
 
             # Chạy validators
             norm_resp = NormalizedResponse(
@@ -178,6 +192,9 @@ class Orchestrator:
 
             # Record breaker outcome
             breaker.record(success=passed and up_res.status == 200, at=now)
+            self.state.on_attempt(target_id, ctx.route, ok=up_res.status == 200, quality_ok=passed)
+            if up_res.status == 200:
+                self.state.record_latency(target_id, ctx.route, up_res.latency_ms)
 
             if up_res.status == 200:
                 att_outcome = AttemptOutcome.OK if passed else AttemptOutcome.QUALITY_FAIL
@@ -238,9 +255,15 @@ class Orchestrator:
         # Tính toán RequestEvent tổng
         last_att = attempt_events[-1]
         req_outcome = (
-            RequestOutcome.OK if last_att.outcome == AttemptOutcome.OK else RequestOutcome.QUALITY_FAIL
+            RequestOutcome.OK
+            if last_att.outcome == AttemptOutcome.OK
+            else RequestOutcome.QUALITY_FAIL
         )
-        if last_att.outcome in (AttemptOutcome.TIMEOUT, AttemptOutcome.RATE_LIMITED, AttemptOutcome.ERROR):
+        if last_att.outcome in (
+            AttemptOutcome.TIMEOUT,
+            AttemptOutcome.RATE_LIMITED,
+            AttemptOutcome.ERROR,
+        ):
             req_outcome = RequestOutcome.ERROR
 
         total_tokens_in = sum(a.tokens_in for a in attempt_events)

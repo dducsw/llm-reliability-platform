@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class TargetCatalog:
-    def __init__(self, db: AsyncDatabase | None = None, seed_file: str = "seeds/targets.yaml") -> None:
+    def __init__(
+        self, db: AsyncDatabase | None = None, seed_file: str = "seeds/targets.yaml"
+    ) -> None:
         self._db = db
         self._seed_file = Path(seed_file)
         self._targets: dict[str, dict[str, Any]] = {}
@@ -42,5 +44,10 @@ class TargetCatalog:
     def get(self, target_id: str) -> dict[str, Any]:
         return self._targets.get(
             target_id,
-            {"_id": target_id, "adapter": "mock", "vendor": "mock", "price": {"in_per_mtok": 0, "out_per_mtok": 0}},
+            {
+                "_id": target_id,
+                "adapter": "mock",
+                "vendor": "mock",
+                "price": {"in_per_mtok": 0, "out_per_mtok": 0},
+            },
         )

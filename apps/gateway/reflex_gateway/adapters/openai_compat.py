@@ -91,7 +91,9 @@ class OpenaiCompatAdapter:
     async def stream(self, target: dict, payload: dict, timeout_s: float) -> AsyncIterator[dict]:
         res = await self.complete(target, payload, timeout_s)
         yield {
-            "choices": [{"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}]
+            "choices": [
+                {"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}
+            ]
         }
         yield {
             "choices": [{"delta": {}, "finish_reason": res.finish_reason}],

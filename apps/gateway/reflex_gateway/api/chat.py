@@ -28,7 +28,9 @@ async def chat_completions(request: Request) -> Response:
 
     route = request.headers.get("x-reflex-route") or payload.get("model")
     if not route:
-        raise HTTPException(status_code=400, detail="Missing x-reflex-route header or model in payload")
+        raise HTTPException(
+            status_code=400, detail="Missing x-reflex-route header or model in payload"
+        )
 
     priority = int(request.headers.get("x-priority", "1"))
     session = request.headers.get("x-reflex-session")
@@ -47,6 +49,7 @@ async def chat_completions(request: Request) -> Response:
 
     is_stream = bool(payload.get("stream", False))
     if is_stream:
+
         async def event_generator() -> AsyncIterator[str]:
             async for chunk in orchestrator.stream(ctx, payload):
                 yield f"data: {json.dumps(chunk)}\n\n"
@@ -60,7 +63,9 @@ async def chat_completions(request: Request) -> Response:
         "x-reflex-attempts": str(res.request_event.attempts),
         "x-reflex-policy-version": str(res.request_event.policy_version),
         "x-reflex-request-id": res.request_event.request_id,
-        "x-reflex-quality": "pass" if (res.request_event.quality and res.request_event.quality.pass_) else "fail",
+        "x-reflex-quality": "pass"
+        if (res.request_event.quality and res.request_event.quality.pass_)
+        else "fail",
     }
     return JSONResponse(content=res.body, headers=headers)
 
