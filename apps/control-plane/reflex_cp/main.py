@@ -22,6 +22,7 @@ from reflex_cp.api.pipelines import router as pipelines_router
 from reflex_cp.api.policies import router as policies_router
 from reflex_cp.api.pulse import router as pulse_router
 from reflex_cp.api.replays import router as replays_router
+from reflex_cp.api.series import router as series_router
 from reflex_cp.api.slos import router as slos_router
 from reflex_cp.api.stream import router as stream_router
 from reflex_cp.hooks.datadog import router as datadog_router
@@ -111,6 +112,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         incidents_router,
         policies_router,
         stream_router,
+        series_router,
         slos_router,
         replays_router,
         pipelines_router,
