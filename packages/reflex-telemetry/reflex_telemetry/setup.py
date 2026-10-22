@@ -42,7 +42,8 @@ def init(service: str, *, llmobs: bool = False) -> Telemetry:
     if os.getenv("DD_TRACE_ENABLED", "true").lower() != "false":
         from ddtrace import patch
 
-        patch(fastapi=True, httpx=True, pymongo=True, logging=True)
+        # Không patch pymongo: integration của ddtrace chưa tương thích AsyncMongoClient (pymongo ≥ 4.9).
+        patch(fastapi=True, httpx=True, logging=True)
         if llmobs and os.getenv("DD_API_KEY"):
             from ddtrace.llmobs import LLMObs
 
