@@ -14,7 +14,12 @@ async def test_verifier_proof_pass() -> None:
     verifier = RecoveryVerifier(db=None)
     action = Action(
         type=ActionType.SHIFT_WEIGHT,
-        params={"route": "order.extract", "from": "vendorA:large", "to": "vendorB:fallback", "pct": 1.0},
+        params={
+            "route": "order.extract",
+            "from": "vendorA:large",
+            "to": "vendorB:fallback",
+            "pct": 1.0,
+        },
         proposed_by=ProposedBy(actor="cortex"),
     )
 
@@ -37,7 +42,12 @@ async def test_failback_steps() -> None:
     orch = FailbackOrchestrator(db=None)
     parent_act = Action(
         type=ActionType.SHIFT_WEIGHT,
-        params={"route": "order.extract", "from": "vendorA:large", "to": "vendorB:fallback", "pct": 1.0},
+        params={
+            "route": "order.extract",
+            "from": "vendorA:large",
+            "to": "vendorB:fallback",
+            "pct": 1.0,
+        },
         proposed_by=ProposedBy(actor="cortex"),
     )
 

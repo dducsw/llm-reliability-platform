@@ -49,7 +49,12 @@ async def test_actuator_apply_in_memory() -> None:
     actuator = Actuator(db=None)
     action = Action(
         type=ActionType.SHIFT_WEIGHT,
-        params={"route": "order.extract", "from": "mock:primary", "to": "mock:secondary", "pct": 0.5},
+        params={
+            "route": "order.extract",
+            "from": "mock:primary",
+            "to": "mock:secondary",
+            "pct": 0.5,
+        },
         proposed_by=ProposedBy(actor="cortex"),
     )
     res_policy = await actuator.apply(action)
@@ -73,7 +78,12 @@ async def test_create_action_api() -> None:
             "/api/actions",
             json={
                 "type": "shift_weight",
-                "params": {"route": "order.extract", "from": "vendorA:large", "to": "vendorB:fallback", "pct": 1.0},
+                "params": {
+                    "route": "order.extract",
+                    "from": "vendorA:large",
+                    "to": "vendorB:fallback",
+                    "pct": 1.0,
+                },
                 "proposed_by": {"actor": "cortex"},
             },
         )

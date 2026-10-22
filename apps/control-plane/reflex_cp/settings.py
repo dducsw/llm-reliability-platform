@@ -17,3 +17,6 @@ class Settings(BaseSettings):
     reflex_webhook_token: str = ""
     reflex_console_token: str = ""
     reflex_lab_token: str = ""
+    dd_api_key: str = ""
+    dd_app_key: str = ""
+    dd_site: str = "datadoghq.com"

@@ -72,7 +72,11 @@ class Sentinel:
     async def run(self) -> None:
         """Chạy vòng lặp vô tận theo chu kỳ tick_s."""
         self._running = True
-        logger.info("Sentinel loop started (interval=%.1fs, instance=%s)", self.tick_s, self.settings.instance_id)
+        logger.info(
+            "Sentinel loop started (interval=%.1fs, instance=%s)",
+            self.tick_s,
+            self.settings.instance_id,
+        )
         while self._running:
             try:
                 await self.tick()

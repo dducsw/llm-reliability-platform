@@ -37,6 +37,7 @@ class Actuator:
         if self.db is None:
             # Fallback in-memory
             from reflex_core.policy import Candidate, CandidateRole, default_policy
+
             current_policy = default_policy(
                 route=route,
                 candidates=[
