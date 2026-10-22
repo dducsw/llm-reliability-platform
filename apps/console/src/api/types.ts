@@ -39,7 +39,7 @@ export interface Incident {
 
 export interface HealthState {
   _id: string;
-  state?: string;
+  status?: string;
   [key: string]: unknown;
 }
 
