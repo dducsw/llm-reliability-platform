@@ -8,12 +8,15 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI
 from reflex_mongo.client import get_db, make_client
+from reflex_telemetry import setup as telemetry_setup
+from reflex_telemetry.tags import SVC_GATEWAY
 
 from reflex_gateway.api import chat, health
 from reflex_gateway.engine.orchestrator import Orchestrator
 from reflex_gateway.policy_store import PolicyStore
 from reflex_gateway.settings import Settings
 from reflex_gateway.target_catalog import TargetCatalog
+from reflex_gateway.telemetry import metrics
 from reflex_gateway.telemetry.mongo_writer import MongoBatchWriter
 from reflex_gateway.telemetry.queue import TelemetryQueue
 
@@ -23,6 +26,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        telemetry = telemetry_setup.init(SVC_GATEWAY)
+        metrics.configure(telemetry.statsd)
         db = None
         client = None
         if cfg.mongodb_uri:

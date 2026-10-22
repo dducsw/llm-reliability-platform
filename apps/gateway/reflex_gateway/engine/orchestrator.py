@@ -31,6 +31,7 @@ from reflex_gateway.engine.deadline import Deadline
 from reflex_gateway.engine.local_state import LocalState
 from reflex_gateway.policy_store import PolicyStore
 from reflex_gateway.target_catalog import TargetCatalog
+from reflex_gateway.telemetry import metrics, spans
 from reflex_gateway.telemetry.queue import TelemetryQueue
 
 
@@ -149,7 +150,12 @@ class Orchestrator:
             adapter = get_adapter(target.get("adapter", "mock"))
 
             breaker = self._get_breaker(target_id, policy.breaker if policy else BreakerConfig())
-            att_kind = AttemptKind.PRIMARY if att_idx == 1 else AttemptKind.RESCUE
+            if att_idx == 1:
+                att_kind = AttemptKind.PRIMARY
+            elif final_quality is not None and not final_quality.pass_:
+                att_kind = AttemptKind.QUALITY_RETRY
+            else:
+                att_kind = AttemptKind.RETRY
 
             if att_idx > 1 and not deadline.allows(
                 self.state.expected_latency_ms(target_id, ctx.route)
@@ -233,6 +239,18 @@ class Orchestrator:
             )
             attempt_events.append(att_event)
             self.telemetry_queue.put_nowait(att_event)
+            metrics.emit_attempt(att_event)
+            spans.tag_attempt_span(
+                spans.current_span(),
+                {
+                    "route": ctx.route,
+                    "target": target_id,
+                    "attempt_kind": att_kind.value,
+                    "outcome": att_outcome.value,
+                    "policy_version": policy_ver,
+                    "gateway_id": self.gateway_id,
+                },
+            )
 
             final_response = up_res.raw
 
@@ -291,6 +309,7 @@ class Orchestrator:
             policy_version=policy_ver,
         )
         self.telemetry_queue.put_nowait(req_event)
+        metrics.emit_request(req_event)
 
         return OrchestratorResult(
             body=final_response or {},
