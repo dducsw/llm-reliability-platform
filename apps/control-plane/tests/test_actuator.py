@@ -91,3 +91,20 @@ async def test_create_action_api() -> None:
         data = res.json()
         assert data.get("_id") is not None
         assert data.get("state") in ("approved", "succeeded")
+
+
+def test_apply_action_shed_priority_sets_threshold() -> None:
+    policy = Policy(
+        _id="chat.reply",
+        version=4,
+        candidates=[Candidate(target="vendorA:large", weight=1.0, role=CandidateRole.PRIMARY)],
+    )
+    action = Action(
+        type=ActionType.SHED_PRIORITY,
+        params={"min_priority": 2},
+        proposed_by=ProposedBy(actor="cortex"),
+        created_at=datetime.now(tz=UTC),
+    )
+    new_policy = apply_action(policy, action)
+    assert new_policy.shed.when_all_degraded_min_priority == 2
+    assert new_policy.version == 5 and policy.shed.when_all_degraded_min_priority == 1
