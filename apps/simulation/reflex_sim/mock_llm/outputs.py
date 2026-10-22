@@ -34,10 +34,17 @@ def generate(route: str, messages: list[dict], rng: random.Random) -> str:
     elif route == "support.triage":
         return json.dumps({"category": "shipping", "urgency": "medium", "sentiment": "neutral"})
     elif route == "cortex.reason":
-        return json.dumps({
-            "hypothesis": "provider_down",
-            "confidence": 0.95,
-            "proposed_action": {"type": "shift_weight", "from": "vendorA:large", "to": "vendorB:large", "pct": 90},
-        })
+        return json.dumps(
+            {
+                "hypothesis": "provider_down",
+                "confidence": 0.95,
+                "proposed_action": {
+                    "type": "shift_weight",
+                    "from": "vendorA:large",
+                    "to": "vendorB:large",
+                    "pct": 90,
+                },
+            }
+        )
     else:
         return rng.choice(SAMPLE_CHAT)

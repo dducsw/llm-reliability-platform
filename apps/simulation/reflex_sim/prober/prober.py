@@ -97,7 +97,9 @@ class Prober:
             outcome=outcome,
             latency_ms=latency,
             ttft_ms=latency * 0.3,
-            quality=QualityResult(pass_=passed, checks=["not_empty"], failed=[] if passed else ["not_empty"]),
+            quality=QualityResult(
+                pass_=passed, checks=["not_empty"], failed=[] if passed else ["not_empty"]
+            ),
             http_status=status,
         )
         return event

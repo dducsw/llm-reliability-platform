@@ -85,7 +85,9 @@ class TrafficGenerator:
                 sent += 1
                 await asyncio.sleep(delay)
 
-        logger.info("TrafficGenerator finished: %d requests sent in %.1fs", sent, time.time() - start_time)
+        logger.info(
+            "TrafficGenerator finished: %d requests sent in %.1fs", sent, time.time() - start_time
+        )
 
     def stop(self) -> None:
         self._running = False

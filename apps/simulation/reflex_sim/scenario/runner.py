@@ -77,7 +77,9 @@ class ScenarioRunner:
 
             # Chờ hết thời lượng phase
             await asyncio.sleep(min(duration_s, 2.0 if fast else duration_s))
-            phase_results.append({"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)})
+            phase_results.append(
+                {"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)}
+            )
 
         # Đánh giá expectations
         exp_results = await check_expectations(scenario.expectations, start_time)

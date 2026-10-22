@@ -74,7 +74,9 @@ def create_app(watcher: ChaosRunsWatcher | None = None) -> FastAPI:
                 status = int(final_res["status_code"])
                 if "retry_after" in final_res:
                     headers["Retry-After"] = str(final_res["retry_after"])
-                return JSONResponse(content=final_res.get("error", {}), status_code=status, headers=headers)
+                return JSONResponse(
+                    content=final_res.get("error", {}), status_code=status, headers=headers
+                )
 
         return JSONResponse(content=final_res, headers=headers)
 

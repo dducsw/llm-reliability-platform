@@ -41,7 +41,7 @@ def _client_db() -> tuple[AsyncMongoClient, AsyncDatabase]:
 @app.command("mock-llm")
 def mock_llm(port: int = 8060) -> None:
     """Mock LLM server deterministic theo seed."""
-    uvicorn.run("reflex_sim.chaos_proxy.server:create_app", factory=True, host="0.0.0.0", port=port)
+    uvicorn.run("reflex_sim.mock_llm.server:create_app", factory=True, host="0.0.0.0", port=port)
 
 
 @app.command("chaos-proxy")
