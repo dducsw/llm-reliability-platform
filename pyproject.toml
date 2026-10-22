@@ -30,6 +30,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["docs"]  # tài liệu có code block minh họa, không phải mã nguồn
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC", "RUF"]
