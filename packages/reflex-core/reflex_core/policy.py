@@ -94,7 +94,7 @@ class Policy(_Model):
 
 def default_policy(route: str, candidates: list[Candidate]) -> Policy:
     return Policy(
-        _id=route,
+        id=route,
         version=1,
         candidates=candidates,
     )

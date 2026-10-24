@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import pytest
 from reflex_core.breaker import BreakerState, CircuitBreaker
 from reflex_core.policy import BreakerConfig
 
@@ -38,7 +37,7 @@ def test_breaker_trip_to_open_and_recover() -> None:
     assert cb.state == BreakerState.CLOSED
 
     cb.record(False)
-    assert cb.state == BreakerState.OPEN
+    assert cb.state == BreakerState.OPEN  # type: ignore[comparison-overlap]
     assert cb.allow() is False
 
     # Chưa hết 10s -> vẫn Open
@@ -79,7 +78,7 @@ def test_breaker_half_open_failure_re_trips() -> None:
 
     # Hết 5s -> HalfOpen
     clock.advance(6)
-    assert cb.state == BreakerState.HALF_OPEN
+    assert cb.state == BreakerState.HALF_OPEN  # type: ignore[comparison-overlap]
 
     # Probe thất bại -> Lập tức quay lại Open với backoff tăng
     cb.record(False)

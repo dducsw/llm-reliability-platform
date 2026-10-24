@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -1605,6 +1605,7 @@ name = "reflex-cortex"
 version = "0.1.0"
 source = { editable = "apps/cortex" }
 dependencies = [
+    { name = "httpx" },
     { name = "openai" },
     { name = "pydantic-settings" },
     { name = "reflex-core" },
@@ -1615,6 +1616,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
     { name = "openai", specifier = ">=1.50" },
     { name = "pydantic-settings", specifier = ">=2.5" },
     { name = "reflex-core", editable = "packages/reflex-core" },
@@ -1708,6 +1710,7 @@ dependencies = [
     { name = "datadog" },
     { name = "datadog-api-client" },
     { name = "ddtrace" },
+    { name = "httpx" },
     { name = "reflex-core" },
     { name = "structlog" },
 ]
@@ -1717,6 +1720,7 @@ requires-dist = [
     { name = "datadog", specifier = ">=0.50" },
     { name = "datadog-api-client", specifier = ">=2.28" },
     { name = "ddtrace", specifier = ">=2.14" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "reflex-core", editable = "packages/reflex-core" },
     { name = "structlog", specifier = ">=24.4" },
 ]

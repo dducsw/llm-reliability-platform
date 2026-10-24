@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
@@ -22,7 +22,10 @@ async def write_postmortem(
     actions: list[dict[str, Any]] = []
 
     if db is not None:
-        inc_doc = await db[INCIDENTS].find_one({"$or": [{"key": incident_key}, {"_id": incident_key}]}) or {}
+        inc_doc = (
+            await db[INCIDENTS].find_one({"$or": [{"key": incident_key}, {"_id": incident_key}]})
+            or {}
+        )
         cursor = db[ACTIONS].find({"incident_id": incident_key})
         async for act in cursor:
             actions.append(act)
@@ -60,7 +63,7 @@ async def write_postmortem(
     body_md = f"""# {title}
 
 **Trạng thái:** Resolved  
-**Thời điểm tạo báo cáo:** {now.strftime('%Y-%m-%d %H:%M:%S UTC')}  
+**Thời điểm tạo báo cáo:** {now.strftime("%Y-%m-%d %H:%M:%S UTC")}  
 **Target:** `{target}` | **Routes:** `{route_str}`  
 
 ---
@@ -69,12 +72,12 @@ async def write_postmortem(
 {summary}
 
 ## 2. Tác động kinh doanh & Kỹ thuật (Impact)
-- **Tổng requests ảnh hưởng:** {impact.get('requests', 0):,}
-- **Requests lỗi tới client (Delivered Bad):** {impact.get('delivered_bad', 0):,}
-- **Chi phí phát sinh:** ${impact.get('extra_cost_usd', 0.0):.2f} USD
+- **Tổng requests ảnh hưởng:** {impact.get("requests", 0):,}
+- **Requests lỗi tới client (Delivered Bad):** {impact.get("delivered_bad", 0):,}
+- **Chi phí phát sinh:** ${impact.get("extra_cost_usd", 0.0):.2f} USD
 
 ## 3. Nguyên nhân gốc rễ (Root Cause & Evidence)
-- **Phân loại bên chịu trách nhiệm:** `{diagnosis.get('side', 'provider')}`
+- **Phân loại bên chịu trách nhiệm:** `{diagnosis.get("side", "provider")}`
 - **Giả thuyết chẩn đoán:** {hyp}
 - **Độ tin cậy:** {confidence * 100:.1f}%
 
@@ -105,7 +108,7 @@ Hệ thống Reflex và Cortex đã thực thi các hành động bảo vệ:
         "title": title,
         "summary": summary,
         "body_md": body_md,
-        "tags": [target, sli] + routes,
+        "tags": [target, sli, *routes],
         "created_at": now,
         "updated_at": now,
     }

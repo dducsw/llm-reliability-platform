@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
+
 from reflex_sim.scenario.model import Scenario
 
 

@@ -53,9 +53,7 @@ def build(
                 "q_elig_short": {
                     "$sum": {"$cond": [{"$gte": ["$ts", start_short]}, "$q_eligible", 0]}
                 },
-                "q_good_short": {
-                    "$sum": {"$cond": [{"$gte": ["$ts", start_short]}, "$q_good", 0]}
-                },
+                "q_good_short": {"$sum": {"$cond": [{"$gte": ["$ts", start_short]}, "$q_good", 0]}},
                 "t_long": {"$sum": {"$cond": [{"$gte": ["$ts", start_long]}, "$total", 0]}},
                 "b_long": {
                     "$sum": {
@@ -69,9 +67,7 @@ def build(
                 "q_elig_long": {
                     "$sum": {"$cond": [{"$gte": ["$ts", start_long]}, "$q_eligible", 0]}
                 },
-                "q_good_long": {
-                    "$sum": {"$cond": [{"$gte": ["$ts", start_long]}, "$q_good", 0]}
-                },
+                "q_good_long": {"$sum": {"$cond": [{"$gte": ["$ts", start_long]}, "$q_good", 0]}},
                 "t_total": {"$sum": "$total"},
                 "b_total": {"$sum": {"$subtract": ["$total", "$ok"]}},
             }

@@ -15,11 +15,15 @@ def test_not_empty_validator() -> None:
 def test_truncation_validator() -> None:
     v = TruncationValidator()
     assert v.check(NormalizedResponse(content="full", finish_reason="stop", route="chat")).passed
-    assert not v.check(NormalizedResponse(content="cut", finish_reason="length", route="chat")).passed
+    assert not v.check(
+        NormalizedResponse(content="cut", finish_reason="length", route="chat")
+    ).passed
 
 
 def test_validator_chain() -> None:
     chain = build_chain(["not_empty", "no_truncation"])
-    results = run_chain(chain, NormalizedResponse(content="OK message", finish_reason="stop", route="chat"))
+    results = run_chain(
+        chain, NormalizedResponse(content="OK message", finish_reason="stop", route="chat")
+    )
     assert len(results) == 2
     assert all(r.passed for r in results)

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import AsyncIterator
 
 import httpx
+
 from reflex_gateway.adapters.base import UpstreamResult
 
 
@@ -91,7 +91,9 @@ class OpenaiCompatAdapter:
     async def stream(self, target: dict, payload: dict, timeout_s: float) -> AsyncIterator[dict]:
         res = await self.complete(target, payload, timeout_s)
         yield {
-            "choices": [{"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}]
+            "choices": [
+                {"delta": {"role": "assistant", "content": res.content}, "finish_reason": None}
+            ]
         }
         yield {
             "choices": [{"delta": {}, "finish_reason": res.finish_reason}],

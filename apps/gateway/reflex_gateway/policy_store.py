@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyStore:
-    def __init__(self, db: AsyncDatabase | None = None, seed_file: str = "seeds/policies.yaml") -> None:
+    def __init__(
+        self, db: AsyncDatabase | None = None, seed_file: str = "seeds/policies.yaml"
+    ) -> None:
         self._db = db
         self._seed_file = Path(seed_file)
         self._policies: dict[str, Policy] = {}

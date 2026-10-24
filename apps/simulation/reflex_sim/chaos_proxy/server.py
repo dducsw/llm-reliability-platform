@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import random
 import time
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+
 from reflex_sim.chaos_proxy import injector
 from reflex_sim.chaos_proxy.runs_watcher import ChaosRunsWatcher
 from reflex_sim.mock_llm import outputs
@@ -74,7 +74,9 @@ def create_app(watcher: ChaosRunsWatcher | None = None) -> FastAPI:
                 status = int(final_res["status_code"])
                 if "retry_after" in final_res:
                     headers["Retry-After"] = str(final_res["retry_after"])
-                return JSONResponse(content=final_res.get("error", {}), status_code=status, headers=headers)
+                return JSONResponse(
+                    content=final_res.get("error", {}), status_code=status, headers=headers
+                )
 
         return JSONResponse(content=final_res, headers=headers)
 

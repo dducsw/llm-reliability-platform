@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
@@ -72,7 +72,11 @@ class Sentinel:
     async def run(self) -> None:
         """Chạy vòng lặp vô tận theo chu kỳ tick_s."""
         self._running = True
-        logger.info("Sentinel loop started (interval=%.1fs, instance=%s)", self.tick_s, self.settings.instance_id)
+        logger.info(
+            "Sentinel loop started (interval=%.1fs, instance=%s)",
+            self.tick_s,
+            self.settings.instance_id,
+        )
         while self._running:
             try:
                 await self.tick()

@@ -60,7 +60,9 @@ def build(*, now: Any, from_: Any, to: Any, env: str = "local") -> list[dict[str
                 "ok": {"$sum": {"$cond": ["$ok", 1, 0]}},
                 "error": {"$sum": {"$cond": [{"$eq": ["$outcome", "error"]}, 1, 0]}},
                 "timeout": {"$sum": {"$cond": [{"$eq": ["$outcome", "timeout"]}, 1, 0]}},
-                "q_eligible": {"$sum": {"$cond": [{"$ne": [{"$type": "$quality"}, "missing"]}, 1, 0]}},
+                "q_eligible": {
+                    "$sum": {"$cond": [{"$ne": [{"$type": "$quality"}, "missing"]}, 1, 0]}
+                },
                 "q_good": {"$sum": {"$cond": [{"$eq": ["$quality.pass", True]}, 1, 0]}},
                 "pct": {
                     "$percentile": {

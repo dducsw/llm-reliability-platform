@@ -7,13 +7,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
+import uuid
 from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
-import hashlib
-import re
 from typing import Protocol
-import uuid
 
 Clock = Callable[[], datetime]
 """Trả về thời điểm hiện tại (UTC). Inject để test/replay deterministic."""

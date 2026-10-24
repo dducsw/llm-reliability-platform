@@ -6,6 +6,7 @@ from reflex_sim.scenario.loader import load
 from reflex_sim.scenario.runner import ScenarioRunner
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_silent_brownout_simulation_fast() -> None:
     scenario = load("silent-brownout")

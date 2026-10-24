@@ -60,7 +60,9 @@ def apply(fault: Fault, response: dict[str, Any], rng: random.Random) -> dict[st
         choice["finish_reason"] = "stop"
 
     elif fault.type == FaultType.REFUSAL:
-        phrase = fault.params.get("phrase", "Xin lỗi, tôi không thể thực hiện yêu cầu này vì vi phạm chính sách.")
+        phrase = fault.params.get(
+            "phrase", "Xin lỗi, tôi không thể thực hiện yêu cầu này vì vi phạm chính sách."
+        )
         message["content"] = phrase
         choice["finish_reason"] = "stop"
 

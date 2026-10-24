@@ -3,22 +3,31 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from pymongo import AsyncMongoClient
 import uvicorn
+from fastapi import Depends, FastAPI
+from pymongo import AsyncMongoClient
+from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_cp.actuator.apply import Actuator
 from reflex_cp.api.actions import router as actions_router
+from reflex_cp.api.auth import require_console_token
 from reflex_cp.api.incidents import router as incidents_router
+from reflex_cp.api.lab import router as lab_router
+from reflex_cp.api.memory import router as memory_router
+from reflex_cp.api.pipelines import router as pipelines_router
 from reflex_cp.api.policies import router as policies_router
 from reflex_cp.api.pulse import router as pulse_router
+from reflex_cp.api.replays import router as replays_router
+from reflex_cp.api.series import router as series_router
+from reflex_cp.api.slos import router as slos_router
 from reflex_cp.api.stream import router as stream_router
 from reflex_cp.hooks.datadog import router as datadog_router
 from reflex_cp.incidents.service import IncidentService
+from reflex_cp.outbox.publisher import OutboxPublisher
 from reflex_cp.sentinel.loop import Sentinel
 from reflex_cp.settings import Settings
 
@@ -36,6 +45,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         actuator_task: asyncio.Task | None = None
         sentinel: Sentinel | None = None
         actuator: Actuator | None = None
+        outbox: OutboxPublisher | None = None
+        outbox_task: asyncio.Task | None = None
 
         if settings.mongodb_uri:
             try:
@@ -57,6 +68,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 actuator_task = asyncio.create_task(actuator.run())
                 app.state.actuator_task = actuator_task
 
+                # Outbox publisher: Datadog events (at-least-once)
+                datadog = (
+                    DatadogApi(settings.dd_api_key, settings.dd_app_key, settings.dd_site)
+                    if settings.dd_api_key
+                    else None
+                )
+                outbox = OutboxPublisher(db, datadog)
+                outbox_task = asyncio.create_task(outbox.run())
+                app.state.outbox_task = outbox_task
+
                 logger.info("Control plane connected to MongoDB: %s", settings.mongodb_db)
             except Exception as e:
                 logger.error("Failed to initialize MongoDB connection or background tasks: %s", e)
@@ -70,6 +91,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             sentinel_task.cancel()
         if actuator_task and not actuator_task.done():
             actuator_task.cancel()
+        if outbox:
+            outbox.stop()
+        if outbox_task and not outbox_task.done():
+            outbox_task.cancel()
 
         if client:
             await client.close()
@@ -80,11 +105,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Đăng ký routes
     app.include_router(datadog_router)
-    app.include_router(actions_router)
-    app.include_router(pulse_router)
-    app.include_router(incidents_router)
-    app.include_router(policies_router)
-    app.include_router(stream_router)
+    protected = [Depends(require_console_token)]
+    for router in (
+        actions_router,
+        pulse_router,
+        incidents_router,
+        policies_router,
+        stream_router,
+        series_router,
+        slos_router,
+        replays_router,
+        pipelines_router,
+        memory_router,
+        lab_router,
+    ):
+        app.include_router(router, dependencies=protected)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

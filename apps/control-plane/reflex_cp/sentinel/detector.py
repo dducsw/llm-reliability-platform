@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from reflex_core.incident import Severity
+
 from reflex_cp.incidents.service import IncidentService
 
 logger = logging.getLogger(__name__)

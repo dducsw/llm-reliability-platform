@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import POLICY_HISTORY, SLI_1M
@@ -26,7 +25,11 @@ async def sli_window(
     start = now - timedelta(minutes=minutes)
     data = []
     if db is not None:
-        cursor = db[SLI_1M].find({"scope": scope, "key": key, "ts": {"$gte": start, "$lte": now}}).sort("ts", 1)
+        cursor = (
+            db[SLI_1M]
+            .find({"scope": scope, "key": key, "ts": {"$gte": start, "$lte": now}})
+            .sort("ts", 1)
+        )
         async for doc in cursor:
             data.append(doc)
     else:

@@ -46,4 +46,9 @@ M_CORTEX_EVIDENCE_INVALID: Final = "reflex.cortex.evidence_invalid"
 
 
 def base_tags(env: str, route: str | None = None, target: str | None = None) -> list[str]:
-    raise NotImplementedError
+    tags = [f"{ENV}:{env}"]
+    if route:
+        tags.append(f"{ROUTE}:{route}")
+    if target:
+        tags.append(f"{TARGET}:{target}")
+    return tags

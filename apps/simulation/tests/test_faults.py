@@ -1,9 +1,12 @@
 import random
+
 from reflex_sim.chaos_proxy import injector
 from reflex_sim.chaos_proxy.faults import Fault, FaultSelector, FaultType
 
 
-def _sample_resp(content: str = '{"items": [{"name": "Trà sữa", "qty": 2}], "address": "123 Lê Lợi"}') -> dict:
+def _sample_resp(
+    content: str = '{"items": [{"name": "Trà sữa", "qty": 2}], "address": "123 Lê Lợi"}',
+) -> dict:
     return {
         "choices": [
             {
@@ -25,7 +28,9 @@ def test_truncate_fault() -> None:
     res = injector.apply(fault, original, rng)
 
     assert res["choices"][0]["finish_reason"] == "length"
-    assert len(res["choices"][0]["message"]["content"]) < len(original["choices"][0]["message"]["content"])
+    assert len(res["choices"][0]["message"]["content"]) < len(
+        original["choices"][0]["message"]["content"]
+    )
 
 
 def test_corrupt_json_fault() -> None:
@@ -66,7 +71,10 @@ def test_rate_limit_fault() -> None:
 
 def test_selector_matching() -> None:
     faults = [
-        Fault(type=FaultType.TRUNCATE, selector=FaultSelector(target="vendorA:large", route="order.extract")),
+        Fault(
+            type=FaultType.TRUNCATE,
+            selector=FaultSelector(target="vendorA:large", route="order.extract"),
+        ),
         Fault(type=FaultType.ERROR, selector=FaultSelector(target="vendorB:large")),
     ]
     rng = random.Random(42)

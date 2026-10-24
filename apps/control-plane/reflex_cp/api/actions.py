@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import logging
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from reflex_core.actions import Action, ActionState, ActionType, ProposedBy
+from reflex_core.actions import (
+    Action,
+    ActionState,
+    ActionType,
+    Decision,
+    ProposedBy,
+    can_transition,
+)
 from reflex_mongo.collections import ACTIONS
 
 from reflex_cp.actuator.apply import Actuator
 from reflex_cp.policy_engine.decision import decide
+from reflex_cp.policy_engine.guardrails import evaluate_all
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +92,32 @@ async def approve(action_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Action not found")
 
     action = Action.model_validate(doc)
-    action.state = ActionState.APPROVED
-    action.updated_at = datetime.now(tz=UTC)
+    if not can_transition(action.state, ActionState.APPROVED):
+        raise HTTPException(
+            status_code=409, detail=f"Cannot approve action in state {action.state.value}"
+        )
 
-    await actuator.apply(action)
+    # Người duyệt chỉ override được guardrail mềm; params sai schema thì không bao giờ được áp.
+    guardrails = await evaluate_all(action, db)
+    schema = next((g for g in guardrails if g.name == "schema"), None)
+    if schema is not None and not schema.pass_:
+        raise HTTPException(status_code=422, detail=schema.detail or "Invalid action params")
+
+    now = datetime.now(tz=UTC)
+    action.state = ActionState.APPROVED
+    action.decision = Decision(mode="human", by="console", at=now, guardrails=guardrails)
+    action.updated_at = now
+
+    try:
+        await actuator.apply(action)
+    except Exception as e:
+        logger.error("Error applying approved action %s: %s", action_id, e)
+        action.state = ActionState.FAILED
+        action.updated_at = datetime.now(tz=UTC)
+
     updated_doc = action.model_dump(by_alias=True, mode="json")
     await db[ACTIONS].update_one({"_id": action_id}, {"$set": updated_doc})
-    return {"ok": True, "action": updated_doc}
+    return {"ok": action.state != ActionState.FAILED, "action": updated_doc}
 
 
 @router.post("/api/actions/{action_id}/reject")
@@ -104,8 +131,14 @@ async def reject(action_id: str, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Action not found")
 
     action = Action.model_validate(doc)
+    if not can_transition(action.state, ActionState.REJECTED):
+        raise HTTPException(
+            status_code=409, detail=f"Cannot reject action in state {action.state.value}"
+        )
+    now = datetime.now(tz=UTC)
     action.state = ActionState.REJECTED
-    action.updated_at = datetime.now(tz=UTC)
+    action.decision = Decision(mode="human", by="console", at=now, guardrails=[])
+    action.updated_at = now
 
     updated_doc = action.model_dump(by_alias=True, mode="json")
     await db[ACTIONS].update_one({"_id": action_id}, {"$set": updated_doc})

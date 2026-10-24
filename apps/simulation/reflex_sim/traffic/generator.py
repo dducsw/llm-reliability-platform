@@ -9,6 +9,7 @@ import time
 import uuid
 
 import httpx
+
 from reflex_sim.traffic.diurnal import rate_at
 from reflex_sim.traffic.prompts import make_prompt
 
@@ -70,6 +71,7 @@ class TrafficGenerator:
         self._running = True
         start_time = time.time()
         sent = 0
+        tasks: set[asyncio.Task] = set()
 
         async with httpx.AsyncClient() as client:
             while self._running:
@@ -81,11 +83,15 @@ class TrafficGenerator:
                 current_rps = rate_at(elapsed, self.base_rps, self.amplitude, self.period_s)
                 delay = 1.0 / current_rps
 
-                asyncio.create_task(self.send_one(client, elapsed))
+                task = asyncio.create_task(self.send_one(client, elapsed))
+                tasks.add(task)
+                task.add_done_callback(tasks.discard)
                 sent += 1
                 await asyncio.sleep(delay)
 
-        logger.info("TrafficGenerator finished: %d requests sent in %.1fs", sent, time.time() - start_time)
+        logger.info(
+            "TrafficGenerator finished: %d requests sent in %.1fs", sent, time.time() - start_time
+        )
 
     def stop(self) -> None:
         self._running = False

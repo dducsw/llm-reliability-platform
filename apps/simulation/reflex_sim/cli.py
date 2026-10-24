@@ -15,10 +15,10 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
+import uvicorn
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import BENCH_TS
 
-import uvicorn
 from reflex_sim.bench.importer import import_bench
 from reflex_sim.bench.runners import rebuild_baselines, top_incidents
 from reflex_sim.prober.prober import Prober
@@ -41,7 +41,7 @@ def _client_db() -> tuple[AsyncMongoClient, AsyncDatabase]:
 @app.command("mock-llm")
 def mock_llm(port: int = 8060) -> None:
     """Mock LLM server deterministic theo seed."""
-    uvicorn.run("reflex_sim.chaos_proxy.server:create_app", factory=True, host="0.0.0.0", port=port)
+    uvicorn.run("reflex_sim.mock_llm.server:create_app", factory=True, host="0.0.0.0", port=port)
 
 
 @app.command("chaos-proxy")

@@ -1,7 +1,7 @@
 import math
-import pytest
+
 from reflex_core.policy import Candidate, CandidateRole, Policy
-from reflex_core.routing import TargetInputs, decide, eligible, score, softmax
+from reflex_core.routing import TargetInputs, decide, eligible, softmax
 
 
 class DeterministicRng:
@@ -51,7 +51,7 @@ def test_softmax_probabilities_sum_to_one() -> None:
 
 def test_decide_routing() -> None:
     policy = Policy(
-        _id="order.extract",
+        id="order.extract",
         version=1,
         candidates=[
             Candidate(target="vendorA:large", weight=0.7, role=CandidateRole.PRIMARY),

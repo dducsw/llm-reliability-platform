@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 import logging
-from typing import Any
+from datetime import UTC, datetime
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.actions import Action, ActionState, Execution
@@ -37,6 +36,7 @@ class Actuator:
         if self.db is None:
             # Fallback in-memory
             from reflex_core.policy import Candidate, CandidateRole, default_policy
+
             current_policy = default_policy(
                 route=route,
                 candidates=[

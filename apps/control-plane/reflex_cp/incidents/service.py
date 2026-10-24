@@ -17,8 +17,6 @@ from reflex_core.incident import (
 )
 from reflex_mongo.collections import INCIDENTS
 
-from reflex_cp.incidents.lifecycle import can_transition
-
 logger = logging.getLogger(__name__)
 
 
@@ -50,9 +48,7 @@ class IncidentService:
 
         if self.db is not None:
             # Tìm incident đang mở có cùng dedup_key
-            existing = await self.db[INCIDENTS].find_one(
-                {"dedup_key": dedup_key, "is_open": True}
-            )
+            existing = await self.db[INCIDENTS].find_one({"dedup_key": dedup_key, "is_open": True})
             if existing:
                 await self.db[INCIDENTS].update_one(
                     {"_id": existing["_id"]},

@@ -13,7 +13,8 @@ from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from reflex_gateway.engine.orchestrator import Orchestrator, RequestContext
+
+from reflex_gateway.engine.orchestrator import Orchestrator, OrchestratorResult, RequestContext
 
 router = APIRouter()
 
@@ -24,11 +25,13 @@ async def chat_completions(request: Request) -> Response:
     try:
         payload = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from None
 
     route = request.headers.get("x-reflex-route") or payload.get("model")
     if not route:
-        raise HTTPException(status_code=400, detail="Missing x-reflex-route header or model in payload")
+        raise HTTPException(
+            status_code=400, detail="Missing x-reflex-route header or model in payload"
+        )
 
     priority = int(request.headers.get("x-priority", "1"))
     session = request.headers.get("x-reflex-session")
@@ -47,6 +50,10 @@ async def chat_completions(request: Request) -> Response:
 
     is_stream = bool(payload.get("stream", False))
     if is_stream:
+        if orchestrator.should_shed(route, priority):
+            # Trả 503 thật thay vì mở SSE rồi mới báo lỗi.
+            return _shed_response(orchestrator.shed(ctx))
+
         async def event_generator() -> AsyncIterator[str]:
             async for chunk in orchestrator.stream(ctx, payload):
                 yield f"data: {json.dumps(chunk)}\n\n"
@@ -55,14 +62,30 @@ async def chat_completions(request: Request) -> Response:
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     res = await orchestrator.complete(ctx, payload)
+    if res.status == 503:
+        return _shed_response(res)
     headers = {
         "x-reflex-target": res.request_event.final_target or "",
         "x-reflex-attempts": str(res.request_event.attempts),
         "x-reflex-policy-version": str(res.request_event.policy_version),
         "x-reflex-request-id": res.request_event.request_id,
-        "x-reflex-quality": "pass" if (res.request_event.quality and res.request_event.quality.pass_) else "fail",
+        "x-reflex-quality": "pass"
+        if (res.request_event.quality and res.request_event.quality.pass_)
+        else "fail",
     }
     return JSONResponse(content=res.body, headers=headers)
+
+
+def _shed_response(res: OrchestratorResult) -> JSONResponse:
+    return JSONResponse(
+        status_code=res.status,
+        content=res.body,
+        headers={
+            "Retry-After": str(res.retry_after_s or 5),
+            "x-reflex-request-id": res.request_event.request_id,
+            "x-reflex-policy-version": str(res.request_event.policy_version),
+        },
+    )
 
 
 @router.get("/v1/models")

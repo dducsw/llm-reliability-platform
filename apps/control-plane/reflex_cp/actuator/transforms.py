@@ -9,6 +9,7 @@ from reflex_core.actions import (
     ActionType,
     EnableHedgingParams,
     OpenCircuitGlobalParams,
+    ShedPriorityParams,
     ShiftWeightParams,
 )
 from reflex_core.policy import Policy, UpdatedBy
@@ -50,6 +51,10 @@ def apply_action(policy: Policy, action: Action) -> Policy:
         new_p.hedge.enabled = True
         new_p.hedge.after = params.after
         new_p.hedge.max_extra_cost_ratio = params.max_cost
+
+    elif action.type == ActionType.SHED_PRIORITY:
+        shed = ShedPriorityParams.model_validate(action.params)
+        new_p.shed.when_all_degraded_min_priority = shed.min_priority
 
     # Cập nhật thông tin version và audit log
     new_p.version += 1
