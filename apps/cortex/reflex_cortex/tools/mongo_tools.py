@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import POLICY_HISTORY, SLI_1M
@@ -23,7 +24,7 @@ async def sli_window(
 ) -> ToolResult:
     now = datetime.now(tz=UTC)
     start = now - timedelta(minutes=minutes)
-    data = []
+    data: list[dict[str, Any]] = []
     if db is not None:
         cursor = (
             db[SLI_1M]
@@ -35,8 +36,8 @@ async def sli_window(
     else:
         data = [{"ts": now.isoformat(), "total": 100, "q_eligible": 100, "q_good": 70}]
 
-    total_req = sum(d.get("total", 0) for d in data)
-    q_good = sum(d.get("q_good", 0) for d in data)
+    total_req = sum(int(d.get("total", 0)) for d in data)
+    q_good = sum(int(d.get("q_good", 0)) for d in data)
     q_rate = (q_good / total_req) if total_req > 0 else 1.0
 
     return ToolResult(
@@ -57,7 +58,7 @@ async def top_contributors(
 
     data = {}
     if db is not None:
-        res = await db.attempts_ts.aggregate(pipeline).to_list(1)
+        res = await (await db.attempts_ts.aggregate(pipeline)).to_list(1)
         data = res[0] if res else {}
     else:
         data = {
@@ -83,7 +84,7 @@ async def blast_radius(
 
     data = {}
     if db is not None:
-        res = await db.requests_ts.aggregate(pipeline).to_list(1)
+        res = await (await db.requests_ts.aggregate(pipeline)).to_list(1)
         data = res[0] if res else {}
     else:
         data = {"requests": 1250, "delivered_bad": 28, "saved_by_reflex": 180, "cost_usd": 3.12}
@@ -127,7 +128,7 @@ async def probes_compare(
 
     data = {}
     if db is not None:
-        res = await db.probes_ts.aggregate(pipeline).to_list(1)
+        res = await (await db.probes_ts.aggregate(pipeline)).to_list(1)
         data = res[0] if res else {}
     else:
         data = {"paths": {"direct": {"ok_ratio": 0.65}, "via_gateway": {"ok_ratio": 0.64}}}

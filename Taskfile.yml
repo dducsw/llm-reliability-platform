@@ -35,6 +35,12 @@ tasks:
       - uv run reflex-mongo migrate
       - uv run reflex-mongo seed --dir seeds
       - uv run reflex-sim bench import --days 60
+      - uv run python tools/bootstrap_memory.py
+
+  memory:bootstrap:
+    desc: Nạp 50 sự cố mẫu có vector signature 64D vào Incident Memory
+    cmds:
+      - uv run python tools/bootstrap_memory.py
 
   migrate:
     desc: Tạo collections, TS, index, TTL, validators, search indexes (idempotent)
@@ -98,3 +104,8 @@ tasks:
     desc: Chạy scenario chính ở chế độ quay video
     cmds:
       - uv run python tools/record_demo.py {{.CLI_ARGS}}
+
+  judge:verify:
+    desc: Chạy kiểm chứng và xuất Proof Report cho Ban Giám Khảo trong 3 phút (I4)
+    cmds:
+      - uv run python tools/judge_verify.py
