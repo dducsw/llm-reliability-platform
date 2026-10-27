@@ -63,7 +63,10 @@ from reflex_mongo.collections import (  # noqa: E402
 )
 
 CFG = GuardrailConfig(cooldown_s=30, cost_ceiling_usd_h=5.0)
-NOW = datetime.now(tz=UTC)
+
+
+def _ago(minutes: float) -> datetime:
+    return datetime.now(tz=UTC) - timedelta(minutes=minutes)
 
 
 def _shift(pct: float = 0.5, to: str = "B", **kw: Any) -> Action:
@@ -83,7 +86,7 @@ async def _result(action: Action, db: Any, name: str) -> Any:
 async def _seed_traffic(db: Any, route_rps: float, dest_rps: float = 0.0) -> None:
     """5 phút sli_1m; token mỗi request 1000 in / 500 out."""
     for m in range(5):
-        ts = NOW - timedelta(minutes=m)
+        ts = _ago(m)
         n = route_rps * 60
         await db[SLI_1M].insert_one(
             {
@@ -125,8 +128,13 @@ def _prior(
         "type": type_,
         "params": {"route": "r", "from": "X", "to": to, "pct": 0.5},
         "state": state,
-        "created_at": NOW - timedelta(minutes=minutes_ago),
+        "ago_min": minutes_ago,  # created_at tính lúc insert, không lúc collect
     }
+
+
+async def _insert(db: Any, prior: dict) -> None:
+    doc = {k: v for k, v in prior.items() if k != "ago_min"}
+    await db[ACTIONS].insert_one({**doc, "created_at": _ago(prior["ago_min"])})
 
 
 @pytest.mark.parametrize(
@@ -141,7 +149,7 @@ def _prior(
 )
 async def test_cooldown(fake_db: Any, prior: dict | None, passed: bool) -> None:
     if prior:
-        await fake_db[ACTIONS].insert_one(prior)
+        await _insert(fake_db, prior)
     assert (await _result(_shift(), fake_db, "cooldown")).pass_ is passed
 
 
@@ -156,13 +164,13 @@ async def test_cooldown(fake_db: Any, prior: dict | None, passed: bool) -> None:
 )
 async def test_flap_guard(fake_db: Any, history: list[str], passed: bool) -> None:
     for i, to in enumerate(history):
-        await fake_db[ACTIONS].insert_one(_prior(to, 14 - i))
+        await _insert(fake_db, _prior(to, 14 - i))
     assert (await _result(_shift(to="B"), fake_db, "flap_guard")).pass_ is passed
 
 
 async def test_flap_guard_ignores_actions_outside_window(fake_db: Any) -> None:
     for i, to in enumerate(["B", "A", "B", "A"]):
-        await fake_db[ACTIONS].insert_one(_prior(to, 30 + i))
+        await _insert(fake_db, _prior(to, 30 + i))
     assert (await _result(_shift(to="B"), fake_db, "flap_guard")).pass_ is True
 
 
