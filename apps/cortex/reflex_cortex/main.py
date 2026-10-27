@@ -15,7 +15,8 @@ from reflex_telemetry import setup as telemetry_setup
 from reflex_telemetry.datadog_api import DatadogApi
 from reflex_telemetry.tags import SVC_CORTEX
 
-from reflex_cortex.agent import CortexAgent
+from reflex_cortex.agent import CortexAgent, GatewayLlm
+from reflex_cortex.postmortem import write_postmortem
 from reflex_cortex.settings import Settings
 
 app = typer.Typer(no_args_is_help=True)
@@ -36,6 +37,15 @@ async def claim(db: AsyncDatabase, incident_key: str) -> bool:
     res = await db[INCIDENTS].update_one(
         {"key": incident_key, "status": IncidentStatus.DETECTED.value},
         {"$set": {"status": IncidentStatus.INVESTIGATING.value}},
+    )
+    return res.modified_count == 1
+
+
+async def claim_postmortem(db: AsyncDatabase, incident_key: str) -> bool:
+    """resolved + chưa có postmortem → đánh dấu `pending`; chỉ một Cortex instance thắng."""
+    res = await db[INCIDENTS].update_one(
+        {"key": incident_key, "status": IncidentStatus.RESOLVED.value, "postmortem_id": None},
+        {"$set": {"postmortem_id": "pending"}},
     )
     return res.modified_count == 1
 
@@ -61,6 +71,17 @@ async def serve_forever(settings: Settings) -> None:
                     await agent.investigate(doc["key"])
                 except Exception:
                     logger.exception("Investigation failed for %s", doc["key"])
+            elif doc.get("status") == IncidentStatus.RESOLVED.value and await claim_postmortem(
+                db, doc["key"]
+            ):
+                try:
+                    await write_postmortem(doc["key"], db, llm=agent.llm)
+                except Exception:
+                    logger.exception("Postmortem failed for %s", doc["key"])
+                    await db[INCIDENTS].update_one(
+                        {"key": doc["key"], "postmortem_id": "pending"},
+                        {"$set": {"postmortem_id": None}},
+                    )
 
 
 @app.command()
@@ -92,6 +113,25 @@ def investigate(incident_key: str) -> None:
                 await client.close()
 
     typer.echo(json.dumps(asyncio.run(_run()), indent=2, ensure_ascii=False))
+
+
+@app.command()
+def postmortem(incident_key: str, no_llm: bool = False) -> None:
+    """Soạn (lại) postmortem cho một incident."""
+    telemetry_setup.init(SVC_CORTEX, llmobs=True)
+    settings = Settings()
+    if not settings.mongodb_uri:
+        raise typer.BadParameter("MONGODB_URI is required for `postmortem`")
+
+    async def _run() -> dict:
+        client: AsyncMongoClient = AsyncMongoClient(settings.mongodb_uri)
+        try:
+            llm = None if no_llm else GatewayLlm(settings.gateway_url, settings.reason_route)
+            return await write_postmortem(incident_key, client[settings.mongodb_db], llm=llm)
+        finally:
+            await client.close()
+
+    typer.echo(asyncio.run(_run())["body_md"])
 
 
 @app.command()
