@@ -13,7 +13,11 @@ class _Actions:
         self.docs = docs
 
     async def find_one(self, flt: dict) -> dict | None:
-        return self.docs.get(flt["_id"])
+        key = flt.get("_id")
+        return self.docs.get(key) if isinstance(key, str) else None
+
+    def find(self, _flt: dict) -> Any:
+        return _NoHealth().find(_flt)
 
     async def update_one(self, flt: dict, upd: dict, **_: Any) -> None:
         self.docs[flt["_id"]].update(upd["$set"])
@@ -26,10 +30,26 @@ class _NoHealth:
     async def find_one(self, _flt: dict) -> None:
         return None
 
+    def find(self, _flt: dict) -> Any:
+        class _Empty:
+            def sort(self, *_: Any) -> "_Empty":
+                return self
+
+            def __aiter__(self) -> "_Empty":
+                return self
+
+            async def __anext__(self) -> dict:
+                raise StopAsyncIteration
+
+        return _Empty()
+
 
 class _Db(dict):
     def __init__(self, docs: dict[str, dict]) -> None:
-        super().__init__(actions=_Actions(docs), health_state=_NoHealth())
+        super().__init__(actions=_Actions(docs))
+
+    def __missing__(self, _name: str) -> _NoHealth:
+        return _NoHealth()
 
 
 class _Actuator:
