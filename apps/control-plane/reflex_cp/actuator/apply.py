@@ -197,7 +197,10 @@ class Actuator:
         while self._running:
             try:
                 pipeline = [{"$match": {"operationType": {"$in": ["insert", "update", "replace"]}}}]
-                async with self.db[ACTIONS].watch(pipeline) as stream:
+                async with await self.db[ACTIONS].watch(
+                    pipeline,
+                    full_document="updateLookup",  # approve = update → cần doc đầy đủ
+                ) as stream:
                     async for change in stream:
                         if not self._running:
                             break

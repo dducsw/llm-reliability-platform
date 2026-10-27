@@ -1,0 +1,14 @@
+# Không đưa secret / artefact local vào build context
+.env
+.env.*
+!.env.example
+.git
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+apps/console/dist
+infra/terraform/.terraform
+infra/compose/nginx/certs
