@@ -4,7 +4,8 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY . .
-RUN uv sync --frozen --no-dev --no-editable --package reflex-gateway
+# Cache uv dùng chung giữa các image (không tải lại package mỗi lần build)
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable --package reflex-gateway
 
 FROM python:3.12-slim-bookworm
 WORKDIR /app

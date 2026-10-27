@@ -64,6 +64,26 @@ không bao giờ nhận event. Unit test không bắt được vì dùng fake. �
 Có integration test trên Change Stream thật: `apps/gateway/tests/test_policy_hot_reload_it.py`,
 `apps/simulation/tests/test_runs_watcher.py`.
 
+### Data path mock chưa từng đúng route
+
+| Lỗi | Hậu quả | Sửa |
+| :--- | :--- | :--- |
+| `.env` dev thiếu `CHAOS_PROXY_URL` → gateway trong container gọi `localhost:8070` | Mọi attempt lỗi kết nối → breaker mở → shed | compose đặt mặc định URL nội bộ cho mọi service Python |
+| Adapter `openai_compat` không gửi `x-reflex-route`; mock adapter đọc `target["route"]` nhưng không ai set | chaos-proxy/mock trả câu chat cho **mọi** route → `order.extract`/`support.triage` luôn quality fail; fault theo route không áp đúng | Orchestrator gắn `route` vào target; adapter gửi header |
+| Mock `support.triage` thiếu `department` (bắt buộc trong `triage_v1`) | Route luôn fail | Sửa output (reflex-core, `mock_outputs.py`) |
+| **Contract:** `cortex_output` bắt `hypotheses`+`recommendation` ở top-level, nhưng agent trả `{"tool"}` ở lượt trung gian và `{"final": …}` ở lượt cuối | Mỗi lượt gọi tool của Cortex bị gateway coi là quality fail → retry/rescue sang vendor khác (tốn tiền, sai số liệu SLI của `cortex.reason`) | Schema `oneOf` tool-turn \| final; mock output theo cùng giao thức — **Đức review** (eval harness của Đức có đọc output mock cũ không) |
+
+Test chặn hồi quy: `packages/reflex-core/tests/test_validators.py::test_mock_outputs_pass_seeded_route_validators`.
+
+**Còn mở (SE-2.1):** chaos-proxy hiện **tự sinh** response, không forward tới vendor thật hay mock-llm.
+Với stack `demo` (vendor thật đi qua chaos-proxy) cần thêm chế độ forward theo `base_url` thật của vendor.
+
+### ddtrace × PyMongo
+
+`ddtrace` 4.16 báo `failed to enable ddtrace support for pymongo: type object 'Server' has no attribute
+'run_operation'` — không crash, chỉ mất span Mongo trong APM. Chờ ddtrace hỗ trợ PyMongo async mới,
+hoặc tạm đặt `DD_TRACE_PYMONGO_ENABLED=false` để bớt log.
+
 ### Migrate: validator bị bỏ qua (DE)
 
 `reflex-mongo migrate` trên `mongodb-atlas-local:8.0` báo
@@ -84,7 +104,33 @@ task demo:reset                         # dry-run; thêm `-- --yes` để xoá
 task demo:record -- --reset             # quay video, console ?present=1
 ```
 
-## 5. Kết quả
+## 5. Kết quả (stack local, Docker Desktop trên macOS, Mongo `mongodb-atlas-local:8.0`)
+
+Dữ liệu: `migrate` + `seed` + `bootstrap_memory` (50 incident). Chưa chạy `bench import --days 60`.
+
+### Smoke
+
+| Kiểm tra | Kết quả |
+| :--- | :--- |
+| 3 route qua gateway | `order.extract`, `chat.reply`, `support.triage`: 200, 1 attempt, quality pass |
+| Hot-reload policy | `$set version` trên `chat.reply` → log `Hot-reloaded policy for chat.reply v2` |
+| `nginx -t` (template demo) | OK; token render đúng; allowlist 9 dải IP webhook ap1 |
+| Integration test (Mongo local) | 9 passed, 3 skipped |
+
+### SE-9.1 — `tools/chaos_self.py` (10 rps × 60s mỗi thí nghiệm, client failover 2 gateway)
+
+| Dừng | Baseline OK | OK khi dừng | Phục hồi | Kết quả |
+| :--- | ---: | ---: | :--- | :--- |
+| mongo | 100% | 100% (600/600) | ✓ | PASS |
+| datadog-agent | 100% | 100% (600/600) | ✓ | PASS |
+| cortex | 100% | 100% (600/600) | ✓ | PASS |
+| control-plane | 100% | 100% (600/600) | ✓ | PASS |
+| gateway-1 | 100% | 100% (600/600) | ✓ | PASS |
+
+Sau khi mongo khởi động lại, gateway ghi telemetry tiếp (20/20 request vào `requests_ts`). Trace bị
+drop trong lúc tắt datadog-agent là đúng thiết kế (fire-and-forget).
+
+### SE-9.2 — `tools/loadtest.py` 50 rps × 30 phút
 
 _(đang chạy)_
 
