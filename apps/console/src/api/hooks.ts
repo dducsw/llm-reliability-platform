@@ -7,6 +7,7 @@ import { applyEvent } from "../stream/store";
 import { apiGet, apiPost } from "./client";
 import type {
   Action,
+  DemoState,
   DualLedger,
   Incident,
   MemoryPoint,
@@ -66,6 +67,13 @@ export const useScenarios = () =>
   useQuery({
     queryKey: ["lab", "scenarios"],
     queryFn: async () => (await apiGet<{ scenarios: string[] }>("/api/lab/scenarios")).scenarios,
+  });
+
+export const useDemo = () =>
+  useQuery({
+    queryKey: ["lab", "demo"], // topic `lab` (chaos_runs) invalidate khi phase đổi
+    queryFn: () => apiGet<DemoState>("/api/demo"),
+    refetchInterval: 30_000,
   });
 
 export const useReplayVariants = () =>

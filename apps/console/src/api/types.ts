@@ -140,3 +140,15 @@ export interface SimilarIncident {
   sim?: number;
   [key: string]: unknown;
 }
+
+export interface DemoState {
+  profile: string;
+  time_scale: number;
+  run: {
+    run_id: string;
+    scenario: string;
+    phase_index: number;
+    phase_starts_at: string;
+    started_at: string;
+  } | null;
+}

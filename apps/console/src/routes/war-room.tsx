@@ -3,7 +3,9 @@ import { Link, useParams } from "@tanstack/react-router";
 
 import { useActions, useIncident } from "../api/hooks";
 import { DatadogLinks } from "../components/DatadogLinks";
+import { NarrationRibbon } from "../components/NarrationRibbon";
 import { Badge, Card, Empty, QueryState, statusTone } from "../components/ui";
+import { presenting } from "../present";
 
 export function WarRoomPage() {
   const { key } = useParams({ strict: false }) as { key: string };
@@ -16,6 +18,7 @@ export function WarRoomPage() {
     <QueryState isLoading={incident.isLoading} error={incident.error}>
       {inc && (
         <div className="space-y-4">
+          <NarrationRibbon incident={inc} actions={related} />
           <Card>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-mono text-lg">{inc.key}</h1>
@@ -60,20 +63,22 @@ export function WarRoomPage() {
                 <Empty>Chưa có action.</Empty>
               )}
             </Card>
-            <Card title="Signals">
-              {inc.signals.length ? (
-                <ul className="space-y-1">
-                  {inc.signals.map((s, idx) => (
-                    <li key={idx}>
-                      <Badge tone="info">{s.source}</Badge> <span className="text-slate-400">{s.at}</span>{" "}
-                      {s.diagnosis}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <Empty>Không có signal.</Empty>
-              )}
-            </Card>
+            {!presenting && (
+              <Card title="Signals">
+                {inc.signals.length ? (
+                  <ul className="space-y-1">
+                    {inc.signals.map((s, idx) => (
+                      <li key={idx}>
+                        <Badge tone="info">{s.source}</Badge> <span className="text-slate-400">{s.at}</span>{" "}
+                        {s.diagnosis}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty>Không có signal.</Empty>
+                )}
+              </Card>
+            )}
             <Card title="Timeline">
               {inc.timeline?.length ? (
                 <ul className="space-y-1">
