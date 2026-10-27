@@ -24,6 +24,10 @@ class OpenaiCompatAdapter:
         api_key = target.get("api_key")
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
+        if target.get("route"):
+            headers["x-reflex-route"] = target[
+                "route"
+            ]  # chaos-proxy/mock-llm: fault + output theo route
 
         start = time.perf_counter()
         async with httpx.AsyncClient(timeout=timeout_s) as client:

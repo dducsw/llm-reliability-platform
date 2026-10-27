@@ -48,6 +48,29 @@ Lần đầu `docker compose up`, mọi service Python restart liên tục với
 | Gateway/CP/sim không thấy `seeds/`, `scenarios/` | Code đọc đường dẫn tương đối, runtime chỉ copy `.venv` | Copy `seeds/` và `scenarios/` vào image |
 | `.env` (secret), `.git`, `node_modules` lọt vào build context | Không có `.dockerignore` | Thêm `.dockerignore` (root) và `apps/console/.dockerignore` |
 
+### Change Stream chưa từng chạy (PyMongo async)
+
+`AsyncCollection.watch()` trả về **coroutine** → phải `async with await coll.watch(...)`. Thiếu `await` →
+mỗi 2s log `'coroutine' object does not support the asynchronous context manager protocol` và
+không bao giờ nhận event. Unit test không bắt được vì dùng fake. Đã sửa:
+
+| Nơi | Hậu quả trước khi sửa |
+| :--- | :--- |
+| `gateway/policy_store.py` | Hot-reload policy (SE-1.5) không chạy — gateway chỉ thấy policy lúc khởi động |
+| `control-plane/actuator/apply.py` | Actuator không nhận action `proposed`/`approved` nào qua stream; thêm `full_document="updateLookup"` vì approve là `update` |
+| `simulation/chaos_proxy/runs_watcher.py` | Chaos-proxy không áp fault từ scenario; thêm: tính lại fault từ mọi `chaos_runs` active → run kết thúc (`update_many`) thì hết fault |
+| **`reflex-mongo/streams.py` (DE-1.1)** | `StreamConsumer` cùng lỗi — Đức review giúp |
+
+Có integration test trên Change Stream thật: `apps/gateway/tests/test_policy_hot_reload_it.py`,
+`apps/simulation/tests/test_runs_watcher.py`.
+
+### Migrate: validator bị bỏ qua (DE)
+
+`reflex-mongo migrate` trên `mongodb-atlas-local:8.0` báo
+`Unknown $jsonSchema keyword: $defs` cho `actions`, `incidents`, `policies` → 3 validator **không được
+cài**. `$jsonSchema` của MongoDB không hỗ trợ `$defs`/`$ref`; cần inline định nghĩa khi export schema
+(`tools/export_schemas.py`).
+
 Đức lưu ý: file data (prompt `.md`, pipeline JSON…) nằm trong package giờ phải được đóng vào wheel
 (hatchling mặc định lấy mọi file trong thư mục package — nếu thêm file ngoài package thì cần khai báo).
 

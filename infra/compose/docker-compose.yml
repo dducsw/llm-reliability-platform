@@ -8,6 +8,11 @@ x-python: &python
   environment: &pyenv
     REFLEX_ENV: ${REFLEX_ENV:-local}
     MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/?directConnection=true}
+    # Địa chỉ nội bộ compose; code mặc định localhost (chạy ngoài Docker) → phải đặt ở đây
+    CHAOS_PROXY_URL: ${CHAOS_PROXY_URL:-http://chaos-proxy:8070}
+    MOCK_LLM_URL: ${MOCK_LLM_URL:-http://mock-llm:8060}
+    GATEWAY_URL: ${GATEWAY_URL:-http://gateway-1:8080}
+    CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-http://control-plane:8090}
     DD_AGENT_HOST: datadog-agent
     DD_ENV: ${REFLEX_ENV:-local}
     DD_VERSION: ${REFLEX_VERSION:-0.1.0}

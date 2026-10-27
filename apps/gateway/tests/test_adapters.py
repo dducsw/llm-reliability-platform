@@ -92,3 +92,25 @@ def test_resolve_refs_builds_base_url_and_model(monkeypatch) -> None:  # type: i
     )
     assert doc["base_url"] == "http://chaos:8070/vendorA"
     assert doc["model"] == "gpt-x"
+
+
+async def test_openai_compat_forwards_route_header(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """chaos-proxy/mock-llm chọn output + fault theo `x-reflex-route`."""
+    from reflex_gateway.adapters import openai_compat
+
+    seen: dict[str, str] = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.update(req.headers)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}], "usage": {}})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        openai_compat.httpx,
+        "AsyncClient",
+        lambda **kw: real(transport=httpx.MockTransport(handler), **kw),
+    )
+    target = {"base_url": "http://chaos:8070/vendorA", "route": "order.extract"}
+    res = await openai_compat.OpenaiCompatAdapter().complete(target, PAYLOAD, 1.0)
+    assert res.status == 200
+    assert seen["x-reflex-route"] == "order.extract"

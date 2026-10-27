@@ -33,18 +33,38 @@ def generate(route: str, messages: list[dict[str, Any]], rng: random.Random) -> 
     if route == "order.extract":
         return json.dumps(rng.choice(SAMPLE_ORDERS), ensure_ascii=False)
     elif route == "support.triage":
-        return json.dumps({"category": "shipping", "urgency": "medium", "sentiment": "neutral"})
-    elif route == "cortex.reason":
         return json.dumps(
             {
-                "hypothesis": "provider_down",
-                "confidence": 0.95,
-                "proposed_action": {
-                    "type": "shift_weight",
-                    "from": "vendorA:large",
-                    "to": "vendorB:large",
-                    "pct": 90,
-                },
+                "urgency": "medium",
+                "department": "logistics",
+                "summary": "Khách hỏi tình trạng giao hàng",
+            },
+            ensure_ascii=False,
+        )
+    elif route == "cortex.reason":
+        # Giao thức agent Cortex: một lượt là {"tool", "args"} hoặc {"final": {...}}
+        return json.dumps(
+            {
+                "final": {
+                    "side": "provider",
+                    "hypotheses": [
+                        {
+                            "id": "H1",
+                            "statement": "Primary vendor degraded",
+                            "confidence": 0.6,
+                            "evidence": [],
+                        }
+                    ],
+                    "recommendation": {
+                        "action_type": "shift_weight",
+                        "params": {
+                            "route": "order.extract",
+                            "from": "vendorA:large",
+                            "to": "vendorB:large",
+                            "pct": 0.9,
+                        },
+                    },
+                }
             }
         )
     else:

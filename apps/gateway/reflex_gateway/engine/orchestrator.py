@@ -182,7 +182,8 @@ class Orchestrator:
     async def _call(
         self, target_id: str, route: str, payload: dict, timeout_s: float
     ) -> UpstreamResult:
-        target = self.target_catalog.get(target_id)
+        # route đi kèm target: mock chọn output theo route, chaos-proxy chọn fault theo route
+        target = {**self.target_catalog.get(target_id), "route": route}
         adapter = get_adapter(target.get("adapter", "mock"))
         self.state.inflight_start(target_id, route)
         try:
