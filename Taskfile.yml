@@ -105,6 +105,21 @@ tasks:
     cmds:
       - uv run python tools/record_demo.py {{.CLI_ARGS}}
 
+  demo:reset:
+    desc: Dọn trạng thái runtime giữa các lần quay (dry-run; `task demo:reset -- --yes` để xoá)
+    cmds:
+      - uv run python tools/demo_reset.py {{.CLI_ARGS}}
+
+  loadtest:
+    desc: Load test gateway 50 rps × 30 phút, đo overhead + chi phí Mongo (SE-9.2)
+    cmds:
+      - uv run python tools/loadtest.py --gateway http://localhost:8080 --gateway http://localhost:8081 {{.CLI_ARGS}}
+
+  chaos:self:
+    desc: Tắt lần lượt mongo / dd-agent / cortex / control-plane / gateway-1, xác nhận fail-safe (SE-9.1)
+    cmds:
+      - uv run python tools/chaos_self.py {{.CLI_ARGS}}
+
   judge:verify:
     desc: Chạy kiểm chứng và xuất Proof Report cho Ban Giám Khảo trong 3 phút (I4)
     cmds:
