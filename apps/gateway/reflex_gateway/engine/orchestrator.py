@@ -27,6 +27,7 @@ from reflex_core.retry import FailureClass, RetryBudget, classify
 from reflex_core.routing import TargetInputs, decide
 from reflex_core.validators.base import NormalizedResponse
 from reflex_core.validators.registry import build_chain, run_chain
+from reflex_telemetry import llmobs
 
 from reflex_gateway.adapters.base import UpstreamResult
 from reflex_gateway.adapters.registry import get_adapter
@@ -185,7 +186,30 @@ class Orchestrator:
         adapter = get_adapter(target.get("adapter", "mock"))
         self.state.inflight_start(target_id, route)
         try:
-            return await adapter.complete(target, payload, timeout_s=timeout_s)
+            with llmobs.span(
+                "llm",
+                f"gateway.attempt.{route}",
+                model_name=target_id,
+                model_provider=str(target.get("vendor", "unknown")),
+            ) as s:
+                res = await adapter.complete(target, payload, timeout_s=timeout_s)
+                llmobs.annotate(
+                    s,
+                    input_data=payload.get("messages", []),
+                    output_data=[{"role": "assistant", "content": res.content}],
+                    metrics={
+                        "input_tokens": res.tokens_in,
+                        "output_tokens": res.tokens_out,
+                        "total_tokens": res.tokens_in + res.tokens_out,
+                    },
+                    tags={
+                        "route": route,
+                        "target": target_id,
+                        "http_status": res.status,
+                        "finish_reason": res.finish_reason or "",
+                    },
+                )
+                return res
         finally:
             self.state.inflight_end(target_id, route)
 

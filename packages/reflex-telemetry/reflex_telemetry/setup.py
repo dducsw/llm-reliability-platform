@@ -47,7 +47,9 @@ def init(service: str, *, llmobs: bool = False) -> Telemetry:
         if llmobs and os.getenv("DD_API_KEY"):
             from ddtrace.llmobs import LLMObs
 
-            LLMObs.enable(ml_app=service, agentless_enabled=False)
+            LLMObs.enable(
+                agent_service=os.getenv("DD_LLMOBS_ML_APP") or service, agentless_enabled=False
+            )
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
     structlog.configure(

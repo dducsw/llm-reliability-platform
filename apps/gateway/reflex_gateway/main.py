@@ -26,7 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        telemetry = telemetry_setup.init(SVC_GATEWAY)
+        telemetry = telemetry_setup.init(SVC_GATEWAY, llmobs=True)
         metrics.configure(telemetry.statsd)
         db = None
         client = None

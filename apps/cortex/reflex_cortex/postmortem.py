@@ -14,6 +14,7 @@ from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import ACTIONS, INCIDENTS, INVESTIGATIONS, POSTMORTEMS
+from reflex_telemetry import llmobs
 
 from reflex_cortex.agent import LlmClient, parse_json_object
 
@@ -203,10 +204,14 @@ async def write_postmortem(
 
     narrative: dict[str, Any] = {}
     if llm is not None:
-        try:
-            narrative = await narrate(llm, facts)
-        except Exception as e:
-            logger.warning("Postmortem narrative failed for %s (%s); facts only", incident_key, e)
+        with llmobs.span("workflow", "cortex.postmortem", session_id=incident_key) as s:
+            try:
+                narrative = await narrate(llm, facts)
+            except Exception as e:
+                logger.warning(
+                    "Postmortem narrative failed for %s (%s); facts only", incident_key, e
+                )
+            llmobs.annotate(s, output_data=narrative, tags={"incident_id": incident_key})
 
     pm = render(facts, narrative, now)
     if db is not None:
