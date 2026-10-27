@@ -1,5 +1,6 @@
 # TLS termination + bảo vệ /hooks/* bằng header X-Reflex-Webhook-Token.
-# TODO: thay __WEBHOOK_TOKEN__ lúc khởi động (envsubst) và thêm allowlist IP Datadog webhook.
+# Image nginx chạy envsubst lúc khởi động (chỉ thay biến env đã định nghĩa, nên $http_* giữ nguyên)
+# và ghi ra /etc/nginx/nginx.conf (NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx).
 events {}
 
 http {
@@ -12,7 +13,10 @@ http {
     ssl_certificate_key /etc/nginx/certs/privkey.pem;
 
     location /hooks/ {
-      if ($http_x_reflex_webhook_token != "__WEBHOOK_TOKEN__") { return 401; }
+      # Allowlist IP webhook của Datadog, sinh bằng infra/compose/nginx/fetch-dd-webhook-ips.sh.
+      # Không có file thì chỉ dựa vào token.
+      include /etc/nginx/allow/*.conf;
+      if ($http_x_reflex_webhook_token != "${REFLEX_WEBHOOK_TOKEN}") { return 401; }
       proxy_pass http://control_plane;
     }
 

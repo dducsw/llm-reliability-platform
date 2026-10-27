@@ -60,6 +60,9 @@ async def datadog_webhook(
 
     # Datadog transition: "Triggered", "Warn", "Alert", "Recovered", etc.
     transition = (payload.alert_transition or "").lower()
+    if "recovered" in transition:
+        # Đóng incident là việc của Verifier (Recovery Proof), không dựa vào monitor hồi phục.
+        return {"ok": True, "incident_key": None, "transition": payload.alert_transition}
     severity = Severity.CRITICAL if "warn" not in transition else Severity.WARNING
 
     inc = await incident_service.open_or_merge(
