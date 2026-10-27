@@ -2,12 +2,13 @@
 
 Headers vào: x-reflex-route (bắt buộc), x-priority, x-reflex-session, x-reflex-deadline-ms.
 Headers ra:  x-reflex-target, x-reflex-attempts, x-reflex-policy-version,
-             x-reflex-request-id, x-reflex-quality.
+             x-reflex-request-id, x-reflex-quality, x-reflex-overhead-ms (wall − upstream, SE-9.2).
 """
 
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from collections.abc import AsyncIterator
 
@@ -61,7 +62,9 @@ async def chat_completions(request: Request) -> Response:
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+    started = time.perf_counter()
     res = await orchestrator.complete(ctx, payload)
+    wall_ms = (time.perf_counter() - started) * 1000
     if res.status == 503:
         return _shed_response(res)
     headers = {
@@ -73,7 +76,15 @@ async def chat_completions(request: Request) -> Response:
         if (res.request_event.quality and res.request_event.quality.pass_)
         else "fail",
     }
+    if not res.request_event.hedged:  # hedge chạy song song → không trừ tuần tự được
+        overhead = gateway_overhead_ms(wall_ms, [a.latency_ms for a in res.attempt_events])
+        headers["x-reflex-overhead-ms"] = f"{overhead:.2f}"
     return JSONResponse(content=res.body, headers=headers)
+
+
+def gateway_overhead_ms(wall_ms: float, upstream_ms: list[float]) -> float:
+    """Thời gian gateway tự tốn (routing, validator, telemetry enqueue, backoff) ngoài upstream."""
+    return max(0.0, wall_ms - sum(upstream_ms))
 
 
 def _shed_response(res: OrchestratorResult) -> JSONResponse:

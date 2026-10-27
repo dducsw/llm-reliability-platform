@@ -32,7 +32,15 @@ def test_chat_completions_sets_reflex_headers(monkeypatch) -> None:  # type: ign
     assert resp.status_code == 200
     assert resp.headers["x-reflex-request-id"] == "req-api-1"
     assert resp.headers["x-reflex-attempts"] == "1"
+    assert float(resp.headers["x-reflex-overhead-ms"]) >= 0
     assert resp.json()["choices"][0]["message"]["content"]
+
+
+def test_overhead_subtracts_upstream_time() -> None:
+    from reflex_gateway.api.chat import gateway_overhead_ms
+
+    assert gateway_overhead_ms(120.0, [100.0, 15.0]) == 5.0
+    assert gateway_overhead_ms(50.0, [60.0]) == 0.0  # đồng hồ lệch → không âm
 
 
 def test_missing_route_is_400(monkeypatch) -> None:  # type: ignore[no-untyped-def]
