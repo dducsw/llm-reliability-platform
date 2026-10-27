@@ -23,6 +23,10 @@ def _match(doc: dict[str, Any], flt: dict[str, Any]) -> bool:
                 return False
             if "$gte" in cond and (val is None or val < cond["$gte"]):
                 return False
+            if "$exists" in cond and (val is not None) != cond["$exists"]:
+                return False
+            if "$lte" in cond and (val is None or val > cond["$lte"]):
+                return False
         elif val != cond:
             return False
     return True
@@ -39,6 +43,10 @@ class _Cursor:
 
     def sort(self, key: str, direction: int = 1) -> _Cursor:
         self.docs.sort(key=lambda d: d.get(key), reverse=direction < 0)
+        return self
+
+    def limit(self, n: int) -> _Cursor:
+        self.docs = self.docs[:n]
         return self
 
     def __aiter__(self) -> Any:
@@ -59,7 +67,7 @@ class FakeCollection:
     async def find_one(self, flt: dict[str, Any], **_: Any) -> dict[str, Any] | None:
         return next((d for d in self.docs if _match(d, flt)), None)
 
-    def find(self, flt: dict[str, Any] | None = None, **_: Any) -> _Cursor:
+    def find(self, flt: dict[str, Any] | None = None, *_: Any, **__: Any) -> _Cursor:
         return _Cursor([d for d in self.docs if _match(d, flt or {})])
 
     async def count_documents(self, flt: dict[str, Any]) -> int:

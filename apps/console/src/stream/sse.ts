@@ -1,5 +1,5 @@
 // SSE client cho /api/stream?topics=… (EventSource tự reconnect và gửi Last-Event-ID)
-export type StreamTopic = "health" | "incidents" | "actions" | "policies" | "lab";
+export type StreamTopic = "health" | "incidents" | "actions" | "policies" | "lab" | "replays";
 
 export interface StreamEvent<T = unknown> {
   topic: StreamTopic;

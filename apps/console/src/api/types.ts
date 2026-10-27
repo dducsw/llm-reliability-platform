@@ -95,3 +95,48 @@ export interface DualLedger {
   provider: LedgerPoint[];
   events: { ts: string; kind: string; label: string }[];
 }
+
+export interface ReplayVariantInfo {
+  id: string;
+  description: string;
+}
+
+export interface VariantResult {
+  description: string;
+  delivered_quality: number;
+  quality_ci_90: number;
+  budget_consumed: number;
+  extra_cost_usd: number;
+  attempts_per_request: number;
+  requests_saved: number;
+}
+
+export interface Replay {
+  _id: string;
+  incident_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  requested?: { variants: string[]; k: number; seed: number };
+  variants?: Record<string, VariantResult>;
+  calibration_error?: number;
+  seeds?: number;
+  error?: string;
+  created_at?: string;
+  completed_at?: string;
+}
+
+export interface MemoryPoint {
+  key: string;
+  sli: string;
+  scope?: string;
+  target?: string | null;
+  status?: string;
+  action?: { type: string; verdict?: string | null } | null;
+  x: number;
+  y: number;
+}
+
+export interface SimilarIncident {
+  key?: string;
+  sim?: number;
+  [key: string]: unknown;
+}

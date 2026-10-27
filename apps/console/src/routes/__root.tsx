@@ -16,7 +16,7 @@ const NAV = [
 const presenting = new URLSearchParams(window.location.search).get("present") === "1";
 
 export function RootLayout() {
-  useLiveTopics(["health", "incidents", "actions", "policies", "lab"]);
+  useLiveTopics(["health", "incidents", "actions", "policies", "lab", "replays"]);
   return (
     <div className={`min-h-screen bg-slate-950 text-slate-100 ${presenting ? "text-lg" : "text-sm"}`}>
       <header className="flex items-center gap-6 border-b border-slate-800 px-6 py-3">

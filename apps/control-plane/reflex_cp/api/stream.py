@@ -1,4 +1,4 @@
-"""GET /api/stream?topics=health,incidents,actions,policies,lab — SSE fan-out từ Change Streams.
+"""GET /api/stream?topics=health,incidents,actions,policies,lab,replays — SSE fan-out từ Change Streams.
 Last-Event-ID ↔ resume token.
 """
 
@@ -14,7 +14,14 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from reflex_mongo.collections import ACTIONS, CHAOS_RUNS, HEALTH_STATE, INCIDENTS, POLICIES
+from reflex_mongo.collections import (
+    ACTIONS,
+    CHAOS_RUNS,
+    HEALTH_STATE,
+    INCIDENTS,
+    POLICIES,
+    REPLAYS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +33,7 @@ TOPIC_COLLECTIONS = {
     "actions": ACTIONS,
     "policies": POLICIES,
     "lab": CHAOS_RUNS,
+    "replays": REPLAYS,
 }
 HEARTBEAT_S = 15.0
 

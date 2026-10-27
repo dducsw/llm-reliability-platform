@@ -1,5 +1,5 @@
 // War Room — signals, timeline, Cortex investigation, actions, proof
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 
 import { useActions, useIncident } from "../api/hooks";
 import { DatadogLinks } from "../components/DatadogLinks";
@@ -24,8 +24,11 @@ export function WarRoomPage() {
                 {inc.severity} · {inc.sli} · {inc.target ?? "—"} → {inc.routes.join(", ")}
               </span>
             </div>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap items-center gap-4">
               <DatadogLinks incidentKey={inc.key} />
+              <Link to="/timemachine/$key" params={{ key: inc.key }} className="text-sky-300 hover:underline">
+                ▶ Open in Time Machine
+              </Link>
             </div>
           </Card>
           <div className="grid gap-4 lg:grid-cols-2">
