@@ -33,8 +33,12 @@ from reflex_cortex.evidence import validate
 from reflex_cortex.rules import classify
 from reflex_cortex.settings import Settings
 from reflex_cortex.tools import build_toolbox
+from reflex_cortex.tools.propose import propose_action
 
 logger = logging.getLogger(__name__)
+
+# Confidence cố định của rule engine (cortex-agent.md §2): luôn dưới ngưỡng auto 0.7.
+RULES_CONFIDENCE = 0.6
 
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -72,6 +76,11 @@ def parse_json_object(text: str) -> dict[str, Any]:
     if not isinstance(obj, dict):
         raise ValueError("LLM output is not a JSON object")
     return obj
+
+
+def untrusted(text: str) -> str:
+    """Bọc kết quả tool (log/span/postmortem…) để LLM coi là dữ liệu, không phải chỉ dẫn."""
+    return f"<untrusted_data>\n{text.replace('</untrusted_data>', '')}\n</untrusted_data>"
 
 
 def _safe_recommendation(
@@ -136,6 +145,7 @@ class CortexAgent:
             ]
 
         validated = validate(hypotheses, steps, results)
+        from_rules = rec is not None and rec is rule_rec
         investigation = Investigation(
             _id=f"inv-{uuid.uuid4().hex[:8]}",
             incident_id=incident_key,
@@ -149,6 +159,14 @@ class CortexAgent:
             recommendation=rec,
         )
         await self._persist(investigation, validated, side)
+        if rec is not None:
+            best = max((h.confidence for h in validated), default=0.0)
+            await self._propose(
+                investigation,
+                rec,
+                actor="rules" if from_rules else "cortex",
+                confidence=RULES_CONFIDENCE if from_rules else best,
+            )
         logger.info(
             "Cortex completed investigation %s for incident %s (action=%s, steps=%d)",
             investigation.id,
@@ -216,8 +234,27 @@ class CortexAgent:
             )
             messages += [
                 {"role": "assistant", "content": reply},
-                {"role": "user", "content": f"Kết quả tool (ref={ref}): {digest}"},
+                {"role": "user", "content": f"Kết quả tool (ref={ref}):\n{untrusted(digest)}"},
             ]
+
+    async def _propose(
+        self, inv: Investigation, rec: Recommendation, actor: str, confidence: float
+    ) -> None:
+        """Ghi action `proposed`; policy engine ở control-plane quyết định auto hay chờ duyệt."""
+        if self.db is None:
+            return
+        try:
+            await propose_action(
+                incident_key=inv.incident_id,
+                action_type=rec.action_type,
+                params=rec.params,
+                confidence=confidence,
+                db=self.db,
+                actor=actor,
+                investigation_id=inv.id,
+            )
+        except Exception:
+            logger.exception("propose_action failed for %s", inv.incident_id)
 
     async def _persist(self, inv: Investigation, hypotheses: list[Hypothesis], side: Side) -> None:
         if self.db is None:

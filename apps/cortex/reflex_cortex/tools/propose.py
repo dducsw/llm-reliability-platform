@@ -25,6 +25,8 @@ async def propose_action(
     params: dict[str, Any],
     confidence: float,
     db: AsyncDatabase | None = None,
+    actor: str = "cortex",
+    investigation_id: str | None = None,
 ) -> str:
     """Ghi nhận hành động do Cortex đề xuất vào collection actions."""
     act_type = ActionType(action_type)
@@ -40,7 +42,9 @@ async def propose_action(
         type=act_type,
         params=params,
         state=ActionState.PROPOSED,
-        proposed_by=ProposedBy(actor="cortex"),
+        proposed_by=ProposedBy(
+            actor=actor, investigation_id=investigation_id, confidence=confidence
+        ),
         created_at=now,
         updated_at=now,
     )

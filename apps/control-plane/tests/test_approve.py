@@ -22,9 +22,14 @@ class _Actions:
         return 0
 
 
+class _NoHealth:
+    async def find_one(self, _flt: dict) -> None:
+        return None
+
+
 class _Db(dict):
     def __init__(self, docs: dict[str, dict]) -> None:
-        super().__init__(actions=_Actions(docs))
+        super().__init__(actions=_Actions(docs), health_state=_NoHealth())
 
 
 class _Actuator:

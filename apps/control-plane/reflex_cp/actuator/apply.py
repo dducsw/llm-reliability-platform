@@ -12,6 +12,7 @@ from reflex_core.policy import Policy
 from reflex_mongo.collections import ACTIONS, POLICIES, POLICY_HISTORY
 
 from reflex_cp.actuator.transforms import apply_action
+from reflex_cp.policy_engine.decision import decide
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +155,40 @@ class Actuator:
         logger.info("Rolled back route %s to content of version %d", route, target_version)
         return restored_policy
 
+    async def handle_proposed(self, action: Action) -> None:
+        """Action do Cortex/rules ghi (`proposed`) → policy engine → auto thì áp luôn.
+
+        Chuyển trạng thái bằng CAS trên `state: proposed` nên chỉ một instance xử lý một action.
+        """
+        if self.db is None:
+            return
+        decision = await decide(action, self.db)
+        now = datetime.now(tz=UTC)
+        res = await self.db[ACTIONS].update_one(
+            {"_id": action.id, "state": ActionState.PROPOSED.value},
+            {
+                "$set": {
+                    "state": action.state.value,
+                    "decision": decision.model_dump(by_alias=True, mode="json"),
+                    "updated_at": now,
+                }
+            },
+        )
+        if res.modified_count == 0:
+            return
+        logger.info("Policy engine: action %s → %s", action.id, action.state.value)
+        if action.state == ActionState.APPROVED:
+            try:
+                await self.apply(action)
+            except Exception as e:
+                logger.error("Error applying action %s: %s", action.id, e)
+                await self.db[ACTIONS].update_one(
+                    {"_id": action.id},
+                    {"$set": {"state": ActionState.FAILED.value, "updated_at": now}},
+                )
+
     async def run(self) -> None:
-        """Watch collection actions với pipeline filter state == 'approved'."""
+        """Watch actions: insert `proposed` (Cortex/rules) → policy engine; `approved` → apply."""
         if self.db is None:
             return
         self._running = True
@@ -169,9 +202,12 @@ class Actuator:
                         if not self._running:
                             break
                         doc = change.get("fullDocument")
-                        if doc and doc.get("state") == ActionState.APPROVED:
-                            action = Action.model_validate(doc)
-                            await self.apply(action)
+                        if not doc:
+                            continue
+                        if doc.get("state") == ActionState.PROPOSED:
+                            await self.handle_proposed(Action.model_validate(doc))
+                        elif doc.get("state") == ActionState.APPROVED:
+                            await self.apply(Action.model_validate(doc))
             except asyncio.CancelledError:
                 break
             except Exception as e:

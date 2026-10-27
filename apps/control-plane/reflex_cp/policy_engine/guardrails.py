@@ -14,9 +14,30 @@ from reflex_core.actions import (
     GuardrailResult,
     validate_params,
 )
-from reflex_mongo.collections import ACTIONS
+from reflex_mongo.collections import ACTIONS, HEALTH_STATE
 
 logger = logging.getLogger(__name__)
+
+_UNHEALTHY = ("degraded", "down")
+
+
+async def _healthy_destination(action: Action, db: AsyncDatabase | None) -> GuardrailResult:
+    dest = action.params.get("to") or action.params.get("to_target")
+    if db is None or not dest:
+        return GuardrailResult(name="healthy_destination", **{"pass": True})
+    hs = await db[HEALTH_STATE].find_one({"_id": f"target:{dest}"})
+    if hs is None:
+        return GuardrailResult(
+            name="healthy_destination", **{"pass": True}, detail=f"No health data for {dest}"
+        )
+    status = hs.get("status", "unknown")
+    if status in _UNHEALTHY:
+        return GuardrailResult(
+            name="healthy_destination",
+            **{"pass": False},
+            detail=f"Destination {dest} is {status}",
+        )
+    return GuardrailResult(name="healthy_destination", **{"pass": True})
 
 
 async def evaluate_all(action: Action, db: AsyncDatabase | None = None) -> list[GuardrailResult]:
@@ -44,9 +65,11 @@ async def evaluate_all(action: Action, db: AsyncDatabase | None = None) -> list[
     else:
         results.append(GuardrailResult(name="human_only", **{"pass": True}))
 
-    # 3. Confidence guardrail
-    confidence = action.params.get("confidence", 1.0)
-    if action.proposed_by.actor == "cortex" and confidence < 0.7:
+    # 3. Confidence guardrail (action máy đề xuất: cortex / rules)
+    confidence = action.proposed_by.confidence
+    if confidence is None:
+        confidence = action.params.get("confidence", 1.0)
+    if action.proposed_by.actor in ("cortex", "rules") and confidence < 0.7:
         results.append(
             GuardrailResult(
                 name="confidence",
@@ -84,8 +107,8 @@ async def evaluate_all(action: Action, db: AsyncDatabase | None = None) -> list[
     # 6. Flap guard
     results.append(GuardrailResult(name="flap_guard", **{"pass": True}))
 
-    # 7. Healthy destination
-    results.append(GuardrailResult(name="healthy_destination", **{"pass": True}))
+    # 7. Healthy destination: không chuyển traffic về target đang degraded/down
+    results.append(await _healthy_destination(action, db))
 
     # 8. Capacity guardrail
     results.append(GuardrailResult(name="capacity", **{"pass": True}))
