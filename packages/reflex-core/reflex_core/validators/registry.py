@@ -5,6 +5,7 @@ from __future__ import annotations
 from reflex_core.validators.base import CheckResult, NormalizedResponse, Validator
 from reflex_core.validators.json_schema import JsonSchemaValidator
 from reflex_core.validators.lang import LangValidator
+from reflex_core.validators.length import LengthValidator
 from reflex_core.validators.not_empty import NotEmptyValidator
 from reflex_core.validators.refusal import RefusalValidator
 from reflex_core.validators.truncation import TruncationValidator
@@ -26,6 +27,8 @@ def build_chain(specs: list[str]) -> list[Validator]:
             chain.append(RefusalValidator())
         elif s == "lang":
             chain.append(LangValidator())
+        elif s.startswith("length:"):
+            chain.append(LengthValidator.from_spec(s.split(":", 1)[1]))
     return chain
 
 

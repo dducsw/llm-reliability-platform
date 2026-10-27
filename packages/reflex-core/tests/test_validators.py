@@ -27,3 +27,23 @@ def test_validator_chain() -> None:
     )
     assert len(results) == 2
     assert all(r.passed for r in results)
+
+
+def test_length_validator() -> None:
+    chain = build_chain(["length:5-20"])
+    assert len(chain) == 1
+
+    def ok(text: str) -> bool:
+        return (
+            chain[0]
+            .check(NormalizedResponse(content=text, finish_reason="stop", route="chat"))
+            .passed
+        )
+
+    assert ok("hello world")
+    assert not ok("  hi  ")
+    assert not ok("x" * 21)
+    open_ended = build_chain(["length:3-"])[0]
+    assert open_ended.check(
+        NormalizedResponse(content="x" * 10_000, finish_reason="stop", route="chat")
+    ).passed
