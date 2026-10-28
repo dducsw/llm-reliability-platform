@@ -18,6 +18,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 import uvicorn
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import BENCH_TS
+from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_sim.bench.importer import import_bench
 from reflex_sim.bench.runners import rebuild_baselines, top_incidents
@@ -87,7 +88,13 @@ def run(scenario: str, seed: int = 42, fast: bool = False) -> None:
     async def _main() -> None:
         sc = load_scenario(scenario)
         client, db = _client_db()
-        runner = ScenarioRunner(db=db)
+        s = Settings()
+        dd = (
+            DatadogApi(s.dd_api_key, s.dd_app_key, s.dd_site)
+            if s.dd_api_key and s.dd_app_key
+            else None
+        )
+        runner = ScenarioRunner(db=db, dd=dd)
         try:
             res = await runner.run(sc, seed=seed, fast=fast)
             print(f"Scenario {sc.name}: {res['status'].upper()} (phases: {res['phases_run']})")

@@ -75,7 +75,7 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
 | D1 | ~~Verdict `FAIL` chưa kéo theo rollback/escalate~~ | **Xong** (`MitigationLoop._on_verify_failed`): rollback action, timeline `verify_failed:rolled_back`, đề xuất `page_human` vào Approvals. Mới có unit test |
 | D2 | ~~Failback chất lượng xấu → dừng im lặng~~ | **Xong** (`_rollback_step`): rollback nấc vừa áp + timeline `failback_N:rolled_back`, cooldown `stable_s`. Mới có unit test |
 | D3 | ~~`investigations`, `timeline`, `signals.at` ghi chuỗi ISO~~ | **Xong** (`reflex_mongo.serde.to_doc`). Lease `investigating_since` cố ý giữ chuỗi: là điều kiện CAS so sánh bằng, Mongo cắt datetime về ms nên không khớp |
-| D4 | Monitor Datadog trong `expectations` luôn SKIP | Cần Datadog API hoặc kiểm chứng gián tiếp |
+| D4 | ~~Monitor Datadog trong `expectations` luôn SKIP~~ | **Code xong**: `DatadogApi.find_monitors` + `_check_monitor` (poll `overall_state` theo `within` thật). Key trong `.env` hợp lệ nhưng **tài khoản chưa có monitor nào** (`infra/terraform/monitors.tf` còn TODO) → vẫn SKIP kèm lý do "monitor chưa tồn tại" cho tới khi Terraform tạo M3. Không FAIL khi thiếu key/monitor/API lỗi |
 | D5 | ~~Fault `vendorA:large` chạm cả `vendorA:small`~~ | **Xong**: orchestrator gắn `target_id`, adapter gửi `x-reflex-target`, chaos-proxy khớp theo target đầy đủ (client không gửi header vẫn khớp theo vendor) |
 | D6 | ~~SLO provider chỉ có `vendorA:large`~~ | **Xong**: thêm `vendorB:large` (route `order.extract`), `vendorA:small` (route `support.triage`); đã upsert lên Atlas. Còn TODO availability/latency/ttft cho từng route |
 | D7 | ~~Verifier mặc định `198/200`~~ | **Xong**: `RecoveryVerifier.verify` bắt buộc truyền số liệu |
@@ -101,3 +101,4 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
 - D3/D5/D6/D7/D9 xong. Còn lại phía SE: D4 (monitor Datadog trong `expectations` luôn SKIP, cần Datadog API) và quan sát trên stack thật
   đường failback 10/50/100 + D1/D2 (cần action Cortex được duyệt tay). D8 và `HealthWriter.budget_remaining` thuộc DE.
 - Build Docker gặp `Failed to bytecode-compile` khi build nhiều service song song → build từng service một.
+- Integration test (`task test:integration`, 2026-10-28): 9 passed, 3 skipped (stub "chưa hiện thực" của DE: `test_explain`, `test_streams`, `tests/integration/test_migrate`), 0 fail.

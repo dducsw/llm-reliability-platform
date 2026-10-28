@@ -12,6 +12,7 @@ from typing import Any
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.sli import parse_window
 from reflex_mongo.collections import CHAOS_RUNS
+from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_sim.chaos_proxy.runs_watcher import ChaosRunsWatcher
 from reflex_sim.scenario.expectations import check as check_expectations
@@ -30,9 +31,11 @@ class ScenarioRunner:
         self,
         db: AsyncDatabase | None = None,
         chaos_watcher: ChaosRunsWatcher | None = None,
+        dd: DatadogApi | None = None,
     ) -> None:
         self.db = db
         self.chaos_watcher = chaos_watcher
+        self.dd = dd
 
     async def _close_runs(self, run_id: str) -> None:
         if self.db is not None:
@@ -103,7 +106,7 @@ class ScenarioRunner:
 
         # Đánh giá expectations
         exp_results = await check_expectations(
-            scenario.expectations, start_time, db=self.db, scale=scale
+            scenario.expectations, start_time, db=self.db, scale=scale, dd=self.dd
         )
 
         return {

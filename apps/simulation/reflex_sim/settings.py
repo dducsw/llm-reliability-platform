@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     chaos_proxy_url: str = "http://chaos-proxy:8070"
     mock_llm_url: str = "http://mock-llm:8060"
     probe_interval_s: float = 15.0
+    # Datadog API (chỉ đọc) — để scenario kiểm chứng expectation `monitor`; thiếu key → SKIP
+    dd_api_key: str = ""
+    dd_app_key: str = ""
+    dd_site: str = "datadoghq.com"
     # Vendor thật sau chaos-proxy (OpenAI-compatible, mặc định DeepSeek). Chỉ các route trong
     # `llm_real_routes` gọi thật — load test/traffic vẫn dùng mock, không đốt token.
     llm_api_key: str = ""

@@ -75,6 +75,11 @@ class DatadogApi:
     async def get_monitor(self, monitor_id: int) -> dict[str, Any]:
         return await self._request("GET", f"/api/v1/monitor/{monitor_id}")
 
+    async def find_monitors(self, name: str) -> list[dict[str, Any]]:
+        """Monitor có tên chứa `name` (kèm `overall_state`)."""
+        found = await self._request("GET", "/api/v1/monitor", params={"name": name})
+        return [m for m in found if name.lower() in str(m.get("name", "")).lower()]
+
     async def send_event(
         self, title: str, text: str, tags: list[str], alert_type: str = "info"
     ) -> None:
