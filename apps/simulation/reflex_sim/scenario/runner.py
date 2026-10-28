@@ -1,4 +1,4 @@
-"""Ghi từng phase vào chaos_runs, gửi Datadog event scenario.phase, --fast = time scale x60."""
+"""Ghi từng phase vào chaos_runs, gửi Datadog event scenario.phase, --fast = time scale x5."""
 
 from __future__ import annotations
 
@@ -20,6 +20,11 @@ from reflex_sim.scenario.model import Scenario
 logger = logging.getLogger(__name__)
 
 
+# Cửa sổ burn của Sentinel (profile demo: 30s/180s) chạy theo giờ thật, nên không nén quá x5:
+# pha lỗi phải đủ dài (≥ cửa sổ dài) thì burn rate mới vượt ngưỡng.
+FAST_SCALE = 5.0
+
+
 class ScenarioRunner:
     def __init__(
         self,
@@ -34,9 +39,10 @@ class ScenarioRunner:
         scenario: Scenario,
         seed: int = 42,
         fast: bool = False,
+        scale: float | None = None,
     ) -> dict[str, Any]:
         run_id = f"run-{uuid.uuid4().hex[:8]}"
-        scale = 60.0 if fast else 1.0
+        scale = scale or (FAST_SCALE if fast else 1.0)
         start_time = time.time()
         logger.info(
             "Starting scenario %s (run_id=%s, seed=%d, fast=%s, scale=x%.0f)",
@@ -83,7 +89,9 @@ class ScenarioRunner:
             )
 
         # Đánh giá expectations
-        exp_results = await check_expectations(scenario.expectations, start_time)
+        exp_results = await check_expectations(
+            scenario.expectations, start_time, db=self.db, scale=scale
+        )
 
         # Dọn dẹp trạng thái active trong chaos_runs
         if self.db is not None:
@@ -98,5 +106,5 @@ class ScenarioRunner:
             "status": "completed",
             "phases_run": len(phase_results),
             "expectations": exp_results,
-            "all_passed": all(r.get("passed", False) for r in exp_results),
+            "all_passed": all(r["passed"] is not False for r in exp_results),
         }

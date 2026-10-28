@@ -140,6 +140,9 @@ services:
   console:
     build: { context: ../../apps/console }
     ports: ["5173:80"]
+    environment:
+      REFLEX_CONSOLE_TOKEN: ${REFLEX_CONSOLE_TOKEN:-}
+      REFLEX_LAB_TOKEN: ${REFLEX_LAB_TOKEN:-}
 
 volumes:
   mongo-data:

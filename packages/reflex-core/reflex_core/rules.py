@@ -53,6 +53,8 @@ def classify(context_pack: dict[str, Any]) -> Recommendation | None:
                 "from": target,
                 "to": fallback_target,
                 "pct": 1.0,
+                # rules tự áp dụng nên phải tự hết hạn (guardrail R4); ActionExpirer rollback
+                "duration_s": 300,
             },
             expected_effect={"quality_5m": ">= 0.99 trong 3m"},
         )

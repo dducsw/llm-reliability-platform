@@ -86,7 +86,8 @@ def run(scenario: str, seed: int = 42, fast: bool = False) -> None:
             print(f"Scenario {sc.name}: {res['status'].upper()} (phases: {res['phases_run']})")
             print(f"Expectations check: {'ALL PASSED' if res['all_passed'] else 'FAILED'}")
             for exp in res["expectations"]:
-                print(f"  - {exp['expectation']}: {'PASS' if exp['passed'] else 'FAIL'}")
+                verdict = {True: "PASS", False: "FAIL", None: "SKIP"}[exp["passed"]]
+                print(f"  - {exp['expectation']}: {verdict} ({exp['detail']})")
         finally:
             await client.close()
 

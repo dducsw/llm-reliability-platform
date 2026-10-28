@@ -74,6 +74,9 @@ class IncidentService:
             )
             doc = new_inc.model_dump(by_alias=True, mode="json")
             doc["_id"] = inc_key
+            # mode="json" biến datetime thành chuỗi → sort("t.detected_at") lẫn kiểu với dữ liệu seed
+            # (BSON xếp Date trước String) và incident mới bị `limit` cắt khỏi danh sách.
+            doc["t"] = new_inc.t.model_dump()
             try:
                 await self.db[INCIDENTS].insert_one(doc)
                 logger.info("Opened new incident %s (dedup=%s)", inc_key, dedup_key)

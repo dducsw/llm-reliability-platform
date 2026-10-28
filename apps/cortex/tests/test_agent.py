@@ -116,6 +116,7 @@ def test_action_params_doc_matches_catalog_aliases() -> None:
 
     doc = action_params_doc()
     assert (
-        "- shift_weight: {route: string, from: string, to: string, pct: number (0.0..1.0]}" in doc
+        "- shift_weight: {route: string, from: string, to: string, pct: number (0.0..1.0],"
+        " duration_s?: integer}" in doc
     )
     assert "page_human" in doc

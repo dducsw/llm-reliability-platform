@@ -301,7 +301,8 @@ async def _blast_radius(
 def _rules_bounded_reversible(action: Action, cfg: GuardrailConfig) -> bool:
     """Ngoại lệ R4 chỉ cho `actor=rules` — Cortex/LLM offline. Không cho Cortex confidence thấp,
     không cho `rules:llm_rejected` (LLM trả đề xuất sai, có thể bị injection). Action phải
-    reversible, không human_only, và nếu có `duration_s` thì tự hết hạn ≤ `rules_max_duration_s`.
+    reversible, không human_only và PHẢI có `duration_s` ≤ `rules_max_duration_s` (tự hết hạn).
+    Action không có thời hạn (vd shift_weight) có thể kẹt vĩnh viễn nếu không ai hoàn tác → cần duyệt.
     """
     if not cfg.rules_auto_reversible or action.proposed_by.actor != "rules":
         return False
@@ -309,7 +310,7 @@ def _rules_bounded_reversible(action: Action, cfg: GuardrailConfig) -> bool:
     if spec is None or not spec.reversible or spec.human_only:
         return False
     duration = action.params.get("duration_s")
-    return duration is None or int(duration) <= cfg.rules_max_duration_s
+    return duration is not None and int(duration) <= cfg.rules_max_duration_s
 
 
 async def evaluate_all(

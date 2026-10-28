@@ -12,8 +12,8 @@ async def test_silent_brownout_simulation_fast() -> None:
     scenario = load("silent-brownout")
     runner = ScenarioRunner(db=None)
 
-    # Chạy mô phỏng ở chế độ --fast (tỉ lệ 60x)
-    result = await runner.run(scenario, seed=42, fast=True)
+    # Chạy mô phỏng ở chế độ --fast (tỉ lệ 5x)
+    result = await runner.run(scenario, seed=42, fast=True, scale=3000.0)
 
     assert result["run_id"].startswith("run-")
     assert result["phases_run"] == len(scenario.phases)

@@ -13,6 +13,7 @@ from pymongo import AsyncMongoClient
 from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_cp.actuator.apply import Actuator
+from reflex_cp.actuator.expiry import ActionExpirer
 from reflex_cp.api.actions import router as actions_router
 from reflex_cp.api.auth import require_console_token, require_console_token_query
 from reflex_cp.api.demo import router as demo_router
@@ -51,6 +52,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         outbox_task: asyncio.Task | None = None
         watchdog: CortexWatchdog | None = None
         watchdog_task: asyncio.Task | None = None
+        expirer: ActionExpirer | None = None
+        expirer_task: asyncio.Task | None = None
 
         if settings.mongodb_uri:
             try:
@@ -82,6 +85,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 outbox_task = asyncio.create_task(outbox.run())
                 app.state.outbox_task = outbox_task
 
+                # Action có thời hạn (rules shift_weight) hết hạn → rollback policy
+                expirer = ActionExpirer(db)
+                expirer_task = asyncio.create_task(expirer.run())
+
                 # Watchdog R4: Cortex im lặng → rule engine ngay tại control-plane
                 if settings.cortex_watchdog_enabled:
                     unclaimed_s, stale_s = settings.watchdog_thresholds()
@@ -105,6 +112,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             outbox.stop()
         if outbox_task and not outbox_task.done():
             outbox_task.cancel()
+        if expirer:
+            expirer.stop()
+        if expirer_task and not expirer_task.done():
+            expirer_task.cancel()
         if watchdog:
             watchdog.stop()
         if watchdog_task and not watchdog_task.done():

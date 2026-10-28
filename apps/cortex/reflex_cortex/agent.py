@@ -103,6 +103,14 @@ def _bounds(prop: dict[str, Any]) -> str:
     return f" {left}{'' if lo is None else lo}..{'' if hi is None else hi}{right}"
 
 
+def _type_name(prop: dict[str, Any]) -> str:
+    """JSON Schema type; Optional[X] (anyOf [X, null]) → X."""
+    if "type" in prop:
+        return str(prop["type"])
+    kinds = [str(o["type"]) for o in prop.get("anyOf", []) if o.get("type") not in (None, "null")]
+    return kinds[0] if kinds else "any"
+
+
 def action_params_doc() -> str:
     """Tham số từng action (sinh từ CATALOG, khớp đúng validator) — LLM thật không đoán được."""
     lines = []
@@ -110,7 +118,7 @@ def action_params_doc() -> str:
         schema = spec.params_model.model_json_schema(by_alias=True)
         required = set(schema.get("required", []))
         fields = ", ".join(
-            f"{name}{'' if name in required else '?'}: {prop.get('type', 'any')}{_bounds(prop)}"
+            f"{name}{'' if name in required else '?'}: {_type_name(prop)}{_bounds(prop)}"
             for name, prop in schema.get("properties", {}).items()
         )
         lines.append(f"- {action_type.value}: {{{fields}}}")

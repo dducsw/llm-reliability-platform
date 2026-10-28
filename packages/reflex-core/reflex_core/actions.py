@@ -56,6 +56,7 @@ class ShiftWeightParams(_Model):
     from_: str = Field(alias="from")
     to: str
     pct: float = Field(gt=0.0, le=1.0)
+    duration_s: int | None = Field(default=None, gt=0)  # có → tự rollback khi hết hạn
 
 
 class OpenCircuitGlobalParams(_Model):

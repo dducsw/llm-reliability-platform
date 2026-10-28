@@ -277,11 +277,17 @@ def _low_conf(actor: str, action_type: ActionType, params: dict[str, Any]) -> Ac
 
 @pytest.mark.asyncio
 async def test_rules_reversible_action_passes_confidence(fake_db: Any) -> None:
-    """R4: luật (Cortex offline) được tự làm việc rút lại được."""
+    """R4: luật (Cortex offline) được tự làm việc rút lại được VÀ tự hết hạn."""
     shift = _low_conf(
-        "rules", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+        "rules",
+        ActionType.SHIFT_WEIGHT,
+        {"route": "r", "from": "A", "to": "B", "pct": 1.0, "duration_s": 300},
     )
     assert (await _result(shift, fake_db, "confidence")).pass_
+    unbounded = _low_conf(
+        "rules", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+    )
+    assert not (await _result(unbounded, fake_db, "confidence")).pass_
     circuit = _low_conf("rules", ActionType.OPEN_CIRCUIT_GLOBAL, {"target": "A", "duration_s": 300})
     assert (await _result(circuit, fake_db, "confidence")).pass_
 
@@ -299,7 +305,9 @@ async def test_rules_exception_is_narrow(fake_db: Any) -> None:
     assert not (await _result(cortex, fake_db, "confidence")).pass_
     off = GuardrailConfig(cooldown_s=30, rules_auto_reversible=False)
     shift = _low_conf(
-        "rules", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+        "rules",
+        ActionType.SHIFT_WEIGHT,
+        {"route": "r", "from": "A", "to": "B", "pct": 1.0, "duration_s": 300},
     )
     res = next(g for g in await evaluate_all(shift, fake_db, off) if g.name == "confidence")
     assert not res.pass_
