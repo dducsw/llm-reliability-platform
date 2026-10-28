@@ -12,7 +12,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
-from reflex_core.actions import Action, ActionState, ActionType, ProposedBy, Verdict
+from reflex_core.actions import (
+    Action,
+    ActionState,
+    ActionType,
+    ProposedBy,
+    Verdict,
+    new_action_id,
+)
 from reflex_core.incident import IncidentStatus
 from reflex_mongo.collections import ACTIONS, INCIDENTS, PROBES_TS, SLI_1M
 
@@ -137,6 +144,7 @@ class MitigationLoop:
         """Đề xuất `page_human` (human_only → policy engine đưa vào Approvals)."""
         now = datetime.now(tz=UTC)
         act = Action(
+            _id=new_action_id(now),
             incident_id=inc["key"],
             parent_action_id=parent["_id"],
             type=ActionType.PAGE_HUMAN,
@@ -146,7 +154,7 @@ class MitigationLoop:
             created_at=now,
             updated_at=now,
         )
-        doc = act.model_dump(by_alias=True, mode="json", exclude={"id"})
+        doc = act.model_dump(by_alias=True, mode="json")
         doc["created_at"], doc["updated_at"] = now, now
         await self.db[ACTIONS].insert_one(doc)
 

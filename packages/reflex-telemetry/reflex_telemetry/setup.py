@@ -69,6 +69,10 @@ def init(service: str, *, llmobs: bool = False) -> Telemetry:
         host=os.getenv("DD_AGENT_HOST", "localhost"),
         port=int(os.getenv("DD_DOGSTATSD_PORT", "8125")),
         constant_tags=[f"env:{env}", f"service:{service}", f"version:{version}"],
+        # Gửi ở thread riêng: không có agent thì mỗi gói UDP phải resolve DNS (thất bại ~14ms) —
+        # làm đồng bộ trên event loop sẽ nghẽn gateway ở vài rps. Hàng đợi đầy thì bỏ gói.
+        disable_buffering=False,
+        disable_background_sender=False,
     )
     return Telemetry(service=service, env=env, version=version, statsd=statsd)
 

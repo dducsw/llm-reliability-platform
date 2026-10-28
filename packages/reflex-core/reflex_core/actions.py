@@ -6,7 +6,8 @@ Catalog: docs/50-reliability/recovery-engine.md §3. Shape: mongodb-data-model.m
 from __future__ import annotations
 
 import builtins
-from datetime import datetime
+import uuid
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -219,6 +220,11 @@ class ProposedBy(_Model):
     actor: str  # cortex | human | rules
     investigation_id: str | None = None
     confidence: float | None = None  # cortex/rules; guardrail `confidence` đọc trường này
+
+
+def new_action_id(now: datetime | None = None) -> str:
+    """`act-<yyyymmddHHMM>-<6 hex>` — _id luôn là chuỗi (ObjectId làm API list_actions lỗi 500)."""
+    return f"act-{(now or datetime.now(tz=UTC)).strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6]}"
 
 
 class Action(_Model):

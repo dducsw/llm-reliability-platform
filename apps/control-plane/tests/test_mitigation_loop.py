@@ -231,3 +231,22 @@ async def test_failback_step_rolled_back_when_quality_drops(
     assert rolled == ["act-fb10"]
     kinds = [t["kind"] for t in fake_db[INCIDENTS].docs[0]["timeline"]]
     assert kinds == ["failback_10:rolled_back"]
+
+
+async def test_generated_actions_have_string_ids(
+    fake_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ObjectId trong `actions` làm GET /api/actions lỗi 500 (Approvals trắng)."""
+    loop = await _seed(fake_db, "mitigated", _shift(120))
+
+    async def stable(*_a: Any) -> bool:
+        return True
+
+    monkeypatch.setattr(loop, "_probes_stable", stable)
+    await loop.sweep(NOW)
+    step = fake_db[ACTIONS].docs[-1]
+    assert isinstance(step["_id"], str) and step["_id"].startswith("act-")
+
+    await loop._escalate({"key": "INC-1"}, "reason", {"_id": "act-shift"})
+    page = fake_db[ACTIONS].docs[-1]
+    assert isinstance(page["_id"], str) and page["type"] == "page_human"
