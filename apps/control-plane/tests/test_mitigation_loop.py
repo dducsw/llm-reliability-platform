@@ -137,3 +137,97 @@ async def test_incident_resolves_after_final_step(fake_db: Any) -> None:
     loop = await _seed(fake_db, "mitigated", _shift(600), final)
     assert await loop.sweep(NOW) == ["INC-1:resolved"]
     assert fake_db[INCIDENTS].docs[0]["is_open"] is False
+
+
+async def test_expired_mitigation_resolves_when_origin_stable(
+    fake_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expired = _shift(600, state="rolled_back")
+    expired["params"]["duration_s"] = 300
+    loop = await _seed(fake_db, "mitigated", expired)
+
+    async def stable(*_a: Any) -> bool:
+        return True
+
+    async def quality(*_a: Any, **_k: Any) -> tuple[int, int]:
+        return 60, 60
+
+    monkeypatch.setattr(loop, "_probes_stable", stable)
+    monkeypatch.setattr(loop, "_quality", quality)
+    assert await loop.sweep(NOW) == ["INC-1:resolved"]
+    assert fake_db[INCIDENTS].docs[0]["is_open"] is False
+
+
+async def test_expired_mitigation_waits_while_origin_unhealthy(
+    fake_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expired = _shift(600, state="rolled_back")
+    expired["params"]["duration_s"] = 300
+    loop = await _seed(fake_db, "mitigated", expired)
+
+    async def stable(*_a: Any) -> bool:
+        return True
+
+    async def quality(*_a: Any, **_k: Any) -> tuple[int, int]:
+        return 40, 60
+
+    monkeypatch.setattr(loop, "_probes_stable", stable)
+    monkeypatch.setattr(loop, "_quality", quality)
+    assert await loop.sweep(NOW) == []
+    assert fake_db[INCIDENTS].docs[0]["status"] == "mitigated"
+
+
+async def test_verify_fail_rolls_back_and_pages_human(
+    fake_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    loop = await _seed(fake_db, "mitigating", _shift(120))
+    rolled: list[str] = []
+
+    async def quality(*_a: Any, **_k: Any) -> tuple[int, int]:
+        return 10, 100
+
+    async def rollback(action: Action) -> None:
+        rolled.append(str(action.id))
+
+    monkeypatch.setattr(loop, "_quality", quality)
+    monkeypatch.setattr(loop.actuator, "rollback", rollback)
+    assert await loop.sweep(NOW) == ["INC-1:verify_failed"]
+    assert rolled == ["act-shift"]
+    page = fake_db[ACTIONS].docs[-1]
+    assert page["type"] == "page_human" and page["state"] == "proposed"
+    assert page["incident_id"] == "INC-1" and isinstance(page["created_at"], datetime)
+
+
+async def test_failback_step_rolled_back_when_quality_drops(
+    fake_db: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    step10 = {
+        "_id": "act-fb10",
+        "incident_id": "INC-1",
+        "parent_action_id": "act-shift",
+        "type": "failback_step",
+        "state": "succeeded",
+        "params": {"route": "order.extract", "to": "vendorA:large", "pct": 10},
+        "proposed_by": {"actor": "failback_orchestrator"},
+        "execution": {
+            "policy_id": "order.extract",
+            "version_before": 2,
+            "version_after": 3,
+            "applied_at": (NOW - timedelta(seconds=120)).isoformat(),
+        },
+    }
+    loop = await _seed(fake_db, "mitigated", _shift(600), step10)
+    rolled: list[str] = []
+
+    async def quality(*_a: Any, **_k: Any) -> tuple[int, int]:
+        return 12, 20
+
+    async def rollback(action: Action) -> None:
+        rolled.append(str(action.id))
+
+    monkeypatch.setattr(loop, "_quality", quality)
+    monkeypatch.setattr(loop.actuator, "rollback", rollback)
+    assert await loop.sweep(NOW) == ["INC-1:failback_rolled_back"]
+    assert rolled == ["act-fb10"]
+    kinds = [t["kind"] for t in fake_db[INCIDENTS].docs[0]["timeline"]]
+    assert kinds == ["failback_10:rolled_back"]

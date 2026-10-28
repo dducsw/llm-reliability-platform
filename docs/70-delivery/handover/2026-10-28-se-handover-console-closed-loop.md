@@ -72,8 +72,8 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
 
 | # | Việc | Ghi chú |
 | :--- | :--- | :--- |
-| D1 | Verdict `FAIL` chưa kéo theo rollback/escalate | Hiện: action `failed`, incident ở lại `mitigating`; cần `page_human` hoặc rollback tự động |
-| D2 | Failback bước ≥50 chất lượng xấu → dừng im lặng | Nên rollback bước và ghi timeline |
+| D1 | ~~Verdict `FAIL` chưa kéo theo rollback/escalate~~ | **Xong** (`MitigationLoop._on_verify_failed`): rollback action, timeline `verify_failed:rolled_back`, đề xuất `page_human` vào Approvals. Mới có unit test |
+| D2 | ~~Failback chất lượng xấu → dừng im lặng~~ | **Xong** (`_rollback_step`): rollback nấc vừa áp + timeline `failback_N:rolled_back`, cooldown `stable_s`. Mới có unit test |
 | D3 | `investigations`, `timeline`, `signals.at`, lease `investigating_since` vẫn ghi chuỗi ISO | Cùng loại lỗi #8 nếu sau này `sort` theo các trường này |
 | D4 | Monitor Datadog trong `expectations` luôn SKIP | Cần Datadog API hoặc kiểm chứng gián tiếp |
 | D5 | Fault selector `vendorA:large` cũng chạm `vendorA:small` | Gateway chỉ gọi `/<vendor>/…`; muốn tách cần header `x-reflex-target` từ adapter |
@@ -90,3 +90,11 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
 - Chuyển kiểu `t.*` của 8 incident và `created_at`/`updated_at` của 10 action từ chuỗi sang `datetime`.
 - Policy `order.extract` đã đưa về trọng số baseline (90/10) với version tăng tiếp (hiện v9+); nhiều incident test đã đặt
   `false_positive`, action chờ duyệt đã `rejected`, `chaos_runs` kẹt đã `completed`.
+
+## 6. Bổ sung phiên 2026-10-28 (chiều)
+
+- Atlas báo `TLSV1_ALERT_INTERNAL_ERROR` khi IP máy dev không nằm trong Network Access → thêm IP hiện tại.
+- Prober trong container bỏ qua `Settings` (gọi `localhost`) → mọi probe fail `not_empty`; đã sửa `cli.py`.
+- `MitigationLoop._resolve_expired`: mitigation do rules có `duration_s` bị `ActionExpirer` rollback → trước đây incident kẹt
+  `mitigated` mãi; giờ `resolved` khi target gốc ổn định. **Đã quan sát thật** (INC-202610281032-1f63e6).
+- D1/D2 xong (xem §4). **Chưa quan sát** đường failback 10/50/100 và D1/D2 trên stack thật (cần action Cortex được duyệt tay).

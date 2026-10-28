@@ -12,10 +12,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
-from reflex_core.actions import Action, ActionState, ActionType, Verdict
+from reflex_core.actions import Action, ActionState, ActionType, ProposedBy, Verdict
 from reflex_core.incident import IncidentStatus
 from reflex_mongo.collections import ACTIONS, INCIDENTS, PROBES_TS, SLI_1M
 
+from reflex_cp.actuator.apply import Actuator
 from reflex_cp.incidents.service import IncidentService
 from reflex_cp.verifier.failback import FailbackOrchestrator
 from reflex_cp.verifier.proof import RecoveryVerifier
@@ -70,6 +71,7 @@ class MitigationLoop:
         self.tick_s = tick_s
         self.verifier = RecoveryVerifier(db)
         self.failback = FailbackOrchestrator(db)
+        self.actuator = Actuator(db)
         self.incidents = IncidentService(db)
         self._running = False
 
@@ -127,6 +129,39 @@ class MitigationLoop:
         rows = [r async for r in await self.db[SLI_1M].aggregate(pipeline)]
         return (int(rows[0]["g"]), int(rows[0]["n"])) if rows else (0, 0)
 
+    async def _note(self, incident_key: str, kind: str, ref: str | None) -> None:
+        entry = {"at": datetime.now(tz=UTC), "kind": kind, "actor": "verifier", "ref": ref}
+        await self.db[INCIDENTS].update_one({"key": incident_key}, {"$push": {"timeline": entry}})
+
+    async def _escalate(self, inc: dict[str, Any], reason: str, parent: dict[str, Any]) -> None:
+        """Đề xuất `page_human` (human_only → policy engine đưa vào Approvals)."""
+        now = datetime.now(tz=UTC)
+        act = Action(
+            incident_id=inc["key"],
+            parent_action_id=parent["_id"],
+            type=ActionType.PAGE_HUMAN,
+            params={"reason": reason},
+            state=ActionState.PROPOSED,
+            proposed_by=ProposedBy(actor="verifier"),
+            created_at=now,
+            updated_at=now,
+        )
+        doc = act.model_dump(by_alias=True, mode="json", exclude={"id"})
+        doc["created_at"], doc["updated_at"] = now, now
+        await self.db[ACTIONS].insert_one(doc)
+
+    async def _on_verify_failed(self, inc: dict[str, Any], doc: dict[str, Any]) -> None:
+        """Verdict FAIL: mitigation không cứu được → rollback policy, ghi timeline, gọi người."""
+        action = Action.model_validate(doc)
+        await self.actuator.rollback(action)
+        await self._note(inc["key"], "verify_failed:rolled_back", str(doc["_id"]))
+        await self._escalate(
+            inc, f"Mitigation {doc['_id']} failed recovery proof; rolled back", doc
+        )
+        logger.warning(
+            "Incident %s: mitigation %s FAIL → rolled back, paging", inc["key"], doc["_id"]
+        )
+
     async def _verify(self, inc: dict[str, Any], now: datetime) -> str | None:
         doc = await self._latest(inc["key"], _MITIGATIONS, (ActionState.SUCCEEDED.value,))
         applied = _applied_at(doc) if doc else None
@@ -157,6 +192,9 @@ class MitigationLoop:
                 after_good=after_good,
                 after_n=after_n,
             )
+            if result.verdict == Verdict.FAIL:
+                await self._on_verify_failed(inc, doc)
+                return "verify_failed"
             if result.verdict != Verdict.PASS:
                 logger.info("Recovery proof for %s: %s", inc["key"], result.verdict)
                 return None
@@ -182,7 +220,7 @@ class MitigationLoop:
             inc["key"], (ActionType.SHIFT_WEIGHT.value,), (ActionState.SUCCEEDED.value,)
         )
         if parent is None:
-            return None
+            return await self._resolve_expired(inc, now)
         steps = [
             d
             async for d in self.db[ACTIONS].find(
@@ -201,7 +239,10 @@ class MitigationLoop:
             return "resolved"
 
         origin = parent["params"]["from"]
-        last = max((_applied_at(d) for d in [parent, *done] if _applied_at(d)), default=None)
+        # step bị rollback vẫn tính là mốc cooldown để không thử lại / rollback dây chuyền ngay
+        cooled = [d["updated_at"] for d in steps if d["state"] == ActionState.ROLLED_BACK.value]
+        marks = [_applied_at(d) for d in [parent, *done]] + [_parse(t) for t in cooled]
+        last = max((m for m in marks if m), default=None)
         if last is None or now < last + timedelta(seconds=self.stable_s):
             return None
         if current_pct == 0:
@@ -209,10 +250,45 @@ class MitigationLoop:
                 return None
         else:
             good, n = await self._quality("target", origin, last)
-            if n < min(self.min_n, 10) or good / n < HEALTHY_QUALITY:
+            if n < min(self.min_n, 10):
                 return None
+            if good / n < HEALTHY_QUALITY:
+                await self._rollback_step(inc, max(done, key=lambda d: int(d["params"]["pct"])))
+                return "failback_rolled_back"
         nxt = await self.failback.advance(Action.model_validate(parent), current_pct)
         if nxt is None:
             return None
         logger.info("Failback %s → %s%%", origin, nxt.params.get("pct"))
         return f"failback_{nxt.params.get('pct')}"
+
+    async def _rollback_step(self, inc: dict[str, Any], step: dict[str, Any]) -> None:
+        """Failback làm chất lượng target gốc xấu đi → hoàn tác nấc vừa áp, ghi timeline."""
+        await self.actuator.rollback(Action.model_validate(step))
+        await self._note(
+            inc["key"], f"failback_{step['params']['pct']}:rolled_back", str(step["_id"])
+        )
+        logger.warning(
+            "Incident %s: failback step %s degraded quality → rolled back", inc["key"], step["_id"]
+        )
+
+    async def _resolve_expired(self, inc: dict[str, Any], now: datetime) -> str | None:
+        """Mitigation hết hạn (`ActionExpirer` đã rollback) → traffic đã về target gốc, không còn gì để failback.
+
+        Chỉ resolve khi target gốc thật sự ổn định; nếu không, incident ở lại `mitigated`.
+        """
+        parent = await self._latest(
+            inc["key"], (ActionType.SHIFT_WEIGHT.value,), (ActionState.ROLLED_BACK.value,)
+        )
+        if parent is None or not parent["params"].get("duration_s"):
+            return None
+        origin = parent["params"]["from"]
+        if not await self._probes_stable(origin, now):
+            return None
+        good, n = await self._quality("target", origin, now - timedelta(seconds=self.stable_s))
+        if n < min(self.min_n, 10) or good / n < HEALTHY_QUALITY:
+            return None
+        await self.incidents.transition(
+            inc["key"], IncidentStatus.RESOLVED.value, "failback", str(parent["_id"])
+        )
+        logger.info("Incident %s resolved (mitigation expired, %s stable)", inc["key"], origin)
+        return "resolved"

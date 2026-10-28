@@ -64,7 +64,14 @@ def prober() -> None:
 
     async def _main() -> None:
         client, db = _client_db()
-        p = Prober(db=db)
+        s = Settings()
+        p = Prober(
+            db=db,
+            gateway_url=s.gateway_url,
+            chaos_proxy_url=s.chaos_proxy_url,
+            interval_s=s.probe_interval_s,
+            env=s.reflex_env,
+        )
         try:
             await p.run()
         finally:
