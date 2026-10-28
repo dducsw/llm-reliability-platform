@@ -161,7 +161,9 @@ class CortexWatchdog:
             created_at=now,
             updated_at=now,
         )
-        await self.db[ACTIONS].insert_one(action.model_dump(by_alias=True, mode="json"))
+        doc = action.model_dump(by_alias=True, mode="json")
+        doc["created_at"] = doc["updated_at"] = now  # datetime, không phải chuỗi (sort created_at)
+        await self.db[ACTIONS].insert_one(doc)
         return str(action.id)
 
     async def _event(

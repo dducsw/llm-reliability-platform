@@ -57,6 +57,7 @@ class FailbackOrchestrator:
             next_act = self.create_step_action(parent_action, route, target, next_pct)
             if self.db is not None:
                 doc = next_act.model_dump(by_alias=True, mode="json")
+                doc["created_at"], doc["updated_at"] = next_act.created_at, next_act.updated_at
                 await self.db[ACTIONS].insert_one(doc)
             return next_act
         return None

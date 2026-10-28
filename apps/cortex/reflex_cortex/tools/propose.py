@@ -51,6 +51,7 @@ async def propose_action(
 
     if db is not None:
         doc = action.model_dump(by_alias=True, mode="json")
+        doc["created_at"] = doc["updated_at"] = now  # giữ kiểu datetime (xem api/actions sort)
         await db[ACTIONS].insert_one(doc)
 
     return action_id
