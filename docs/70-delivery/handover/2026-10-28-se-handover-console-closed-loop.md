@@ -75,7 +75,7 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
 | D1 | ~~Verdict `FAIL` chưa kéo theo rollback/escalate~~ | **Xong** (`MitigationLoop._on_verify_failed`): rollback action, timeline `verify_failed:rolled_back`, đề xuất `page_human` vào Approvals. Mới có unit test |
 | D2 | ~~Failback chất lượng xấu → dừng im lặng~~ | **Xong** (`_rollback_step`): rollback nấc vừa áp + timeline `failback_N:rolled_back`, cooldown `stable_s`. Mới có unit test |
 | D3 | ~~`investigations`, `timeline`, `signals.at` ghi chuỗi ISO~~ | **Xong** (`reflex_mongo.serde.to_doc`). Lease `investigating_since` cố ý giữ chuỗi: là điều kiện CAS so sánh bằng, Mongo cắt datetime về ms nên không khớp |
-| D4 | ~~Monitor Datadog trong `expectations` luôn SKIP~~ | **Code xong**: `DatadogApi.find_monitors` + `_check_monitor` (poll `overall_state` theo `within` thật). Key trong `.env` hợp lệ nhưng **tài khoản chưa có monitor nào** (`infra/terraform/monitors.tf` còn TODO) → vẫn SKIP kèm lý do "monitor chưa tồn tại" cho tới khi Terraform tạo M3. Không FAIL khi thiếu key/monitor/API lỗi |
+| D4 | ~~Monitor Datadog trong `expectations` luôn SKIP~~ | **Xong**: `DatadogApi.find_monitors` + `_check_monitor` (poll `overall_state` theo `within` thật). SKIP khi thiếu key / monitor không tồn tại / API lỗi / **tất cả `No Data`** (agent tắt); FAIL chỉ khi monitor có dữ liệu mà không lên `Alert` |
 | D5 | ~~Fault `vendorA:large` chạm cả `vendorA:small`~~ | **Xong**: orchestrator gắn `target_id`, adapter gửi `x-reflex-target`, chaos-proxy khớp theo target đầy đủ (client không gửi header vẫn khớp theo vendor) |
 | D6 | ~~SLO provider chỉ có `vendorA:large`~~ | **Xong**: thêm `vendorB:large` (route `order.extract`), `vendorA:small` (route `support.triage`); đã upsert lên Atlas. Còn TODO availability/latency/ttft cho từng route |
 | D7 | ~~Verifier mặc định `198/200`~~ | **Xong**: `RecoveryVerifier.verify` bắt buộc truyền số liệu |
@@ -102,3 +102,23 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
   đường failback 10/50/100 + D1/D2 (cần action Cortex được duyệt tay). D8 và `HealthWriter.budget_remaining` thuộc DE.
 - Build Docker gặp `Failed to bytecode-compile` khi build nhiều service song song → build từng service một.
 - Integration test (`task test:integration`, 2026-10-28): 9 passed, 3 skipped (stub "chưa hiện thực" của DE: `test_explain`, `test_streams`, `tests/integration/test_migrate`), 0 fail.
+
+## 7. Approvals lỗi 500, gateway nghẹt, Terraform (cuối ngày 2026-10-28)
+
+- **Approvals 500** (`GET /api/actions`): action `page_human` do D1 chèn **không có `_id`** → Mongo gán `ObjectId` → pydantic
+  không serialize được. `FailbackOrchestrator.advance` cùng kiểu lỗi (`_id: None`). Sửa: `reflex_core.actions.new_action_id()`
+  dùng ở cả hai chỗ + test. Document hỏng trên Atlas đã đổi `_id` sang chuỗi. D1 **đã chạy thật** trên stack: rules `shift_weight`
+  → verify FAIL (14/21) → rollback → `page_human` chờ duyệt.
+- **Gateway nghẹt dưới traffic-gen (~10 rps)**: không có `datadog-agent` (chế độ Atlas) → mỗi gói DogStatsD resolve DNS thất bại
+  ~14ms **ngay trên event loop** → healthz treo, latency 80–220ms, SLI route thưa (vài request/phút) nên verify ra FAIL oan.
+  Sửa `reflex_telemetry.setup`: `disable_background_sender=False` (gửi ở thread riêng). Sau sửa p50 ≈ 10ms dưới tải.
+  **Lần `silent-brownout` bị nghẹt này không dùng làm bằng chứng được — chạy lại.**
+- **Terraform** (`infra/terraform`, state local, gitignored — chỉ nằm trên máy này): đã `apply -target` 4 monitor trên tài khoản
+  Datadog (site `ap1`), `env=local`: `M3a`/`M3b` (id 15405613/14), composite `M3_quality_fast_burn` (15405616), `M7_retry_amplification` (15405615).
+  Query M3 dựa metric mới `reflex.attempt.quality.{total,pass}` (gateway phát theo **attempt**, gắn target đã gọi — metric request-level
+  `reflex.quality.*` gắn `final_target` nên bị rescue chéo vendor che, cùng lỗi #12). Ngưỡng 14.4 × 0.5% = 0.072.
+  Chưa tạo webhook (chưa có URL công khai tới control-plane) → monitor chưa gọi được `@webhook-reflex-control-plane-local`.
+  Monitor hiện `No Data` vì không có datadog-agent: chạy `task up:atlas -- datadog-agent` để metric tới Datadog.
+  **Chưa làm** (thiếu metric nguồn): M6 và probe P_direct/P_via_gw (`reflex.probe.result` chưa được phát), M9/M10, M11
+  (`reflex.telemetry.dropped`), M12, M13; M1/M2/M4 cần SLO object (`slos.tf`); dashboards/logs còn TODO.
+  Chạy lại: `TF_VAR_env=local TF_VAR_dd_site=<site> TF_VAR_dd_api_key=… TF_VAR_dd_app_key=… terraform plan -target=datadog_monitor.m3`.

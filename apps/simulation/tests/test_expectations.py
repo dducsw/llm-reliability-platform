@@ -102,3 +102,10 @@ async def test_monitor_missing_or_unavailable_is_skipped_not_failed() -> None:
     assert (await _monitor(None))["passed"] is None
     assert (await _monitor(_Dd([])))["passed"] is None
     assert (await _monitor(_Dd(DatadogApiError("403"))))["passed"] is None
+
+
+@pytest.mark.asyncio
+async def test_monitor_without_data_is_skipped_not_failed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(expectations, "MONITOR_POLL_S", 0.1)
+    r = await _monitor(_Dd([{"name": "M3_quality_fast_burn", "overall_state": "No Data"}]))
+    assert r["passed"] is None and "No Data" in r["detail"]

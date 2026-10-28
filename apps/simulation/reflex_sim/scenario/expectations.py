@@ -94,6 +94,9 @@ async def _check_monitor(exp: dict[str, Any], dd: DatadogApi | None) -> dict[str
         if any(m.get("overall_state") == want for m in monitors):
             return _result(exp, True, f"{name}: {want}")
         if time.monotonic() >= deadline:
+            if all(m.get("overall_state") == "No Data" for m in monitors):
+                # Không có metric nào tới Datadog (agent tắt?) → không kết luận được, không phải fail
+                return _result(exp, None, f"{name}: No Data — datadog-agent chưa chạy? bỏ qua")
             return _result(exp, False, f"{name} ở trạng thái {state}, chưa đạt {want}")
         await asyncio.sleep(MONITOR_POLL_S)
 

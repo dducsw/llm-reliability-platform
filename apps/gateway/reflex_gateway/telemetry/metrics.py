@@ -45,6 +45,10 @@ def emit_attempt(event: AttemptEvent) -> None:
         f"{t.GATEWAY_ID}:{event.gateway_id}",
     ]
     _statsd.increment(t.M_ATTEMPT, tags=tags)
+    if event.quality is not None:
+        _statsd.increment(t.M_ATTEMPT_QUALITY_TOTAL, tags=tags)
+        if event.quality.pass_:
+            _statsd.increment(t.M_ATTEMPT_QUALITY_PASS, tags=tags)
     _statsd.distribution(t.M_ATTEMPT_LATENCY, event.latency_ms, tags=tags)
     if event.ttft_ms is not None:
         _statsd.distribution(t.M_ATTEMPT_TTFT, event.ttft_ms, tags=tags)
