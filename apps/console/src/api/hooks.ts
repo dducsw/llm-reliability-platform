@@ -5,7 +5,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { subscribe, type StreamTopic } from "../stream/sse";
 import { applyEvent } from "../stream/store";
 import { apiGet, apiPost } from "./client";
-import type { Action, DualLedger, Incident, PipelineInfo, Policy, Pulse } from "./types";
+import type {
+  Action,
+  DemoState,
+  DualLedger,
+  Incident,
+  MemoryPoint,
+  PipelineInfo,
+  Policy,
+  Pulse,
+  Replay,
+  ReplayVariantInfo,
+  SimilarIncident,
+} from "./types";
 
 export const usePulse = () => useQuery({ queryKey: ["pulse"], queryFn: () => apiGet<Pulse>("/api/pulse") });
 
@@ -55,6 +67,62 @@ export const useScenarios = () =>
   useQuery({
     queryKey: ["lab", "scenarios"],
     queryFn: async () => (await apiGet<{ scenarios: string[] }>("/api/lab/scenarios")).scenarios,
+  });
+
+export const useDemo = () =>
+  useQuery({
+    queryKey: ["lab", "demo"], // topic `lab` (chaos_runs) invalidate khi phase đổi
+    queryFn: () => apiGet<DemoState>("/api/demo"),
+    refetchInterval: 30_000,
+  });
+
+export const useReplayVariants = () =>
+  useQuery({
+    queryKey: ["replays", "variants"],
+    queryFn: async () => (await apiGet<{ variants: ReplayVariantInfo[] }>("/api/replays/variants")).variants,
+    staleTime: Infinity,
+  });
+
+export const useReplays = (incidentKey: string) =>
+  useQuery({
+    queryKey: ["replays", "list", incidentKey],
+    queryFn: async () =>
+      (await apiGet<{ items: Replay[] }>(`/api/replays?incident_id=${encodeURIComponent(incidentKey)}`)).items,
+  });
+
+const isActive = (r?: Replay) => r?.status === "queued" || r?.status === "running";
+
+export const useReplay = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["replays", "one", id],
+    queryFn: () => apiGet<Replay>(`/api/replays/${id}`),
+    enabled: Boolean(id),
+    // SSE topic `replays` là đường chính; poll chậm phòng khi stream rớt lúc job đang chạy
+    refetchInterval: (q) => (isActive(q.state.data) ? 3_000 : false),
+  });
+
+export function useRunReplay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { incident_id: string; variants: string[]; k: number }) =>
+      apiPost<Replay>("/api/replays", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["replays", "list"] }),
+  });
+}
+
+export const useMemoryMap = (sli: string | undefined) =>
+  useQuery({
+    queryKey: ["memory", "map", sli ?? "all"],
+    queryFn: () =>
+      apiGet<{ points: MemoryPoint[]; method: string }>(`/api/memory/map${sli ? `?sli=${encodeURIComponent(sli)}` : ""}`),
+  });
+
+export const useSimilar = (key: string | undefined) =>
+  useQuery({
+    queryKey: ["memory", "similar", key],
+    queryFn: () => apiGet<{ similar: SimilarIncident[]; reason?: string }>(`/api/memory/similar?incident_id=${encodeURIComponent(key ?? "")}`),
+    enabled: Boolean(key),
+    retry: false,
   });
 
 export function useDecideAction() {

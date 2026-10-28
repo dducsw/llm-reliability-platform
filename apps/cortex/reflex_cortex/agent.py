@@ -26,6 +26,7 @@ from reflex_core.incident import (
     ToolStep,
 )
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
+from reflex_telemetry import llmobs
 from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_cortex.context_pack import build as build_context_pack
@@ -33,8 +34,12 @@ from reflex_cortex.evidence import validate
 from reflex_cortex.rules import classify
 from reflex_cortex.settings import Settings
 from reflex_cortex.tools import build_toolbox
+from reflex_cortex.tools.propose import propose_action
 
 logger = logging.getLogger(__name__)
+
+# Confidence cố định của rule engine (cortex-agent.md §2): luôn dưới ngưỡng auto 0.7.
+RULES_CONFIDENCE = 0.6
 
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -52,14 +57,31 @@ class GatewayLlm:
         self._timeout_s = timeout_s
 
     async def chat(self, messages: list[dict[str, str]]) -> str:
-        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-            resp = await client.post(
-                self._url,
-                json={"model": self._route, "messages": messages},
-                headers={"x-reflex-route": self._route, "x-priority": "0"},
+        with llmobs.span(
+            "llm", "cortex.llm", model_name=self._route, model_provider="reflex-gateway"
+        ) as s:
+            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+                resp = await client.post(
+                    self._url,
+                    json={"model": self._route, "messages": messages},
+                    headers={"x-reflex-route": self._route, "x-priority": "0"},
+                )
+            resp.raise_for_status()
+            body = resp.json()
+            content: str = body["choices"][0]["message"]["content"]
+            usage = body.get("usage") or {}
+            llmobs.annotate(
+                s,
+                input_data=messages,
+                output_data=[{"role": "assistant", "content": content}],
+                metrics={
+                    "input_tokens": usage.get("prompt_tokens", 0),
+                    "output_tokens": usage.get("completion_tokens", 0),
+                    "total_tokens": usage.get("total_tokens", 0),
+                },
+                tags={"reflex.target": resp.headers.get("x-reflex-target", "")},
             )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+            return content
 
 
 def parse_json_object(text: str) -> dict[str, Any]:
@@ -72,6 +94,11 @@ def parse_json_object(text: str) -> dict[str, Any]:
     if not isinstance(obj, dict):
         raise ValueError("LLM output is not a JSON object")
     return obj
+
+
+def untrusted(text: str) -> str:
+    """Bọc kết quả tool (log/span/postmortem…) để LLM coi là dữ liệu, không phải chỉ dẫn."""
+    return f"<untrusted_data>\n{text.replace('</untrusted_data>', '')}\n</untrusted_data>"
 
 
 def _safe_recommendation(
@@ -106,13 +133,34 @@ class CortexAgent:
 
     async def investigate(self, incident_key: str) -> Investigation:
         """Dựng context pack → vòng lặp LLM+tool (có giới hạn) → validate evidence → lưu."""
-        context_pack = await build_context_pack(incident_key, self.db)
+        with llmobs.span("agent", "cortex.investigate", session_id=incident_key) as s:
+            inv = await self._investigate(incident_key)
+            rec = inv.recommendation
+            llmobs.annotate(
+                s,
+                input_data={"incident_id": incident_key},
+                output_data={
+                    "action_type": rec.action_type if rec else None,
+                    "params": rec.params if rec else None,
+                    "hypotheses": [h.statement for h in inv.hypotheses],
+                },
+                metrics={"tool_calls": len(inv.steps)},
+                tags={"incident_id": incident_key, "investigation_id": inv.id or ""},
+            )
+            return inv
+
+    async def _investigate(self, incident_key: str) -> Investigation:
+        with llmobs.span("task", "cortex.context_pack") as s:
+            context_pack = await build_context_pack(incident_key, self.db)
+            llmobs.annotate(s, input_data={"incident_id": incident_key}, output_data=context_pack)
         rule_rec = classify(context_pack)
 
         steps: list[ToolStep] = []
         results: dict[str, Any] = {}
         try:
-            final = await self._reason(incident_key, context_pack, steps, results)
+            with llmobs.span("workflow", "cortex.reason") as ws:
+                final = await self._reason(incident_key, context_pack, steps, results)
+                llmobs.annotate(ws, output_data=final, metrics={"tool_calls": len(steps)})
             hypotheses = [Hypothesis.model_validate(h) for h in final.get("hypotheses", [])]
             rec = _safe_recommendation(final.get("recommendation"), rule_rec)
             side = (
@@ -136,6 +184,7 @@ class CortexAgent:
             ]
 
         validated = validate(hypotheses, steps, results)
+        from_rules = rec is not None and rec is rule_rec
         investigation = Investigation(
             _id=f"inv-{uuid.uuid4().hex[:8]}",
             incident_id=incident_key,
@@ -149,6 +198,14 @@ class CortexAgent:
             recommendation=rec,
         )
         await self._persist(investigation, validated, side)
+        if rec is not None:
+            best = max((h.confidence for h in validated), default=0.0)
+            await self._propose(
+                investigation,
+                rec,
+                actor="rules" if from_rules else "cortex",
+                confidence=RULES_CONFIDENCE if from_rules else best,
+            )
         logger.info(
             "Cortex completed investigation %s for incident %s (action=%s, steps=%d)",
             investigation.id,
@@ -195,14 +252,16 @@ class CortexAgent:
             n = len(steps) + 1
             ref = f"{name.replace('.', '_')}_{n}"
             started = time.perf_counter()
-            if name not in toolbox:
-                digest, data = f"unknown tool `{name}`", None
-            else:
-                try:
-                    res = await toolbox[name](**args)
-                    digest, data = res.digest, res.data
-                except Exception as e:  # tool lỗi là thông tin cho LLM, không phải lỗi của vòng lặp
-                    digest, data = f"tool error: {e}", None
+            with llmobs.span("tool", name or "unknown") as ts:
+                if name not in toolbox:
+                    digest, data = f"unknown tool `{name}`", None
+                else:
+                    try:
+                        res = await toolbox[name](**args)
+                        digest, data = res.digest, res.data
+                    except Exception as e:  # tool lỗi là thông tin cho LLM, không phải lỗi vòng lặp
+                        digest, data = f"tool error: {e}", None
+                llmobs.annotate(ts, input_data=args, output_data=digest, tags={"ref": ref})
             results[ref] = data
             steps.append(
                 ToolStep(
@@ -216,8 +275,27 @@ class CortexAgent:
             )
             messages += [
                 {"role": "assistant", "content": reply},
-                {"role": "user", "content": f"Kết quả tool (ref={ref}): {digest}"},
+                {"role": "user", "content": f"Kết quả tool (ref={ref}):\n{untrusted(digest)}"},
             ]
+
+    async def _propose(
+        self, inv: Investigation, rec: Recommendation, actor: str, confidence: float
+    ) -> None:
+        """Ghi action `proposed`; policy engine ở control-plane quyết định auto hay chờ duyệt."""
+        if self.db is None:
+            return
+        try:
+            await propose_action(
+                incident_key=inv.incident_id,
+                action_type=rec.action_type,
+                params=rec.params,
+                confidence=confidence,
+                db=self.db,
+                actor=actor,
+                investigation_id=inv.id,
+            )
+        except Exception:
+            logger.exception("propose_action failed for %s", inv.incident_id)
 
     async def _persist(self, inv: Investigation, hypotheses: list[Hypothesis], side: Side) -> None:
         if self.db is None:

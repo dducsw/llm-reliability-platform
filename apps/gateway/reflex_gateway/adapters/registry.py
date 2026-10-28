@@ -14,3 +14,10 @@ _ADAPTERS: dict[str, Adapter] = {
 
 def get_adapter(name: str) -> Adapter:
     return _ADAPTERS.get(name, _ADAPTERS["mock"])
+
+
+async def close_adapters() -> None:
+    for adapter in _ADAPTERS.values():
+        http = getattr(adapter, "http", None)
+        if http is not None:
+            await http.aclose()

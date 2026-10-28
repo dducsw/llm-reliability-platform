@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import CHAOS_RUNS
@@ -38,38 +39,54 @@ class ChaosRunsWatcher:
             except asyncio.CancelledError:
                 pass
 
+    @staticmethod
+    def parse_faults(raw_faults: list[dict[str, Any]]) -> list[Fault]:
+        faults: list[Fault] = []
+        for rf in raw_faults:
+            try:
+                faults.append(
+                    Fault(
+                        type=FaultType(rf["type"]),
+                        selector=FaultSelector(
+                            target=rf.get("target", "*"),
+                            route=rf.get("route"),
+                            pct_of_traffic=rf.get("pct_of_traffic"),
+                        ),
+                        params=rf.get("params", {}),
+                    )
+                )
+            except Exception as exc:
+                logger.warning("Error parsing fault: %s", exc)
+        return faults
+
+    @staticmethod
+    def current_faults(active_docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Phase mới nhất của mỗi run đang active (phase cũ chỉ được đóng khi cả run kết thúc)."""
+        latest: dict[Any, dict[str, Any]] = {}
+        for d in active_docs:
+            run = d.get("run_id")
+            if run not in latest or d.get("phase_index", 0) >= latest[run].get("phase_index", 0):
+                latest[run] = d
+        return [f for d in latest.values() for f in d.get("faults", [])]
+
+    async def refresh(self) -> None:
+        """Tính lại từ toàn bộ chaos_runs active — đúng cả khi phase bị đóng bằng update_many
+        (event `update` không có fullDocument) hay khi proxy khởi động lại giữa scenario."""
+        if self.db is None:
+            return
+        docs = [d async for d in self.db[CHAOS_RUNS].find({"status": "active"})]
+        self.active_faults = self.parse_faults(self.current_faults(docs))
+        logger.info("Active chaos faults updated: %d faults", len(self.active_faults))
+
     async def run(self) -> None:
         if self.db is None:
             return
         while self._running:
             try:
-                async with self.db[CHAOS_RUNS].watch() as stream:
-                    async for change in stream:
-                        op = change.get("operationType")
-                        if op in ("insert", "replace", "update"):
-                            doc = change.get("fullDocument")
-                            if doc and doc.get("status") == "active":
-                                raw_faults = doc.get("faults", [])
-                                faults = []
-                                for rf in raw_faults:
-                                    try:
-                                        faults.append(
-                                            Fault(
-                                                type=FaultType(rf["type"]),
-                                                selector=FaultSelector(
-                                                    target=rf.get("target", "*"),
-                                                    route=rf.get("route"),
-                                                    pct_of_traffic=rf.get("pct_of_traffic"),
-                                                ),
-                                                params=rf.get("params", {}),
-                                            )
-                                        )
-                                    except Exception as exc:
-                                        logger.warning("Error parsing fault: %s", exc)
-                                self.active_faults = faults
-                                logger.info("Active chaos faults updated: %d faults", len(faults))
-                        elif op == "delete":
-                            self.active_faults = []
+                async with await self.db[CHAOS_RUNS].watch() as stream:
+                    await self.refresh()
+                    async for _change in stream:
+                        await self.refresh()
             except asyncio.CancelledError:
                 break
             except Exception as e:

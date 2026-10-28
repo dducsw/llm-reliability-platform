@@ -7,8 +7,10 @@ services:
     image: nginx:1.27-alpine
     ports: ["443:443", "80:80"]
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/allow:/etc/nginx/allow:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     environment:
-      REFLEX_WEBHOOK_TOKEN: ${REFLEX_WEBHOOK_TOKEN}
+      REFLEX_WEBHOOK_TOKEN: ${REFLEX_WEBHOOK_TOKEN:?REFLEX_WEBHOOK_TOKEN is required}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     depends_on: [control-plane, console]

@@ -1,14 +1,19 @@
 # syntax=docker/dockerfile:1.7
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
-WORKDIR /src
+# Build tại /app (trùng runtime): shebang trong .venv/bin là đường dẫn tuyệt đối
+WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY . .
-RUN uv sync --frozen --no-dev --package reflex-gateway
+# Cache uv dùng chung giữa các image (không tải lại package mỗi lần build)
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable --package reflex-gateway
 
 FROM python:3.12-slim-bookworm
 WORKDIR /app
-COPY --from=build /src/.venv /app/.venv
-COPY --from=build /src/VERSION /app/VERSION
+COPY --from=build /app/.venv /app/.venv
+COPY --from=build /app/VERSION /app/VERSION
+# Seed catalog + scenario YAML đọc theo đường dẫn tương đối (fallback khi Mongo chưa có)
+COPY --from=build /app/seeds /app/seeds
+COPY --from=build /app/scenarios /app/scenarios
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8080
 CMD ["ddtrace-run", "reflex-gateway"]

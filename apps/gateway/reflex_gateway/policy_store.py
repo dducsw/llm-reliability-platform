@@ -81,7 +81,7 @@ class PolicyStore:
             return
         while True:
             try:
-                async with self._db[POLICIES].watch() as stream:
+                async with await self._db[POLICIES].watch(full_document="updateLookup") as stream:
                     async for change in stream:
                         op = change.get("operationType")
                         if op in ("insert", "replace", "update"):

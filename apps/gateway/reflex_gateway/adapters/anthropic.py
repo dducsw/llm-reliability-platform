@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 
 import httpx
 
-from reflex_gateway.adapters.base import UpstreamResult
+from reflex_gateway.adapters.base import SharedClient, UpstreamResult
 
 _STOP_REASONS = {
     "end_turn": "stop",
@@ -37,7 +37,7 @@ class AnthropicAdapter:
     name = "anthropic"
 
     def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
-        self._transport = transport
+        self.http = SharedClient(transport)
 
     async def complete(self, target: dict, payload: dict, timeout_s: float) -> UpstreamResult:
         url = f"{(target.get('base_url') or _DEFAULT_BASE_URL).rstrip('/')}/messages"
@@ -52,10 +52,9 @@ class AnthropicAdapter:
             return (time.perf_counter() - start) * 1000.0
 
         try:
-            async with httpx.AsyncClient(timeout=timeout_s, transport=self._transport) as client:
-                resp = await client.post(
-                    url, json=to_anthropic_payload(target, payload), headers=headers
-                )
+            resp = await self.http.get().post(
+                url, json=to_anthropic_payload(target, payload), headers=headers, timeout=timeout_s
+            )
         except httpx.TimeoutException:
             return _error(504, "timeout", elapsed(), "timeout")
         except httpx.HTTPError as e:

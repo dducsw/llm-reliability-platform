@@ -4,7 +4,10 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import "./index.css";
+import { installSecretMask, presenting } from "./present";
 import { router } from "./router";
+
+if (presenting) installSecretMask();
 
 const queryClient = new QueryClient();
 

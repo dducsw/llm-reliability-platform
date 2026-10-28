@@ -15,6 +15,7 @@ from reflex_telemetry.datadog_api import DatadogApi
 from reflex_cp.actuator.apply import Actuator
 from reflex_cp.api.actions import router as actions_router
 from reflex_cp.api.auth import require_console_token
+from reflex_cp.api.demo import router as demo_router
 from reflex_cp.api.incidents import router as incidents_router
 from reflex_cp.api.lab import router as lab_router
 from reflex_cp.api.memory import router as memory_router
@@ -118,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         pipelines_router,
         memory_router,
         lab_router,
+        demo_router,
     ):
         app.include_router(router, dependencies=protected)
 

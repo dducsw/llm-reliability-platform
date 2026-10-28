@@ -9,6 +9,7 @@ export const QUERY_KEYS: Record<StreamTopic, readonly string[]> = {
   actions: ["actions"],
   policies: ["policies"],
   lab: ["lab"],
+  replays: ["replays"],
 };
 
 // Change Stream chỉ báo "có gì đổi"; invalidate để refetch read-model chuẩn thay vì tự vá cache

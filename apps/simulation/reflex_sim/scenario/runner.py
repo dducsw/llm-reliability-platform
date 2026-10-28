@@ -72,6 +72,7 @@ class ScenarioRunner:
                         "faults": raw_faults,
                         "status": "active",
                         "starts_at": phase_start,
+                        "time_scale": scale,
                     }
                 )
 

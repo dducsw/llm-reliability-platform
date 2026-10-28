@@ -59,7 +59,7 @@ class StreamConsumer:
                 watch_kwargs["resume_after"] = resume_token
 
             try:
-                async with self._db[self._collection].watch(
+                async with await self._db[self._collection].watch(
                     self._pipeline,
                     **watch_kwargs,
                 ) as stream:

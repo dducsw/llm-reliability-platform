@@ -217,6 +217,7 @@ class VerificationResult(_Model):
 class ProposedBy(_Model):
     actor: str  # cortex | human | rules
     investigation_id: str | None = None
+    confidence: float | None = None  # cortex/rules; guardrail `confidence` đọc trường này
 
 
 class Action(_Model):

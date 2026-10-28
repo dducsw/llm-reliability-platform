@@ -1,6 +1,8 @@
 import { Link, Outlet } from "@tanstack/react-router";
 
-import { useLiveTopics } from "../api/hooks";
+import { useDemo, useLiveTopics } from "../api/hooks";
+import { DemoClock } from "../components/DemoClock";
+import { presenting } from "../present";
 
 const NAV = [
   { to: "/", label: "Pulse" },
@@ -12,11 +14,10 @@ const NAV = [
   { to: "/explain", label: "Query Explorer" },
 ] as const;
 
-// ?present=1: chữ to hơn khi quay video
-const presenting = new URLSearchParams(window.location.search).get("present") === "1";
-
 export function RootLayout() {
-  useLiveTopics(["health", "incidents", "actions", "policies", "lab"]);
+  useLiveTopics(["health", "incidents", "actions", "policies", "lab", "replays"]);
+  const demo = useDemo();
+  const profile = (demo.data?.profile ?? "demo").toUpperCase();
   return (
     <div className={`min-h-screen bg-slate-950 text-slate-100 ${presenting ? "text-lg" : "text-sm"}`}>
       <header className="flex items-center gap-6 border-b border-slate-800 px-6 py-3">
@@ -28,7 +29,10 @@ export function RootLayout() {
             </Link>
           ))}
         </nav>
-        <span className="ml-auto rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">DEMO PROFILE</span>
+        <div className="ml-auto flex items-center gap-3">
+          <DemoClock />
+          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">{profile} PROFILE</span>
+        </div>
       </header>
       <main className="p-6">
         <Outlet />

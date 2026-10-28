@@ -1,10 +1,28 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "cortex_output",
+  "description": "Một lượt của agent Cortex qua route cortex.reason: gọi tool hoặc kết luận (cortex-agent.md).",
   "type": "object",
-  "required": ["hypotheses", "recommendation"],
-  "properties": {
-    "hypotheses": { "type": "array" },
-    "recommendation": { "type": "object" }
-  }
+  "oneOf": [
+    {
+      "required": ["tool"],
+      "properties": {
+        "tool": { "type": "string", "minLength": 1 },
+        "args": { "type": "object" }
+      }
+    },
+    {
+      "required": ["final"],
+      "properties": {
+        "final": {
+          "type": "object",
+          "required": ["hypotheses", "recommendation"],
+          "properties": {
+            "hypotheses": { "type": "array" },
+            "recommendation": { "type": ["object", "null"] }
+          }
+        }
+      }
+    }
+  ]
 }
