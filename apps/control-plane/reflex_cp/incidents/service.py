@@ -72,6 +72,7 @@ class IncidentService:
                 status=IncidentStatus.DETECTED,
                 signals=[sig_model],
                 t=IncidentTimes(first_bad_at=now, detected_at=now),
+                created_at=now,
             )
             doc = to_doc(new_inc)  # datetime giữ BSON Date để sort("t.detected_at") không lẫn kiểu
             doc["_id"] = inc_key

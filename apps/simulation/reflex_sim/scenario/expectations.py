@@ -31,7 +31,7 @@ async def _check_incident(
     if "route" in spec:
         query["routes"] = spec["route"]
     if "opened_by" in spec:
-        query["source"] = spec["opened_by"]
+        query["signals.0.source"] = spec["opened_by"]  # tín hiệu đầu tiên mở incident
     if "status" in spec:
         query["status"] = spec["status"]
     within_s = parse_window(exp["within"]) if "within" in exp else POLL_CAP_S

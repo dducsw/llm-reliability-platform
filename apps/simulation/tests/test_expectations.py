@@ -38,7 +38,7 @@ async def test_incident_expectation_filters_by_route_and_source() -> None:
     exp = {"incident": {"route": "order.extract", "opened_by": "sentinel"}, "within": "100s"}
     [r] = await expectations.check([exp], time.time(), db=_Db(incidents=coll))
     assert r["passed"] is True
-    assert coll.query["routes"] == "order.extract" and coll.query["source"] == "sentinel"
+    assert coll.query["routes"] == "order.extract" and coll.query["signals.0.source"] == "sentinel"
 
 
 @pytest.mark.asyncio
