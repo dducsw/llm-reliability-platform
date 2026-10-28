@@ -27,12 +27,21 @@ x-dd-labels: &dd-labels
 services:
   mongo:
     image: mongodb/mongodb-atlas-local:8.0
+    # Replica set lưu hostname trong volume; hostname mặc định = container id → recreate
+    # container (đổi config) là mất primary. Cố định để volume dùng lại được.
+    hostname: mongo
     ports: ["27017:27017"]
     volumes: [mongo-data:/data/db]
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1})"]
-      interval: 5s
-      retries: 20
+      # mongosh là tiến trình Node: mỗi lần check ~100% 1 core trong vài giây.
+      # interval 5s → Mongo "idle" vẫn ~1 core, kéo p99 overhead gateway (SE-9.2).
+      # Lúc khởi động vẫn check dày (start_interval) để service phụ thuộc lên nhanh.
+      interval: 60s
+      timeout: 20s
+      start_period: 120s
+      start_interval: 3s
+      retries: 3
 
   datadog-agent:
     image: gcr.io/datadoghq/agent:7

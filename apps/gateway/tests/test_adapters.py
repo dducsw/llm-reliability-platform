@@ -94,9 +94,9 @@ def test_resolve_refs_builds_base_url_and_model(monkeypatch) -> None:  # type: i
     assert doc["model"] == "gpt-x"
 
 
-async def test_openai_compat_forwards_route_header(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+async def test_openai_compat_forwards_route_header() -> None:
     """chaos-proxy/mock-llm chọn output + fault theo `x-reflex-route`."""
-    from reflex_gateway.adapters import openai_compat
+    from reflex_gateway.adapters.openai_compat import OpenaiCompatAdapter
 
     seen: dict[str, str] = {}
 
@@ -104,13 +104,23 @@ async def test_openai_compat_forwards_route_header(monkeypatch) -> None:  # type
         seen.update(req.headers)
         return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}], "usage": {}})
 
-    real = httpx.AsyncClient
-    monkeypatch.setattr(
-        openai_compat.httpx,
-        "AsyncClient",
-        lambda **kw: real(transport=httpx.MockTransport(handler), **kw),
-    )
     target = {"base_url": "http://chaos:8070/vendorA", "route": "order.extract"}
-    res = await openai_compat.OpenaiCompatAdapter().complete(target, PAYLOAD, 1.0)
+    res = await OpenaiCompatAdapter(httpx.MockTransport(handler)).complete(target, PAYLOAD, 1.0)
     assert res.status == 200
     assert seen["x-reflex-route"] == "order.extract"
+
+
+async def test_adapters_reuse_one_pooled_client() -> None:
+    """Client mới mỗi request làm gateway bão hòa ở ~25 rps (SE-9.2)."""
+    from reflex_gateway.adapters.openai_compat import OpenaiCompatAdapter
+
+    ok = httpx.MockTransport(
+        lambda _: httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+    )
+    adapter = OpenaiCompatAdapter(ok)
+    await adapter.complete({"base_url": "http://x/v1"}, PAYLOAD, 1.0)
+    first = adapter.http.get()
+    await adapter.complete({"base_url": "http://x/v1"}, PAYLOAD, 1.0)
+    assert adapter.http.get() is first
+    await adapter.http.aclose()
+    assert first.is_closed
