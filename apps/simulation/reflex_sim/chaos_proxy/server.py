@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from reflex_mongo.client import get_db, make_client
 
 from reflex_sim.chaos_proxy import injector
 from reflex_sim.chaos_proxy.faults import Fault, FaultType
@@ -61,15 +62,25 @@ class RealUpstream:
 def create_app(
     watcher: ChaosRunsWatcher | None = None, upstream: RealUpstream | None = None
 ) -> FastAPI:
-    real = upstream or RealUpstream(Settings())
+    settings = Settings()
+    real = upstream or RealUpstream(settings)
+    proxy_watcher = watcher or ChaosRunsWatcher()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Chạy thật (không inject watcher): đọc chaos_runs từ Mongo để scenario chèn được fault
+        client = None
+        if watcher is None and settings.mongodb_uri:
+            client = make_client(settings.mongodb_uri, app_name="reflex-chaos-proxy")
+            proxy_watcher.db = get_db(client, settings.mongodb_db)
+            await proxy_watcher.start()
         yield
+        await proxy_watcher.stop()
+        if client is not None:
+            await client.close()
         await real.aclose()
 
     app = FastAPI(title="Reflex Chaos Proxy", lifespan=lifespan)
-    proxy_watcher = watcher or ChaosRunsWatcher()
     app.state.watcher = proxy_watcher
     app.state.upstream = real
 

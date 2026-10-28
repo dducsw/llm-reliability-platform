@@ -65,7 +65,7 @@ export function WarRoomPage() {
             </Card>
             {!presenting && (
               <Card title="Signals">
-                {inc.signals.length ? (
+                {inc.signals?.length ? (
                   <ul className="space-y-1">
                     {inc.signals.map((s, idx) => (
                       <li key={idx}>

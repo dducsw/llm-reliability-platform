@@ -53,7 +53,7 @@ def chaos_proxy(port: int = 8070) -> None:
 @app.command()
 def traffic(rps: float = 8.0, duration: float = 0.0) -> None:
     """ShopMate traffic generator."""
-    gen = TrafficGenerator(base_rps=rps)
+    gen = TrafficGenerator(gateway_url=Settings().gateway_url, base_rps=rps)
     dur = None if duration <= 0 else duration
     asyncio.run(gen.run(duration_s=dur))
 

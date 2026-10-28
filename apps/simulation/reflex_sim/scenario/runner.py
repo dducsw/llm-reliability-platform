@@ -77,7 +77,7 @@ class ScenarioRunner:
                 )
 
             # Chờ hết thời lượng phase
-            await asyncio.sleep(min(duration_s, 2.0 if fast else duration_s))
+            await asyncio.sleep(duration_s)
             phase_results.append(
                 {"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)}
             )
