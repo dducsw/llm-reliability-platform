@@ -97,7 +97,9 @@ def create_app(
 
         # Tìm faults áp dụng
         active_faults = proxy_watcher.active_faults
-        matched_faults = injector.select(active_faults, target=vendor, route=route, rng=rng)
+        # gateway gửi target đầy đủ (vendorA:large); client khác chỉ có vendor theo đường dẫn
+        target = request.headers.get("x-reflex-target") or vendor
+        matched_faults = injector.select(active_faults, target=target, route=route, rng=rng)
         headers: dict[str, str] = {}
 
         if real.handles(route) and not any(f.type in _SHORT_CIRCUIT for f in matched_faults):

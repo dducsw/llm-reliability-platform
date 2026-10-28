@@ -16,6 +16,8 @@ x-python: &python
     DD_AGENT_HOST: datadog-agent
     DD_ENV: ${REFLEX_ENV:-local}
     DD_VERSION: ${REFLEX_VERSION:-0.1.0}
+    # ddtrace chưa hỗ trợ PyMongo async (Server.run_operation) → tắt để khỏi in traceback mỗi lần khởi động
+    DD_TRACE_PYMONGO_ENABLED: "false"
   depends_on:
     mongo: { condition: service_healthy }
   restart: unless-stopped

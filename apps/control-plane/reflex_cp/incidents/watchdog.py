@@ -19,6 +19,7 @@ from reflex_core.actions import Action, ActionState, ActionType, ProposedBy, val
 from reflex_core.incident import Diagnosis, IncidentStatus, Side, TimelineEntry
 from reflex_core.rules import RULES_CONFIDENCE, classify
 from reflex_mongo.collections import ACTIONS, INCIDENTS, OUTBOX, POLICIES
+from reflex_mongo.serde import to_doc
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class CortexWatchdog:
                     "investigator": INVESTIGATOR,
                     "investigating_since": now.isoformat(),
                 },
-                "$push": {"timeline": entry.model_dump(mode="json")},
+                "$push": {"timeline": to_doc(entry)},
             },
         )
         return res.modified_count == 1

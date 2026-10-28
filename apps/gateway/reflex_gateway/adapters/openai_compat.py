@@ -31,6 +31,8 @@ class OpenaiCompatAdapter:
             headers["x-reflex-route"] = target[
                 "route"
             ]  # chaos-proxy/mock-llm: fault + output theo route
+        if target.get("target_id"):
+            headers["x-reflex-target"] = target["target_id"]  # fault theo target đầy đủ (tier)
 
         start = time.perf_counter()
         try:

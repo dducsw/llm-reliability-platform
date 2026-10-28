@@ -27,6 +27,7 @@ from reflex_core.incident import (
 )
 from reflex_core.rules import RULES_ACTOR_LLM_REJECTED, RULES_CONFIDENCE, classify
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
+from reflex_mongo.serde import to_doc
 from reflex_telemetry import llmobs
 from reflex_telemetry.datadog_api import DatadogApi
 
@@ -349,7 +350,7 @@ class CortexAgent:
         """Lưu investigation (luôn, để audit) + diagnosis; False nếu đã mất quyền với incident."""
         if self.db is None:
             return True
-        await self.db[INVESTIGATIONS].insert_one(inv.model_dump(by_alias=True, mode="json"))
+        await self.db[INVESTIGATIONS].insert_one(to_doc(inv))
         best = max(hypotheses, key=lambda h: h.confidence, default=None)
         diag = Diagnosis(
             side=side,

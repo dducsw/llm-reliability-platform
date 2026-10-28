@@ -24,10 +24,10 @@ class RecoveryVerifier:
     async def verify(
         self,
         action: Action,
-        baseline_good: int = 198,
-        baseline_n: int = 200,
-        after_good: int = 199,
-        after_n: int = 200,
+        baseline_good: int,
+        baseline_n: int,
+        after_good: int,
+        after_n: int,
     ) -> VerificationResult:
         """Đo lường hồi phục qua Wilson CI và kiểm định 2 tỷ lệ (two-proportion z-test)."""
         now = datetime.now(tz=UTC)

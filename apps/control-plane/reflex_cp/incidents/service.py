@@ -16,6 +16,7 @@ from reflex_core.incident import (
     TimelineEntry,
 )
 from reflex_mongo.collections import INCIDENTS
+from reflex_mongo.serde import to_doc
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class IncidentService:
             if existing:
                 await self.db[INCIDENTS].update_one(
                     {"_id": existing["_id"]},
-                    {"$push": {"signals": sig_model.model_dump(mode="json")}},
+                    {"$push": {"signals": to_doc(sig_model)}},
                 )
                 logger.info("Merged signal into active incident %s", existing.get("key"))
                 return existing
@@ -72,11 +73,8 @@ class IncidentService:
                 signals=[sig_model],
                 t=IncidentTimes(first_bad_at=now, detected_at=now),
             )
-            doc = new_inc.model_dump(by_alias=True, mode="json")
+            doc = to_doc(new_inc)  # datetime giữ BSON Date để sort("t.detected_at") không lẫn kiểu
             doc["_id"] = inc_key
-            # mode="json" biến datetime thành chuỗi → sort("t.detected_at") lẫn kiểu với dữ liệu seed
-            # (BSON xếp Date trước String) và incident mới bị `limit` cắt khỏi danh sách.
-            doc["t"] = new_inc.t.model_dump()
             try:
                 await self.db[INCIDENTS].insert_one(doc)
                 logger.info("Opened new incident %s (dedup=%s)", inc_key, dedup_key)
@@ -126,7 +124,7 @@ class IncidentService:
         if self.db is not None:
             await self.db[INCIDENTS].update_one(
                 {"key": key},
-                {"$set": fields, "$push": {"timeline": entry.model_dump(mode="json")}},
+                {"$set": fields, "$push": {"timeline": to_doc(entry)}},
             )
         elif key in self._memory_incidents:
             self._memory_incidents[key].update(fields)
