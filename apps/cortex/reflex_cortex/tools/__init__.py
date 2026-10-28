@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Awaitable, Callable
 from functools import partial
 from typing import Any
@@ -40,3 +41,19 @@ def build_toolbox(
             }
         )
     return box
+
+
+def signature(name: str, fn: ToolFn) -> str:
+    """`mongo.sli_window(scope: str, key: str, window_m: int = 30)` — chỉ tham số LLM được truyền.
+
+    Không có chữ ký, LLM thật phải đoán tên tham số và đốt ngân sách tool call vào lỗi.
+    """
+    bound = fn.keywords if isinstance(fn, partial) else {}
+    params = [p for p in inspect.signature(fn).parameters.values() if p.name not in bound]
+    args = ", ".join(
+        p.name
+        + (f": {p.annotation}" if p.annotation is not inspect.Parameter.empty else "")
+        + (f" = {p.default!r}" if p.default is not inspect.Parameter.empty else "")
+        for p in params
+    )
+    return f"{name}({args})"

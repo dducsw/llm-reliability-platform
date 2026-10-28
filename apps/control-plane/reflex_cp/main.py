@@ -28,6 +28,7 @@ from reflex_cp.api.slos import router as slos_router
 from reflex_cp.api.stream import router as stream_router
 from reflex_cp.hooks.datadog import router as datadog_router
 from reflex_cp.incidents.service import IncidentService
+from reflex_cp.incidents.watchdog import CortexWatchdog
 from reflex_cp.outbox.publisher import OutboxPublisher
 from reflex_cp.sentinel.loop import Sentinel
 from reflex_cp.settings import Settings
@@ -48,6 +49,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         actuator: Actuator | None = None
         outbox: OutboxPublisher | None = None
         outbox_task: asyncio.Task | None = None
+        watchdog: CortexWatchdog | None = None
+        watchdog_task: asyncio.Task | None = None
 
         if settings.mongodb_uri:
             try:
@@ -79,6 +82,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 outbox_task = asyncio.create_task(outbox.run())
                 app.state.outbox_task = outbox_task
 
+                # Watchdog R4: Cortex im lặng → rule engine ngay tại control-plane
+                if settings.cortex_watchdog_enabled:
+                    unclaimed_s, stale_s = settings.watchdog_thresholds()
+                    watchdog = CortexWatchdog(db, unclaimed_s=unclaimed_s, stale_s=stale_s)
+                    watchdog_task = asyncio.create_task(watchdog.run())
+
                 logger.info("Control plane connected to MongoDB: %s", settings.mongodb_db)
             except Exception as e:
                 logger.error("Failed to initialize MongoDB connection or background tasks: %s", e)
@@ -96,6 +105,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             outbox.stop()
         if outbox_task and not outbox_task.done():
             outbox_task.cancel()
+        if watchdog:
+            watchdog.stop()
+        if watchdog_task and not watchdog_task.done():
+            watchdog_task.cancel()
 
         if client:
             await client.close()

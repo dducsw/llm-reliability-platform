@@ -36,3 +36,12 @@ async def test_propose_action_tool() -> None:
         db=None,
     )
     assert action_id.startswith("act-")
+
+
+def test_prompt_signatures_hide_bound_args() -> None:
+    from reflex_cortex.tools import build_toolbox, signature
+
+    box = build_toolbox(object(), None, "INC-1")  # type: ignore[arg-type]
+    sig = signature("mongo.sli_window", box["mongo.sli_window"])
+    assert sig.startswith("mongo.sli_window(scope: str, key: str")
+    assert "db" not in sig

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from datetime import UTC, datetime
 
 import typer
 from pymongo import AsyncMongoClient
@@ -32,13 +33,24 @@ def _agent(db: AsyncDatabase | None, settings: Settings) -> CortexAgent:
     return CortexAgent(db=db, settings=settings, datadog=datadog)
 
 
-async def claim(db: AsyncDatabase, incident_key: str) -> bool:
-    """detected → investigating bằng một update nguyên tử; chỉ một Cortex instance thắng."""
+async def claim(db: AsyncDatabase, incident_key: str) -> str | None:
+    """detected → investigating bằng một update nguyên tử; chỉ một Cortex instance thắng.
+
+    Trả về lease (`investigating_since`) — watchdog control-plane dựa vào nó để biết Cortex
+    treo; Cortex chỉ ghi kết quả khi lease còn là của mình.
+    """
+    lease = datetime.now(tz=UTC).isoformat()
     res = await db[INCIDENTS].update_one(
         {"key": incident_key, "status": IncidentStatus.DETECTED.value},
-        {"$set": {"status": IncidentStatus.INVESTIGATING.value}},
+        {
+            "$set": {
+                "status": IncidentStatus.INVESTIGATING.value,
+                "investigator": "cortex",
+                "investigating_since": lease,
+            }
+        },
     )
-    return res.modified_count == 1
+    return lease if res.modified_count == 1 else None
 
 
 async def claim_postmortem(db: AsyncDatabase, incident_key: str) -> bool:
@@ -60,15 +72,17 @@ async def serve_forever(settings: Settings) -> None:
     # Incident đã `detected` trước khi Cortex khởi động
     pending = [doc async for doc in db[INCIDENTS].find({"status": IncidentStatus.DETECTED.value})]
     for doc in pending:
-        if await claim(db, doc["key"]):
-            await agent.investigate(doc["key"])
+        if lease := await claim(db, doc["key"]):
+            await agent.investigate(doc["key"], lease=lease)
 
     async with await db[INCIDENTS].watch(pipeline, full_document="updateLookup") as stream:
         async for change in stream:
             doc = change.get("fullDocument") or {}
-            if doc.get("status") == IncidentStatus.DETECTED.value and await claim(db, doc["key"]):
+            if doc.get("status") == IncidentStatus.DETECTED.value and (
+                lease := await claim(db, doc["key"])
+            ):
                 try:
-                    await agent.investigate(doc["key"])
+                    await agent.investigate(doc["key"], lease=lease)
                 except Exception:
                     logger.exception("Investigation failed for %s", doc["key"])
             elif doc.get("status") == IncidentStatus.RESOLVED.value and await claim_postmortem(
