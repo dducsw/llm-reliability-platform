@@ -24,10 +24,15 @@ Mọi commit có mã task trong message; `git log origin/main..loibui` để xem
   Datadog event qua outbox (tag `reflex.cortex.fallback`, `reason:*`).
 - **Lease phía Cortex:** `claim()` ghi `investigator=cortex` + `investigating_since`; Cortex chỉ ghi
   diagnosis/propose khi lease còn của mình (watchdog đã tiếp quản → bỏ đề xuất, investigation vẫn lưu để audit).
-- **Chưa làm (cần quyết):** cho action của luật tự áp dụng nếu reversible + có hạn. Hiện vẫn **chờ người duyệt**
-  (confidence 0.6 < 0.7) — thay đổi guardrail an toàn nên cần team thống nhất.
+- **Auto cho luật** (guardrail `confidence`): `actor=rules` (Cortex/LLM offline) được qua dù 0.6 < 0.7 nếu action
+  reversible, không human_only, và `duration_s` (nếu có) ≤ 300s. Các guardrail khác vẫn chạy (healthy_destination,
+  capacity, blast_radius, cooldown, flap). Tắt: `REFLEX_RULES_AUTO_REVERSIBLE=false`.
+  - LLM *có trả lời* nhưng đề xuất bị loại (sai catalog/schema — dấu hiệu bị log độc dắt) → `actor=rules:llm_rejected`,
+    **vẫn chờ duyệt** (test SE-7.6 giữ nguyên ý nghĩa).
+  - Guardrail giờ kiểm confidence cho **mọi actor khác `human`** (trước: chỉ `cortex`/`rules` → actor lạ lọt qua).
 - E2E trên Atlas (2026-10-28): Cortex sống → `actor=cortex`; Cortex tắt → watchdog sau 17s; Cortex bị kill
-  giữa chừng → watchdog sau 122s. Cả ba action `awaiting_approval`.
+  giữa chừng → watchdog sau 122s. (Chạy trước khi bật auto cho luật — lúc đó cả ba `awaiting_approval`;
+  sau khi bật chỉ kiểm bằng unit test, chưa chạy lại E2E để khỏi đổi policy thật trên Atlas.)
 
 ## 2c. Cortex chạy LLM thật (DeepSeek `deepseek-flash`)
 
@@ -196,4 +201,3 @@ in-flight > `rps × 60`, không treo nữa.
 ## 6. Còn mở
 
 - Deploy `demo` lên VM + TLS + vendor thật (SE-9.3) — cần quyền hạ tầng.
-- R4: quyết định có cho action của luật tự áp dụng (reversible + có hạn) không — hiện chờ duyệt.

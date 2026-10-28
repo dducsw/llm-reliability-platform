@@ -25,7 +25,7 @@ from reflex_core.incident import (
     Side,
     ToolStep,
 )
-from reflex_core.rules import RULES_CONFIDENCE, classify
+from reflex_core.rules import RULES_ACTOR_LLM_REJECTED, RULES_CONFIDENCE, classify
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
 from reflex_telemetry import llmobs
 from reflex_telemetry.datadog_api import DatadogApi
@@ -179,6 +179,7 @@ class CortexAgent:
             context_pack = await build_context_pack(incident_key, self.db)
             llmobs.annotate(s, input_data={"incident_id": incident_key}, output_data=context_pack)
         rule_rec = classify(context_pack)
+        llm_rejected = False  # LLM có trả lời nhưng đề xuất bị loại → có thể bị dắt (injection)
 
         steps: list[ToolStep] = []
         results: dict[str, Any] = {}
@@ -188,6 +189,7 @@ class CortexAgent:
                 llmobs.annotate(ws, output_data=final, metrics={"tool_calls": len(steps)})
             hypotheses = [Hypothesis.model_validate(h) for h in final.get("hypotheses", [])]
             rec = _safe_recommendation(final.get("recommendation"), rule_rec)
+            llm_rejected = bool(final.get("recommendation")) and rec is rule_rec
             side = (
                 Side(final.get("side", "unknown"))
                 if final.get("side") in {s.value for s in Side}
@@ -232,7 +234,9 @@ class CortexAgent:
             await self._propose(
                 investigation,
                 rec,
-                actor="rules" if from_rules else "cortex",
+                actor=(RULES_ACTOR_LLM_REJECTED if llm_rejected else "rules")
+                if from_rules
+                else "cortex",
                 confidence=RULES_CONFIDENCE if from_rules else best,
             )
         logger.info(

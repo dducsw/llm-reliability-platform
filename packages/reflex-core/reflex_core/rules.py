@@ -10,6 +10,9 @@ from reflex_core.incident import Recommendation
 
 # Confidence cố định của rule engine (cortex-agent.md §2): luôn dưới ngưỡng auto 0.7.
 RULES_CONFIDENCE = 0.6
+# Actor khi luật thay cho đề xuất LLM bị loại (sai catalog/schema): không được auto như
+# `rules` thuần (Cortex/LLM offline), vì LLM có thể đã bị dắt bởi dữ liệu độc.
+RULES_ACTOR_LLM_REJECTED = "rules:llm_rejected"
 
 
 def classify(context_pack: dict[str, Any]) -> Recommendation | None:

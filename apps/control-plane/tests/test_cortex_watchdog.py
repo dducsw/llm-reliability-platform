@@ -104,10 +104,11 @@ async def test_lost_race_does_not_propose(fake_db: Any) -> None:
     assert fake_db[ACTIONS].docs == []
 
 
-async def test_rules_proposal_still_needs_human_approval(fake_db: Any) -> None:
+async def test_rules_proposal_passes_confidence_guardrail(fake_db: Any) -> None:
+    """shift_weight reversible → ngoại lệ R4: confidence 0.6 không chặn; guardrail khác vẫn chạy."""
     wd = await _seed(fake_db, _incident("INC-5", "detected", age_s=90))
     await wd.sweep(NOW)
     action = Action.model_validate(fake_db[ACTIONS].docs[0])
     decision = await decide(action, fake_db)
-    assert decision.mode == "human"
-    assert any(g.name == "confidence" and not g.pass_ for g in decision.guardrails)
+    conf = next(g for g in decision.guardrails if g.name == "confidence")
+    assert conf.pass_ and "rules fallback" in (conf.detail or "")

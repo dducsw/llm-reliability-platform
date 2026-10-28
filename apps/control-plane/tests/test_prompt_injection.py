@@ -112,7 +112,7 @@ async def test_off_catalog_action_from_log_falls_back_to_rules(fake_db: Any) -> 
     rec = {"action_type": "drop_policies", "params": {"all": True}}
     _, doc = await _run(fake_db, _final(rec, "dd_logs_search_1"))
     assert doc["type"] != "drop_policies"
-    assert doc["proposed_by"]["actor"] == "rules"
+    assert doc["proposed_by"]["actor"] == "rules:llm_rejected"
     assert doc["state"] == ActionState.AWAITING_APPROVAL.value
     assert "confidence" in _failed(doc)
 
@@ -121,5 +121,23 @@ async def test_off_catalog_action_from_log_falls_back_to_rules(fake_db: Any) -> 
 async def test_bad_params_from_log_fall_back_to_rules(fake_db: Any) -> None:
     rec = {"action_type": "shift_weight", "params": {"route": "*", "pct": 50}}
     _, doc = await _run(fake_db, _final(rec, "dd_logs_search_1"))
-    assert doc["proposed_by"]["actor"] == "rules"
+    assert doc["proposed_by"]["actor"] == "rules:llm_rejected"
     assert doc["state"] == ActionState.AWAITING_APPROVAL.value
+
+
+class DownLlm:
+    async def chat(self, messages: list[dict[str, str]]) -> str:
+        raise RuntimeError("gateway 503")
+
+
+@pytest.mark.asyncio
+async def test_llm_down_rules_action_skips_confidence_gate(fake_db: Any) -> None:
+    """Đối chứng: LLM sập (không phải bị dắt) → actor `rules` → ngoại lệ R4 cho qua confidence."""
+    agent = CortexAgent(db=fake_db, llm=DownLlm(), settings=Settings())
+    await agent.investigate("INC-DOWN-1")
+    [proposed] = fake_db[ACTIONS].docs
+    assert proposed["proposed_by"]["actor"] == "rules"
+    from reflex_core.actions import Action
+
+    await Actuator(fake_db).handle_proposed(Action.model_validate(proposed))
+    assert "confidence" not in _failed(fake_db[ACTIONS].docs[0])

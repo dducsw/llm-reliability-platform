@@ -264,3 +264,42 @@ async def test_blast_radius_low_budget_widens_one_tier(fake_db: Any) -> None:
 async def test_all_ten_guardrails_reported(fake_db: Any) -> None:
     names = [g.name for g in await evaluate_all(_shift(), fake_db, CFG)]
     assert len(names) == len(set(names)) == 10
+
+
+def _low_conf(actor: str, action_type: ActionType, params: dict[str, Any]) -> Action:
+    return Action(
+        _id="low",
+        type=action_type,
+        params=params,
+        proposed_by=ProposedBy(actor=actor, confidence=0.6),
+    )
+
+
+@pytest.mark.asyncio
+async def test_rules_reversible_action_passes_confidence(fake_db: Any) -> None:
+    """R4: luật (Cortex offline) được tự làm việc rút lại được."""
+    shift = _low_conf(
+        "rules", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+    )
+    assert (await _result(shift, fake_db, "confidence")).pass_
+    circuit = _low_conf("rules", ActionType.OPEN_CIRCUIT_GLOBAL, {"target": "A", "duration_s": 300})
+    assert (await _result(circuit, fake_db, "confidence")).pass_
+
+
+@pytest.mark.asyncio
+async def test_rules_exception_is_narrow(fake_db: Any) -> None:
+    long_circuit = _low_conf(
+        "rules", ActionType.OPEN_CIRCUIT_GLOBAL, {"target": "A", "duration_s": 3600}
+    )
+    assert not (await _result(long_circuit, fake_db, "confidence")).pass_
+    # Cortex LLM confidence thấp vẫn phải chờ duyệt
+    cortex = _low_conf(
+        "cortex", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+    )
+    assert not (await _result(cortex, fake_db, "confidence")).pass_
+    off = GuardrailConfig(cooldown_s=30, rules_auto_reversible=False)
+    shift = _low_conf(
+        "rules", ActionType.SHIFT_WEIGHT, {"route": "r", "from": "A", "to": "B", "pct": 1.0}
+    )
+    res = next(g for g in await evaluate_all(shift, fake_db, off) if g.name == "confidence")
+    assert not res.pass_
