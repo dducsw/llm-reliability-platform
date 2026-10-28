@@ -232,3 +232,59 @@ async def test_shed_returns_503_only_when_all_degraded_and_priority_low() -> Non
         assert (await orch.complete(_ctx(priority=2), {"messages": []})).status == 200
     finally:
         registry._ADAPTERS.pop("slowfast", None)
+
+
+@pytest.mark.asyncio
+async def test_policy_deadline_used_and_final_error_is_not_200() -> None:
+    """Không có header deadline → dùng policy.deadline_ms; mọi attempt lỗi → status lỗi thật."""
+    from reflex_gateway.adapters import registry
+    from reflex_gateway.adapters.base import UpstreamResult
+
+    class _Down:
+        name = "down"
+
+        def __init__(self) -> None:
+            self.timeouts: list[float] = []
+
+        async def complete(self, target: dict, payload: dict, timeout_s: float) -> UpstreamResult:
+            self.timeouts.append(timeout_s)
+            return UpstreamResult(
+                status=503,
+                content="",
+                finish_reason="error",
+                tokens_in=0,
+                tokens_out=0,
+                latency_ms=1.0,
+                ttft_ms=None,
+                raw={"error": "down"},
+                error_class="http_error",
+            )
+
+        def stream(self, target: dict, payload: dict, timeout_s: float):  # type: ignore[no-untyped-def]
+            raise NotImplementedError
+
+    down = _Down()
+    registry._ADAPTERS["down"] = down  # type: ignore[assignment]
+    try:
+        ps = PolicyStore(db=None)
+        ps.set(
+            Policy(
+                _id="cortex.reason",
+                version=1,
+                deadline_ms=60000,
+                candidates=[Candidate(target="mock:large", weight=1.0, role=CandidateRole.PRIMARY)],
+            )
+        )
+        tc = TargetCatalog(db=None)
+        tc._targets["mock:large"] = {"_id": "mock:large", "adapter": "down"}
+        orch = Orchestrator(policy_store=ps, target_catalog=tc, telemetry_queue=TelemetryQueue(100))
+        ctx = RequestContext(
+            request_id="r", route="cortex.reason", priority=0, session=None, deadline_ms=None
+        )
+        res = await orch.complete(ctx, {"messages": [{"role": "user", "content": "hi"}]})
+    finally:
+        registry._ADAPTERS.pop("down", None)
+
+    assert down.timeouts[0] == 30.0  # min(60s policy, 30s cap) — không phải 8s mặc định
+    assert res.status == 503
+    assert res.request_event.outcome.value == "error"

@@ -36,7 +36,8 @@ async def chat_completions(request: Request) -> Response:
 
     priority = int(request.headers.get("x-priority", "1"))
     session = request.headers.get("x-reflex-session")
-    deadline_ms = int(request.headers.get("x-reflex-deadline-ms", "8000"))
+    deadline_hdr = request.headers.get("x-reflex-deadline-ms")
+    deadline_ms = int(deadline_hdr) if deadline_hdr else None  # None → deadline của policy
     request_id = request.headers.get("x-reflex-request-id") or f"req-{uuid.uuid4().hex[:12]}"
     trace_id = request.headers.get("x-datadog-trace-id")
 
@@ -79,7 +80,7 @@ async def chat_completions(request: Request) -> Response:
     if not res.request_event.hedged:  # hedge chạy song song → không trừ tuần tự được
         overhead = gateway_overhead_ms(wall_ms, [a.latency_ms for a in res.attempt_events])
         headers["x-reflex-overhead-ms"] = f"{overhead:.2f}"
-    return JSONResponse(content=res.body, headers=headers)
+    return JSONResponse(content=res.body, status_code=res.status, headers=headers)
 
 
 def gateway_overhead_ms(wall_ms: float, upstream_ms: list[float]) -> float:

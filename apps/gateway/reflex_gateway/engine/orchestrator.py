@@ -45,7 +45,7 @@ class RequestContext:
     route: str
     priority: int
     session: str | None
-    deadline_ms: int
+    deadline_ms: int | None  # None → theo policy.deadline_ms của route
     trace_id: str | None = None
 
 
@@ -284,7 +284,7 @@ class Orchestrator:
             self._get_hedge_budget(ctx.route, policy).record_request()
 
         # 1. Thu thập inputs cho routing
-        deadline = Deadline(ctx.deadline_ms)
+        deadline = Deadline(ctx.deadline_ms or (policy.deadline_ms if policy else 8000))
         if policy and policy.candidates:
             target_inputs = self._candidate_inputs(policy, ctx.route)
             route_decision = decide(policy, target_inputs, self.rng)
@@ -484,10 +484,15 @@ class Orchestrator:
         self.telemetry_queue.put_nowait(req_event)
         metrics.emit_request(req_event)
 
+        # Hết attempt mà lần cuối vẫn lỗi → trả lỗi thật, không 200 + body không có `choices`
+        status = 200
+        if req_outcome == RequestOutcome.ERROR:
+            status = last_att.http_status if (last_att.http_status or 0) >= 400 else 502
         return OrchestratorResult(
             body=final_response or {},
             request_event=req_event,
             attempt_events=attempt_events,
+            status=status,
         )
 
     async def stream(self, ctx: RequestContext, payload: dict) -> AsyncIterator[dict]:
