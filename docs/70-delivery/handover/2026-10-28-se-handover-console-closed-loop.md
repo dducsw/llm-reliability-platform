@@ -168,3 +168,26 @@ Incident `INC-202610281829-1cb7d5`: Cortex đề xuất → người duyệt 18:
 
 Sau failback 100% policy `order.extract` là `vendorA:large` 1.0 / `vendorB:large` 0.0 (thiết kế "100% = trả hết cho target gốc"); chạy lại thí nghiệm
 cần đưa về 90/10 (snapshot vào `policy_history`, version tăng, CAS) và dọn incident/action sót.
+
+## 11. Việc còn lại (tổng hợp cuối phiên 2026-10-29)
+
+| # | Việc | Chủ | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| T1 | Webhook Datadog → control-plane (`datadog_webhook`) | SE | Cần URL công khai tới `/hooks/datadog` (nginx TLS của stack demo). Chưa có thì monitor chưa gọi được `@webhook-reflex-control-plane-<env>`; Sentinel vẫn là detector chính. Terraform có sẵn `webhooks.tf`, apply với `webhook_url`/`webhook_token` thật |
+| T2 | M12 Detector disagreement | SE | Metric `reflex.incident.open{source}` đã phát. Chỉ tạo monitor sau T1, nếu không sẽ báo liên tục (không có incident nguồn `datadog`) |
+| T3 | M4 TTFT SLO burn + SLO Delivered latency | SE | Cần gateway phát `reflex.request.under_threshold{route,threshold}` (xem `monitors-and-slos.md` §1) |
+| T4 | M5 (anomaly p99), M8 (cost), M13 (LLMObs Cortex) | SE | M5/M8 dùng metric đã có (`reflex.attempt.latency`, `reflex.cost.usd`) nhưng cú pháp anomaly cần thử trên tài khoản thật (⚠ trong tài liệu); M13 cần xác định metric LLMObs |
+| T5 | `dashboards.tf`, `logs.tf` (3 dashboard JSON đã có trong `infra/terraform/dashboards/`; log pipeline + facet) | SE | Vẫn là TODO(P3) |
+| T6 | State Terraform nằm local, gitignored | SE | Cân nhắc backend từ xa (S3/Terraform Cloud) hoặc `terraform import` lại khi đổi máy; id hiện tại xem `terraform state list` |
+| T7 | Gom 5 SLO của Datadog vào collection `slos.datadog` (output Terraform) | SE | `outputs.tf` còn TODO |
+| T8 | Failback 100% để policy ở `vendorA:large` 1.0 / `vendorB:large` 0.0 | SE+DE | Theo thiết kế hiện tại. Cân nhắc trả về trọng số baseline của policy seed để secondary không bị bỏ đói (đổi `failback_step` transform) |
+| T9 | D2 dùng ngưỡng cứng `good/n < 0.99`, n ≥ 10 | SE | Dễ rollback do nhiễu mẫu nhỏ; có thể chuyển sang cận Wilson. Hiện tự thử lại sau cooldown nên chưa gây hại |
+| T10 | Docker VM 1.9GB dùng chung với project khác | Môi trường | Build song song hay thiếu CPU → `bytecode-compile` lỗi / gateway chậm. Build từng service một; cân nhắc tăng RAM Docker Desktop |
+| T11 | `reflex-mongo migrate` bỏ qua 3 validator `$defs` (D8) | DE | Đã ghi ở handover 10-27 |
+| T12 | `HealthWriter` chưa ghi `budget_remaining` | DE | Bậc nới blast radius theo budget chưa kích hoạt |
+| T13 | 3 integration test stub "chưa hiện thực" | DE | `test_explain`, `test_streams`, `tests/integration/test_migrate` |
+| T14 | `rules.py` ở `reflex_core` do DE sở hữu nội dung; mọi thay đổi R1–R5 (handover 10-27) cần DE review | DE | Chưa có xác nhận review |
+
+**Quy ước vận hành đã rút ra (để người sau không dẫm lại):** dùng `127.0.0.1` thay `localhost` cho Console; `terraform plan -out` rồi apply file đó (không `-auto-approve`);
+composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h; ghi vào Mongo luôn dùng `reflex_mongo.serde.to_doc` và `_id` chuỗi
+(`reflex_core.actions.new_action_id`); thay đổi dữ liệu hàng loạt trên Atlas dùng chung phải theo ID cụ thể.
