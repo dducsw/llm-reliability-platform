@@ -65,6 +65,25 @@ class ScenarioRunner:
 
         phase_results: list[dict[str, Any]] = []
 
+        # Monitor Datadog chỉ Alert trong lúc fault đang chạy → theo dõi song song từ đầu, không đợi hết scenario
+        exps = scenario.expectations
+        monitor_idx = [i for i, e in enumerate(exps) if "monitor" in e]
+        total_s = sum(parse_window(p.duration) for p in scenario.phases) / scale
+        monitor_task = (
+            asyncio.create_task(
+                check_expectations(
+                    [exps[i] for i in monitor_idx],
+                    start_time,
+                    db=self.db,
+                    scale=scale,
+                    dd=self.dd,
+                    monitor_watch_s=total_s,
+                )
+            )
+            if monitor_idx
+            else None
+        )
+
         try:
             for idx, phase in enumerate(scenario.phases):
                 duration_s = parse_window(phase.duration) / scale
@@ -100,14 +119,25 @@ class ScenarioRunner:
                 phase_results.append(
                     {"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)}
                 )
+        except BaseException:
+            if monitor_task is not None:
+                monitor_task.cancel()
+            raise
         finally:
             # Đóng run ngay khi hết phase (không chờ expectations) hoặc khi bị huỷ/lỗi
             await self._close_runs(run_id)
 
-        # Đánh giá expectations
-        exp_results = await check_expectations(
-            scenario.expectations, start_time, db=self.db, scale=scale, dd=self.dd
+        # Đánh giá expectations (monitor đã chạy song song; các loại khác kiểm tra sau khi hết phase)
+        rest_idx = [i for i in range(len(exps)) if i not in monitor_idx]
+        rest = await check_expectations(
+            [exps[i] for i in rest_idx], start_time, db=self.db, scale=scale, dd=self.dd
         )
+        monitors = await monitor_task if monitor_task is not None else []
+        merged: dict[int, dict[str, Any]] = {
+            **dict(zip(rest_idx, rest, strict=True)),
+            **dict(zip(monitor_idx, monitors, strict=True)),
+        }
+        exp_results = [merged[i] for i in range(len(exps))]
 
         return {
             "run_id": run_id,
