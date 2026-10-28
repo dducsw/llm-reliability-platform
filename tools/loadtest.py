@@ -6,6 +6,9 @@ Overhead lấy từ header `x-reflex-overhead-ms` (wall − upstream), không ph
     uv run python tools/loadtest.py --rps 50 --minutes 30 \\
         --gateway http://localhost:8080 --gateway http://localhost:8081 --out loadtest.json
 
+Request quá REQUEST_DEADLINE_S bị tính `client_timeout`; in-flight vượt `rps × STALL_S` (request không
+còn tới gateway, vd Docker Desktop nghẽn) → dừng sớm, `aborted` ghi lý do, vẫn xuất kết quả đã đo.
+
 Có MONGODB_URI → ghi thêm dbStats và số document requests_ts/attempts_ts trước/sau (chi phí Mongo).
 """
 
@@ -24,6 +27,9 @@ from typing import Any
 
 import httpx
 
+REQUEST_DEADLINE_S = 70  # 2 gateway × timeout 30s + dư
+STALL_S = 60
+
 ROUTES = {"order.extract": 0.5, "chat.reply": 0.35, "support.triage": 0.15}
 PROMPTS = {
     "order.extract": "Trích xuất đơn hàng: 2 áo thun size M giao tới Quận 3, thanh toán COD.",
@@ -38,6 +44,8 @@ class Stats:
     overhead_ms: list[float] = field(default_factory=list)
     status: dict[str, int] = field(default_factory=dict)
     late_sends: int = 0
+    aborted: str | None = None
+    elapsed_s: float = 0.0
 
     def add_status(self, key: str) -> None:
         self.status[key] = self.status.get(key, 0) + 1
@@ -92,10 +100,16 @@ async def run(gateways: list[str], rps: float, seconds: float, seed: int) -> Sta
             k = next(rotation)
             order = gateways[k:] + gateways[:k]
             route = rng.choices(routes, weights)[0]
-            t = asyncio.create_task(one(client, order, route, stats, f"lt-{seed}-{i}"))
+            t = asyncio.create_task(guarded(client, order, route, stats, f"lt-{seed}-{i}"))
             tasks.add(t)
             t.add_done_callback(tasks.discard)
             now = time.perf_counter()
+            if len(tasks) > rps * STALL_S:
+                stats.aborted = f"stalled: {len(tasks)} in flight at {now - start:.0f}s"
+                print(stats.aborted, file=sys.stderr)
+                for t in tasks:
+                    t.cancel()
+                break
             if now - last_report >= 30:
                 last_report = now
                 print(
@@ -104,18 +118,31 @@ async def run(gateways: list[str], rps: float, seconds: float, seed: int) -> Sta
                     file=sys.stderr,
                 )
         await asyncio.gather(*tasks, return_exceptions=True)
+        stats.elapsed_s = time.perf_counter() - start
     return stats
+
+
+async def guarded(
+    client: httpx.AsyncClient, gateways: list[str], route: str, stats: Stats, rid: str
+) -> None:
+    try:
+        await asyncio.wait_for(one(client, gateways, route, stats, rid), REQUEST_DEADLINE_S)
+    except TimeoutError:
+        stats.add_status("client_timeout")
 
 
 def summarize(stats: Stats, rps: float, seconds: float, max_p99_overhead: float) -> dict[str, Any]:
     total = sum(stats.status.values())
     ok = stats.status.get("200", 0)
     p99 = pct(stats.overhead_ms, 99)
+    ran = min(seconds, stats.elapsed_s) if stats.elapsed_s else seconds
     return {
         "target_rps": rps,
         "duration_s": seconds,
+        "ran_s": round(ran, 1),
+        "aborted": stats.aborted,
         "requests": total,
-        "achieved_rps": round(total / seconds, 2) if seconds else 0,
+        "achieved_rps": round(total / ran, 2) if ran else 0,
         "success_ratio": round(ok / total, 4) if total else 0,
         "status": stats.status,
         "late_sends": stats.late_sends,
@@ -127,7 +154,7 @@ def summarize(stats: Stats, rps: float, seconds: float, max_p99_overhead: float)
         },
         "overhead_samples": len(stats.overhead_ms),
         "max_p99_overhead_ms": max_p99_overhead,
-        "pass": p99 is not None and p99 <= max_p99_overhead,
+        "pass": stats.aborted is None and p99 is not None and p99 <= max_p99_overhead,
     }
 
 

@@ -1,0 +1,22 @@
+# Stack nhẹ: Mongo = Atlas (MONGODB_URI trong .env), không chạy container mongo local
+# (mongod + mongot ~600MB RAM, ~1 core). `task up:atlas`.
+# Chỉ dùng cho dev/test của từng người — đừng chạy load test vào cluster dùng chung.
+services:
+  mongo:
+    profiles: [local-mongo]
+  mock-llm:
+    depends_on: !reset {}
+  chaos-proxy:
+    depends_on: !reset {}
+  gateway-1:
+    depends_on: !reset {}
+  gateway-2:
+    depends_on: !reset {}
+  control-plane:
+    depends_on: !reset {}
+  cortex:
+    depends_on: !reset {}
+  prober:
+    depends_on: !reset {}
+  traffic-gen:
+    depends_on: !reset {}

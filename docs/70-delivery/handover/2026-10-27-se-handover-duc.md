@@ -78,6 +78,23 @@ Test chặn hồi quy: `packages/reflex-core/tests/test_validators.py::test_mock
 **Còn mở (SE-2.1):** chaos-proxy hiện **tự sinh** response, không forward tới vendor thật hay mock-llm.
 Với stack `demo` (vendor thật đi qua chaos-proxy) cần thêm chế độ forward theo `base_url` thật của vendor.
 
+### Hiệu năng gateway (phát hiện khi load test SE-9.2)
+
+Lần chạy 50 rps đầu tiên: gateway chỉ kịp ~7 rps, hàng nghìn request treo, p99 overhead > 1s.
+
+| Lỗi | Hậu quả | Sửa |
+| :--- | :--- | :--- |
+| Adapter `openai_compat`/`anthropic` tạo `httpx.AsyncClient` **mỗi request** (SSLContext + TCP mới) | ~20–40ms CPU/request → gateway bão hòa ~25 rps; 25 rps wall p50 ~340ms | `SharedClient` dùng chung pool theo adapter (timeout theo request), đóng ở lifespan → p50 ~13ms |
+| Healthcheck mongo chạy `mongosh` (Node) mỗi 5s | Mongo "idle" vẫn ~1 core, tranh CPU với gateway trong VM Docker → kéo p99 | `interval: 60s` + `start_interval: 3s` lúc khởi động |
+| Container mongo không có `hostname` cố định | `atlas-local` đặt tên replica set = hostname (container id) → **recreate container (đổi config) là mất primary**, runner panic | `hostname: mongo`. Volume cũ cần đổi `_id`/`members[0].host` trong `local.system.replset` sang `mongo` (Lợi đã làm cho volume của mình) |
+
+Đo CPU/request một tiến trình gateway ở 25 rps: khi còn mongo local tranh CPU, `ddtrace-run` = 19ms vs không ddtrace = 9ms;
+sau khi bỏ mongo khỏi VM, `ddtrace-run` đầy đủ chỉ còn **8ms**, p99 overhead ~12ms → chi phí chủ yếu do tranh CPU, không phải ddtrace.
+
+**Chế độ Atlas** (`infra/compose/docker-compose.atlas.yml`, `task up:atlas`): không chạy container mongo, dùng
+`MONGODB_URI` trong `.env`. Nhẹ hơn hẳn trên laptop (~600MB cho gateway×2 + chaos-proxy + mock-llm + agent). Lưu ý:
+chỉ dùng cluster riêng của mình (M0 free: 512MB), thí nghiệm chaos `mongo` không áp dụng (`--only` các service khác).
+
 ### ddtrace × PyMongo
 
 `ddtrace` 4.16 báo `failed to enable ddtrace support for pymongo: type object 'Server' has no attribute
@@ -98,6 +115,7 @@ cài**. `$jsonSchema` của MongoDB không hỗ trợ `$defs`/`$ref`; cần inli
 
 ```bash
 task up && task seed                    # stack local + dữ liệu
+task up:atlas -- gateway-1 gateway-2 chaos-proxy mock-llm datadog-agent   # nhẹ, Mongo = Atlas
 task chaos:self -- --out chaos.json     # SE-9.1
 task loadtest -- --minutes 30 --out loadtest.json   # SE-9.2 (50 rps mặc định)
 task demo:reset                         # dry-run; thêm `-- --yes` để xoá
@@ -132,7 +150,20 @@ drop trong lúc tắt datadog-agent là đúng thiết kế (fire-and-forget).
 
 ### SE-9.2 — `tools/loadtest.py` 50 rps × 30 phút
 
-_(đang chạy)_
+**Chưa có lần chạy đủ 30 phút hợp lệ trên laptop.** Lần tốt nhất (chế độ Atlas, sau khi sửa pool client):
+
+| Chỉ số | Giá trị (17 phút đầu, 51 016 request) |
+| :--- | :--- |
+| Success | 51 016 / 51 016 (100%), không retry |
+| p99 overhead gateway (luỹ kế) | ~37.5 ms — **chưa đạt** mục tiêu ≤ 10 ms |
+| Bài ngắn 25 rps / 1 gateway, VM không có mongo | 8 ms CPU/request, p99 overhead ~12 ms |
+
+Sau phút 17 request không còn tới gateway (gateway log: 1500 req/phút đều đặn tới 10:15 rồi 0) — trùng lúc máy bật
+thêm stack khác trong Docker Desktop; máy swap ~5.9GB, load avg ~9 → số liệu không còn đại diện.
+`loadtest.py` giờ có deadline mỗi request (`client_timeout`) và tự dừng khi in-flight > `rps × 60` (`aborted`),
+không còn treo vô hạn như lần đầu.
+
+Cần chạy lại trên VM (cùng đợt deploy SE-9.3) hoặc laptop rảnh để có số chốt.
 
 ## 6. Còn mở
 

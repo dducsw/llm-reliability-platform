@@ -5,6 +5,7 @@ dotenv: [".env"]
 
 vars:
   COMPOSE: docker compose -f infra/compose/docker-compose.yml
+  COMPOSE_ATLAS: docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.atlas.yml
   COMPOSE_DEMO: docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.demo.yml
 
 tasks:
@@ -18,6 +19,11 @@ tasks:
     desc: Khởi động toàn bộ stack local
     cmds:
       - "{{.COMPOSE}} up -d --build"
+
+  up:atlas:
+    desc: Stack nhẹ, Mongo = Atlas (MONGODB_URI trong .env); vd `task up:atlas -- gateway-1 gateway-2 chaos-proxy mock-llm datadog-agent`
+    cmds:
+      - "{{.COMPOSE_ATLAS}} up -d --build {{.CLI_ARGS}}"
 
   down:
     desc: Tắt stack
