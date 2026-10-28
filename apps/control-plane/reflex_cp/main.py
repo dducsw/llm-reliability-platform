@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,8 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from pymongo import AsyncMongoClient
 from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import make_statsd
+from reflex_telemetry.tags import SVC_CONTROL_PLANE
 
 from reflex_cp.actuator.apply import Actuator
 from reflex_cp.actuator.expiry import ActionExpirer
@@ -64,6 +67,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 db = client[settings.mongodb_db]
                 app.state.client = client
                 app.state.db = db
+                IncidentService.statsd = make_statsd(
+                    SVC_CONTROL_PLANE,
+                    os.getenv("REFLEX_ENV", "local"),
+                    os.getenv("DD_VERSION", "0"),
+                )
                 app.state.incident_service = IncidentService(db)
 
                 # Khởi động Sentinel background loop

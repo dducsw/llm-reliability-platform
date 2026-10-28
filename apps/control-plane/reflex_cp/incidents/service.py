@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class IncidentService:
+    # Gắn một lần ở main (DogStatsD dùng chung); None khi không có telemetry (test, CLI)
+    statsd: Any = None
+
     def __init__(self, db: AsyncDatabase | None = None) -> None:
         self.db = db
         self._memory_incidents: dict[str, dict[str, Any]] = {}
@@ -79,6 +82,10 @@ class IncidentService:
             try:
                 await self.db[INCIDENTS].insert_one(doc)
                 logger.info("Opened new incident %s (dedup=%s)", inc_key, dedup_key)
+                if self.statsd is not None:  # M12: so sánh số incident theo nguồn phát hiện
+                    self.statsd.increment(
+                        "reflex.incident.open", tags=[f"source:{sig_model.source}"]
+                    )
                 return doc
             except DuplicateKeyError:
                 # Race condition: một tiến trình khác vừa tạo xong

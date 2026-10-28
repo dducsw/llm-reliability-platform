@@ -14,6 +14,12 @@ def configure(statsd: DogStatsd | None) -> None:
     _statsd = statsd
 
 
+def emit_dropped(env: str = "") -> None:
+    """Queue telemetry đầy → mất event; đây là tín hiệu "mù" (M11), phải ra được ngoài gateway."""
+    if _statsd is not None:
+        _statsd.increment(t.M_TELEMETRY_DROPPED)
+
+
 def emit_request(event: RequestEvent) -> None:
     if _statsd is None:
         return

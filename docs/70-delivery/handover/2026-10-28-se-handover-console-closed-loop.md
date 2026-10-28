@@ -143,3 +143,19 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
   thay vì `signals[0].source`. Đã sửa (commit 52a0a25); **chưa chạy lại scenario để thấy 4/4 PASS**.
 - **Policy sau failback 100% là `vendorA:large` 1.0 / `vendorB:large` 0.0** (theo thiết kế "100% = trả hết cho target gốc"), không về 90/10 baseline. Trước khi chạy lại cần đưa `order.extract` về baseline.
 - Rollback D2 dựa ngưỡng cứng `good/n < 0.99` với n ≥ 10 → dễ rollback do nhiễu mẫu nhỏ (có timeout thoáng qua do Docker VM 1.9GB dùng chung với project khác). Chấp nhận được vì tự thử lại sau cooldown, nhưng có thể đổi sang cận Wilson.
+
+## 9. Terraform + metric nguồn hoàn chỉnh (2026-10-29)
+
+Metric mới được phát: `reflex.probe.result{target,path,route,result}` (prober), `reflex.telemetry.dropped` (queue gateway đầy),
+`reflex.incident.open{source}` (control-plane), `reflex.attempt.quality.{total,pass}` (§7). Control-plane giờ có DogStatsD
+(`reflex_telemetry.setup.make_statsd`).
+
+Đã `apply` lên Datadog (site `ap1`, `env=local`, state local gitignored): SLO Delivered availability `chat.reply`, Delivered
+quality `order.extract`, Provider quality ×3 target; monitor M1, M2, M3 (a/b + composite), M6, M7, M9, M10, M11, P_direct, P_via_gw.
+
+Bài học từ API validate thật (HCL `validate` không bắt được): composite **không** được chứa composite (M9 dùng M3a && M3b thay vì M3);
+burn-rate SLO bắt buộc cửa sổ dài 1h–2d (không có 5m cho demo); `apply -auto-approve` không qua `plan` bị chặn → luôn `plan -out` rồi apply file đó.
+
+**Chưa làm:** M4 (cần gateway phát `reflex.request.under_threshold`), M5 (anomaly), M8 (cost), M12 (chỉ có nghĩa khi webhook Datadog đã nối
+vào control-plane, nếu không sẽ báo liên tục), M13 (LLMObs), `datadog_webhook` (cần URL công khai tới control-plane), dashboards, log pipeline.
+Expectation monitor của runner giờ theo dõi **song song** từ đầu scenario (trước đó đánh giá sau khi hết fault nên M3 đã về `OK`).

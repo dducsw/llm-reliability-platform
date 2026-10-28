@@ -19,6 +19,8 @@ import uvicorn
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import BENCH_TS
 from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import init as telemetry_init
+from reflex_telemetry.tags import SVC_PROBER
 
 from reflex_sim.bench.importer import import_bench
 from reflex_sim.bench.runners import rebuild_baselines, top_incidents
@@ -66,7 +68,9 @@ def prober() -> None:
     async def _main() -> None:
         client, db = _client_db()
         s = Settings()
+        statsd = telemetry_init(SVC_PROBER).statsd
         p = Prober(
+            statsd=statsd,
             db=db,
             gateway_url=s.gateway_url,
             chaos_proxy_url=s.chaos_proxy_url,

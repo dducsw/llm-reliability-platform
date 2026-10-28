@@ -6,6 +6,8 @@ import asyncio
 
 from reflex_core.events import AttemptEvent, RequestEvent
 
+from reflex_gateway.telemetry import metrics
+
 
 class TelemetryQueue:
     def __init__(self, maxsize: int = 10_000) -> None:
@@ -19,6 +21,7 @@ class TelemetryQueue:
             return True
         except asyncio.QueueFull:
             self.dropped += 1
+            metrics.emit_dropped()
             return False
 
     async def get(self) -> RequestEvent | AttemptEvent:

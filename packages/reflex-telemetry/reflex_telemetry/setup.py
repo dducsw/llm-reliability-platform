@@ -31,6 +31,18 @@ def _read_version() -> str:
     return os.getenv("DD_VERSION", "0.0.0")
 
 
+def make_statsd(service: str, env: str, version: str) -> DogStatsd:
+    return DogStatsd(
+        host=os.getenv("DD_AGENT_HOST", "localhost"),
+        port=int(os.getenv("DD_DOGSTATSD_PORT", "8125")),
+        constant_tags=[f"env:{env}", f"service:{service}", f"version:{version}"],
+        # Gửi ở thread riêng: không có agent thì mỗi gói UDP phải resolve DNS (thất bại ~14ms) —
+        # làm đồng bộ trên event loop sẽ nghẽn gateway ở vài rps. Hàng đợi đầy thì bỏ gói.
+        disable_buffering=False,
+        disable_background_sender=False,
+    )
+
+
 def init(service: str, *, llmobs: bool = False) -> Telemetry:
     env = os.getenv("REFLEX_ENV", "local")
     version = _read_version()
@@ -65,15 +77,7 @@ def init(service: str, *, llmobs: bool = False) -> Telemetry:
         cache_logger_on_first_use=True,
     )
 
-    statsd = DogStatsd(
-        host=os.getenv("DD_AGENT_HOST", "localhost"),
-        port=int(os.getenv("DD_DOGSTATSD_PORT", "8125")),
-        constant_tags=[f"env:{env}", f"service:{service}", f"version:{version}"],
-        # Gửi ở thread riêng: không có agent thì mỗi gói UDP phải resolve DNS (thất bại ~14ms) —
-        # làm đồng bộ trên event loop sẽ nghẽn gateway ở vài rps. Hàng đợi đầy thì bỏ gói.
-        disable_buffering=False,
-        disable_background_sender=False,
-    )
+    statsd = make_statsd(service, env, version)
     return Telemetry(service=service, env=env, version=version, statsd=statsd)
 
 

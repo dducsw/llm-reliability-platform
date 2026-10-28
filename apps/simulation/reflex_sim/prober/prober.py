@@ -14,6 +14,7 @@ import yaml
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.events import AttemptOutcome, ProbeEvent, ProbeMeta, ProbePath, QualityResult
 from reflex_mongo.collections import PROBES_TS
+from reflex_telemetry import tags as t
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class Prober:
         interval_s: float = 15.0,
         env: str = "local",
         seeds_path: str = "seeds/golden_prompts.yaml",
+        statsd: Any | None = None,
     ) -> None:
         self.db = db
         self.gateway_url = gateway_url.rstrip("/")
@@ -36,6 +38,23 @@ class Prober:
         self.seeds_path = Path(seeds_path)
         self._running = False
         self._prompts: list[dict[str, Any]] = []
+        self.statsd = statsd
+
+    def emit(self, event: ProbeEvent, route: str) -> None:
+        """`reflex.probe.result` — nguồn cho monitor M6 (probe silence) và P_direct/P_via_gw (M9/M10)."""
+        if self.statsd is None:
+            return
+        result = "pass" if event.quality.pass_ else "fail"
+        self.statsd.increment(
+            t.M_PROBE_RESULT,
+            tags=[
+                f"{t.ENV}:{event.meta.env}",
+                f"{t.TARGET}:{event.meta.target}",
+                f"{t.PATH}:{event.meta.path.value}",
+                f"{t.ROUTE}:{route}",
+                f"result:{result}",
+            ],
+        )
 
     def load_prompts(self) -> None:
         if self.seeds_path.exists():
@@ -115,6 +134,7 @@ class Prober:
                     for path in (ProbePath.DIRECT, ProbePath.VIA_GATEWAY):
                         event = await self.probe_one(client, target, path, golden)
                         events.append(event)
+                        self.emit(event, golden["route"])
 
         if self.db is not None and events:
             try:

@@ -15,9 +15,9 @@ from reflex_gateway.telemetry import metrics
 
 class _Statsd:
     def __init__(self) -> None:
-        self.incs: list[tuple[str, list[str]]] = []
+        self.incs: list[tuple[str, list[str] | None]] = []
 
-    def increment(self, name: str, tags: list[str]) -> None:
+    def increment(self, name: str, tags: list[str] | None = None) -> None:
         self.incs.append((name, tags))
 
     def distribution(self, *_a: Any, **_k: Any) -> None:
@@ -58,10 +58,24 @@ def test_failed_quality_counts_total_only() -> None:
 
 
 def test_passed_quality_counts_total_and_pass_with_target_tag() -> None:
-    by_name = dict(_emitted(True))
+    by_name = {n: t or [] for n, t in _emitted(True)}
     assert "reflex.attempt.quality.pass" in by_name
     assert "target:vendorA:large" in by_name["reflex.attempt.quality.total"]
 
 
 def test_attempt_without_quality_check_emits_no_quality_metric() -> None:
     assert not [n for n, _ in _emitted(None) if "quality" in n]
+
+
+def test_full_queue_emits_telemetry_dropped() -> None:
+    from reflex_gateway.telemetry.queue import TelemetryQueue
+
+    fake = _Statsd()
+    metrics.configure(fake)  # type: ignore[arg-type]
+    try:
+        q = TelemetryQueue(maxsize=1)
+        assert q.put_nowait(_attempt(True)) is True
+        assert q.put_nowait(_attempt(True)) is False  # đầy → drop
+    finally:
+        metrics.configure(None)
+    assert fake.incs == [("reflex.telemetry.dropped", None)]
