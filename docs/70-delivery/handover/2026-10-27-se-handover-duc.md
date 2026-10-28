@@ -148,22 +148,23 @@ Dữ liệu: `migrate` + `seed` + `bootstrap_memory` (50 incident). Chưa chạy
 Sau khi mongo khởi động lại, gateway ghi telemetry tiếp (20/20 request vào `requests_ts`). Trace bị
 drop trong lúc tắt datadog-agent là đúng thiết kế (fire-and-forget).
 
-### SE-9.2 — `tools/loadtest.py` 50 rps × 30 phút
+### SE-9.2 — `tools/loadtest.py` 50 rps × 30 phút — **PASS**
 
-**Chưa có lần chạy đủ 30 phút hợp lệ trên laptop.** Lần tốt nhất (chế độ Atlas, sau khi sửa pool client):
+Chế độ Atlas (`task up:atlas`: gateway×2, chaos-proxy, mock-llm, datadog-agent; Mongo = Atlas M0),
+Docker Desktop 3 CPU / 2GB, ddtrace + LLMObs bật đầy đủ, client failover 2 gateway.
 
-| Chỉ số | Giá trị (17 phút đầu, 51 016 request) |
+| Chỉ số | Kết quả |
 | :--- | :--- |
-| Success | 51 016 / 51 016 (100%), không retry |
-| p99 overhead gateway (luỹ kế) | ~37.5 ms — **chưa đạt** mục tiêu ≤ 10 ms |
-| Bài ngắn 25 rps / 1 gateway, VM không có mongo | 8 ms CPU/request, p99 overhead ~12 ms |
+| Request | 90 000 / 90 000 thành công (50.0 rps, 1800s), 0 retry, 4 late send phía client |
+| Overhead gateway p50 / p95 / p99 | 2.30 / 3.39 / **3.97 ms** (mục tiêu ≤ 10 ms) — ổn định ~4 ms suốt 30 phút |
+| Latency end-to-end p50 / p95 / p99 | 8.63 / 10.99 / 14.94 ms (upstream = chaos-proxy) |
+| Mongo (Atlas) tăng thêm | +90 000 `requests_ts`, +90 000 `attempts_ts`; data +8.1 MB, storage +3.3 MB, index +0.5 MB |
 
-Sau phút 17 request không còn tới gateway (gateway log: 1500 req/phút đều đặn tới 10:15 rồi 0) — trùng lúc máy bật
-thêm stack khác trong Docker Desktop; máy swap ~5.9GB, load avg ~9 → số liệu không còn đại diện.
-`loadtest.py` giờ có deadline mỗi request (`client_timeout`) và tự dừng khi in-flight > `rps × 60` (`aborted`),
-không còn treo vô hạn như lần đầu.
+→ ~5.4 MB storage / 100k request: M0 512MB đủ cho nhiều đợt test; TTL time-series dọn dữ liệu cũ.
 
-Cần chạy lại trên VM (cùng đợt deploy SE-9.3) hoặc laptop rảnh để có số chốt.
+Lịch sử: các lần trước không hợp lệ (client tạo HTTP client mỗi request → bão hòa ~25 rps; mongo local tranh CPU;
+máy swap; Docker restart khi đổi resource). `loadtest.py` giờ có deadline mỗi request và tự `aborted` khi
+in-flight > `rps × 60`, không treo nữa.
 
 ## 6. Còn mở
 
