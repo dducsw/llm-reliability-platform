@@ -18,12 +18,23 @@ class Settings(BaseSettings):
     cortex_unclaimed_s: float = 0.0
     cortex_stale_s: float = 0.0
     cortex_watchdog_enabled: bool = True
+    # Vòng verify → failback → resolve; 0 = theo profile (demo 60s/60s, standard 300s/300s)
+    verify_after_s: float = 0.0
+    failback_stable_s: float = 0.0
+    mitigation_loop_enabled: bool = True
     reflex_webhook_token: str = ""
     reflex_console_token: str = ""
     reflex_lab_token: str = ""
     dd_api_key: str = ""
     dd_app_key: str = ""
     dd_site: str = "datadoghq.com"
+
+    def mitigation_thresholds(self) -> tuple[float, float]:
+        demo = self.reflex_profile == "demo"
+        return (
+            self.verify_after_s or (60.0 if demo else 300.0),
+            self.failback_stable_s or (60.0 if demo else 300.0),
+        )
 
     def watchdog_thresholds(self) -> tuple[float, float]:
         demo = self.reflex_profile == "demo"

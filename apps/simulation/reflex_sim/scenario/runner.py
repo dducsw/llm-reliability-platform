@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
@@ -34,6 +34,13 @@ class ScenarioRunner:
         self.db = db
         self.chaos_watcher = chaos_watcher
 
+    async def _close_runs(self, run_id: str) -> None:
+        if self.db is not None:
+            await self.db[CHAOS_RUNS].update_many(
+                {"run_id": run_id, "status": "active"},
+                {"$set": {"status": "completed", "completed_at": datetime.now(tz=UTC)}},
+            )
+
     async def run(
         self,
         scenario: Scenario,
@@ -55,50 +62,49 @@ class ScenarioRunner:
 
         phase_results: list[dict[str, Any]] = []
 
-        for idx, phase in enumerate(scenario.phases):
-            duration_s = parse_window(phase.duration) / scale
-            phase_start = datetime.now(tz=UTC)
-            logger.info(
-                "Phase %d: at=%s duration=%s (scaled=%.1fs, %d faults)",
-                idx,
-                phase.at,
-                phase.duration,
-                duration_s,
-                len(phase.faults),
-            )
-
-            # Cập nhật chaos faults
-            raw_faults = [f.model_dump() for f in phase.faults]
-            if self.db is not None:
-                await self.db[CHAOS_RUNS].insert_one(
-                    {
-                        "run_id": run_id,
-                        "phase_index": idx,
-                        "scenario": scenario.name,
-                        "faults": raw_faults,
-                        "status": "active",
-                        "starts_at": phase_start,
-                        "time_scale": scale,
-                    }
+        try:
+            for idx, phase in enumerate(scenario.phases):
+                duration_s = parse_window(phase.duration) / scale
+                phase_start = datetime.now(tz=UTC)
+                logger.info(
+                    "Phase %d: at=%s duration=%s (scaled=%.1fs, %d faults)",
+                    idx,
+                    phase.at,
+                    phase.duration,
+                    duration_s,
+                    len(phase.faults),
                 )
 
-            # Chờ hết thời lượng phase
-            await asyncio.sleep(duration_s)
-            phase_results.append(
-                {"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)}
-            )
+                # Cập nhật chaos faults
+                raw_faults = [f.model_dump() for f in phase.faults]
+                if self.db is not None:
+                    await self.db[CHAOS_RUNS].insert_one(
+                        {
+                            "run_id": run_id,
+                            "phase_index": idx,
+                            "scenario": scenario.name,
+                            "faults": raw_faults,
+                            "status": "active",
+                            "starts_at": phase_start,
+                            # Tiến trình chết giữa chừng thì fault tự hết hiệu lực (xem ChaosRunsWatcher)
+                            "ends_at": phase_start + timedelta(seconds=duration_s),
+                            "time_scale": scale,
+                        }
+                    )
+
+                # Chờ hết thời lượng phase
+                await asyncio.sleep(duration_s)
+                phase_results.append(
+                    {"phase": idx, "duration_s": duration_s, "faults_count": len(phase.faults)}
+                )
+        finally:
+            # Đóng run ngay khi hết phase (không chờ expectations) hoặc khi bị huỷ/lỗi
+            await self._close_runs(run_id)
 
         # Đánh giá expectations
         exp_results = await check_expectations(
             scenario.expectations, start_time, db=self.db, scale=scale
         )
-
-        # Dọn dẹp trạng thái active trong chaos_runs
-        if self.db is not None:
-            await self.db[CHAOS_RUNS].update_many(
-                {"run_id": run_id, "status": "active"},
-                {"$set": {"status": "completed", "completed_at": datetime.now(tz=UTC)}},
-            )
 
         return {
             "run_id": run_id,

@@ -288,3 +288,31 @@ async def test_policy_deadline_used_and_final_error_is_not_200() -> None:
     assert down.timeouts[0] == 30.0  # min(60s policy, 30s cap) — không phải 8s mặc định
     assert res.status == 503
     assert res.request_event.outcome.value == "error"
+
+
+@pytest.mark.asyncio
+async def test_shed_lets_one_probe_through_so_route_can_recover() -> None:
+    """Health chỉ cập nhật khi có attempt: shed tuyệt đối sẽ chặn route vĩnh viễn."""
+    from datetime import UTC, datetime, timedelta
+
+    from reflex_core.policy import ShedConfig
+    from reflex_gateway.adapters import registry
+
+    adapter = _Slow({"slow:a": 0.0, "fast:b": 0.0})
+    try:
+        orch = _two_target_orch(
+            adapter, hedge=False, shed=ShedConfig(when_all_degraded_min_priority=2)
+        )
+        now = datetime(2026, 10, 28, 12, 0, tzinfo=UTC)
+        orch.clock = lambda: now
+        for t in ("slow:a", "fast:b"):
+            for _ in range(30):
+                orch.state.on_attempt(t, "chat.reply", ok=False, quality_ok=False)
+
+        assert orch.should_shed("chat.reply", 2) is True  # bắt đầu shed
+        assert orch.should_shed("chat.reply", 2) is True  # vẫn trong chu kỳ
+        now += timedelta(seconds=6)
+        assert orch.should_shed("chat.reply", 2) is False  # 1 request thăm dò đi qua
+        assert orch.should_shed("chat.reply", 2) is True  # rồi lại shed
+    finally:
+        registry._ADAPTERS.pop("slowfast", None)

@@ -8,6 +8,7 @@ from reflex_core.actions import (
     Action,
     ActionType,
     EnableHedgingParams,
+    FailbackStepParams,
     OpenCircuitGlobalParams,
     ShedPriorityParams,
     ShiftWeightParams,
@@ -34,6 +35,18 @@ def apply_action(policy: Policy, action: Action) -> Policy:
             if total > 0:
                 for c in new_p.candidates:
                     c.weight = round(c.weight / total, 4)
+
+    elif action.type == ActionType.FAILBACK_STEP:
+        # pct = tỷ trọng traffic của target gốc (10 → 50 → 100); phần còn lại chia theo tỷ lệ cũ
+        params = FailbackStepParams.model_validate(action.params)
+        dest = next((c for c in new_p.candidates if c.target == params.to), None)
+        if dest is not None:
+            dest.weight = round(params.pct / 100, 4)
+            others = [c for c in new_p.candidates if c is not dest]
+            total_other = sum(c.weight for c in others)
+            remainder = round(1.0 - dest.weight, 4)
+            for c in others:
+                c.weight = round(c.weight / total_other * remainder, 4) if total_other > 0 else 0.0
 
     elif action.type == ActionType.OPEN_CIRCUIT_GLOBAL:
         params = OpenCircuitGlobalParams.model_validate(action.params)

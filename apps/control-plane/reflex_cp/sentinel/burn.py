@@ -30,6 +30,10 @@ class BurnEvaluator:
         self.short_s = 30 if profile == "demo" else 300
         self.long_s = 180 if profile == "demo" else 3600
         self.factor = 14.4
+        # Route lưu lượng thấp: 1 request lỗi lẻ đã đẩy burn > factor → báo động giả.
+        # Chỉ kết luận khi cả hai cửa sổ có đủ mẫu.
+        self.min_short = 5
+        self.min_long = 20
 
     async def _get_slos(self) -> list[dict[str, Any]]:
         slos = []
@@ -94,7 +98,11 @@ class BurnEvaluator:
 
                     b_short = burn_rate(g_s, t_s, objective) if t_s > 0 else 0.0
                     b_long = burn_rate(g_l, t_l, objective) if t_l > 0 else 0.0
-                    fires = multiwindow_fires(b_long, b_short, self.factor)
+                    fires = (
+                        t_s >= self.min_short
+                        and t_l >= self.min_long
+                        and multiwindow_fires(b_long, b_short, self.factor)
+                    )
 
                     evaluations.append(
                         {

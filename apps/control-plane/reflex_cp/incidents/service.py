@@ -116,20 +116,20 @@ class IncidentService:
         now = datetime.now(tz=UTC)
         entry = TimelineEntry(at=now, kind="status_change", actor=actor, ref=ref)
 
-        update: dict[str, Any] = {
-            "status": new_status.value,
-            "$push": {"timeline": entry.model_dump(mode="json")},
-        }
+        fields: dict[str, Any] = {"status": new_status.value}
         if new_status in (IncidentStatus.RESOLVED, IncidentStatus.FALSE_POSITIVE):
-            update["is_open"] = False
-            update["t.resolved_at"] = now
+            fields["is_open"] = False
+            fields["t.resolved_at"] = now
         elif new_status == IncidentStatus.MITIGATED:
-            update["t.mitigated_at"] = now
+            fields["t.mitigated_at"] = now
 
         if self.db is not None:
-            await self.db[INCIDENTS].update_one({"key": key}, {"$set": update})
+            await self.db[INCIDENTS].update_one(
+                {"key": key},
+                {"$set": fields, "$push": {"timeline": entry.model_dump(mode="json")}},
+            )
         elif key in self._memory_incidents:
-            self._memory_incidents[key].update(update)
+            self._memory_incidents[key].update(fields)
 
     async def compute_signature(self, key: str) -> None:
         """A8 first-bad-at + A9 signature vector."""

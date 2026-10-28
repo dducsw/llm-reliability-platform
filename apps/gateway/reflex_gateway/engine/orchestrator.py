@@ -50,6 +50,9 @@ class RequestContext:
 
 
 DEGRADED_HEALTH = 0.5
+# Đang shed vẫn cho 1 request/route đi qua mỗi chu kỳ này: health chỉ cập nhật khi có attempt,
+# shed tuyệt đối thì health đứng yên dưới ngưỡng và route bị chặn vĩnh viễn.
+SHED_PROBE_INTERVAL_S = 5.0
 SHED_RETRY_AFTER_S = 5
 
 
@@ -96,6 +99,7 @@ class Orchestrator:
         self._breakers: dict[str, CircuitBreaker] = {}
         self._retry_budgets: dict[str, RetryBudget] = {}
         self._hedge_budgets: dict[str, HedgeBudget] = {}
+        self._shed_probe_at: dict[str, datetime] = {}
 
     def _get_breaker(self, target_id: str, config: BreakerConfig) -> CircuitBreaker:
         if target_id not in self._breakers:
@@ -142,7 +146,19 @@ class Orchestrator:
         all_degraded = all(
             i.breaker_open or not i.eligible or i.health < DEGRADED_HEALTH for i in inputs.values()
         )
-        return should_shed(policy.shed, priority, all_degraded)
+        if not should_shed(policy.shed, priority, all_degraded):
+            if not all_degraded:
+                self._shed_probe_at.pop(route, None)
+            return False
+        now = self.clock()
+        last = self._shed_probe_at.get(route)
+        if last is None:
+            self._shed_probe_at[route] = now
+            return True
+        if (now - last).total_seconds() >= SHED_PROBE_INTERVAL_S:
+            self._shed_probe_at[route] = now
+            return False  # request thăm dò: kết quả cập nhật health để route tự hồi phục
+        return True
 
     def shed(self, ctx: RequestContext) -> OrchestratorResult:
         policy = self.policy_store.get(ctx.route)

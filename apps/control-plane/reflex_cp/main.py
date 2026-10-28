@@ -33,6 +33,7 @@ from reflex_cp.incidents.watchdog import CortexWatchdog
 from reflex_cp.outbox.publisher import OutboxPublisher
 from reflex_cp.sentinel.loop import Sentinel
 from reflex_cp.settings import Settings
+from reflex_cp.verifier.loop import MitigationLoop
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         outbox_task: asyncio.Task | None = None
         watchdog: CortexWatchdog | None = None
         watchdog_task: asyncio.Task | None = None
+        mitigation: MitigationLoop | None = None
+        mitigation_task: asyncio.Task | None = None
         expirer: ActionExpirer | None = None
         expirer_task: asyncio.Task | None = None
 
@@ -85,6 +88,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 outbox_task = asyncio.create_task(outbox.run())
                 app.state.outbox_task = outbox_task
 
+                # Verify (Recovery Proof) → failback 10/50/100 → resolve incident
+                if settings.mitigation_loop_enabled:
+                    verify_s, stable_s = settings.mitigation_thresholds()
+                    mitigation = MitigationLoop(db, verify_after_s=verify_s, stable_s=stable_s)
+                    mitigation_task = asyncio.create_task(mitigation.run())
+
                 # Action có thời hạn (rules shift_weight) hết hạn → rollback policy
                 expirer = ActionExpirer(db)
                 expirer_task = asyncio.create_task(expirer.run())
@@ -112,6 +121,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             outbox.stop()
         if outbox_task and not outbox_task.done():
             outbox_task.cancel()
+        if mitigation:
+            mitigation.stop()
+        if mitigation_task and not mitigation_task.done():
+            mitigation_task.cancel()
         if expirer:
             expirer.stop()
         if expirer_task and not expirer_task.done():
