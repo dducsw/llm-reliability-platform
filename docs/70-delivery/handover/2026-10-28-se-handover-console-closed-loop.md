@@ -11,7 +11,7 @@ Chrome headless, sửa mọi lỗi gặp. Tiếp nối [handover 2026-10-27](202
 | Chưa chạy | Integration test (`task test:integration`), `task lint` bản đầy đủ trong CI |
 | Stack đang chạy | `task up:atlas` (gateway×2, chaos-proxy, mock-llm, control-plane, cortex, console, traffic-gen, prober). Cortex tôi có tắt để thử R4 rồi bật lại |
 | Scenario | `silent-brownout` chạy lúc 10:27 (UTC) bị bỏ dở giữa chừng; tự đóng `chaos_runs` (`ends_at`), không cần dọn |
-| Kết quả cuối của vòng khép kín | **Chưa quan sát trọn vẹn trên stack thật** (xem §3) |
+| Kết quả cuối của vòng khép kín | **Đã quan sát trọn vẹn trên stack thật** lúc 17:25 (xem §8) |
 
 ## 1. Lỗi đã sửa (mỗi dòng có test hoặc đã quan sát trên stack thật)
 
@@ -122,3 +122,24 @@ gateway trong lúc đang kẹt; ngưỡng số mẫu tối thiểu. Lần chạy
   **Chưa làm** (thiếu metric nguồn): M6 và probe P_direct/P_via_gw (`reflex.probe.result` chưa được phát), M9/M10, M11
   (`reflex.telemetry.dropped`), M12, M13; M1/M2/M4 cần SLO object (`slos.tf`); dashboards/logs còn TODO.
   Chạy lại: `TF_VAR_env=local TF_VAR_dd_site=<site> TF_VAR_dd_api_key=… TF_VAR_dd_app_key=… terraform plan -target=datadog_monitor.m3`.
+
+## 8. Vòng khép kín chạy trọn trên stack thật (2026-10-28 17:03–17:26 UTC)
+
+`reflex-sim run silent-brownout --fast` với datadog-agent + traffic-gen, sau khi dọn dữ liệu cũ (2 incident → `false_positive`,
+2 action → `rejected`, đúng theo ID). Incident `INC-202610281708-fcb2c4`:
+
+| Giờ | Sự kiện |
+| :--- | :--- |
+| 17:08:19 | Sentinel mở incident (SLO provider `vendorA:large`); Cortex đề xuất `shift_weight` → `awaiting_approval` |
+| 17:14:26 | **Người duyệt trên Console** → `succeeded`, policy v14 |
+| 17:16:52 | Verify `INCONCLUSIVE` (mẫu ít) rồi `PASS` → `mitigated` |
+| 17:17:05 | failback 10% tự áp dụng (policy engine cho qua) |
+| 17:18:10 / 17:21:03 | failback 50% **bị rollback 2 lần** (D2): `vendorA:large` có attempt `timeout` 504 → ledger <99% |
+| 17:24:21 | failback 50% thành công; 17:25:30 failback 100% |
+| 17:25:41 | `resolved` |
+
+- **M3 `Alert` PASS trên Datadog thật** (D4 đã kiểm chứng đầu-cuối). Expectation delivered_sli PASS (1.0000).
+- Hai expectation `incident` FAIL **oan** do lỗi của chính ta: incident mới không có `created_at`, và `opened_by` lọc `source` ở cấp incident
+  thay vì `signals[0].source`. Đã sửa (commit 52a0a25); **chưa chạy lại scenario để thấy 4/4 PASS**.
+- **Policy sau failback 100% là `vendorA:large` 1.0 / `vendorB:large` 0.0** (theo thiết kế "100% = trả hết cho target gốc"), không về 90/10 baseline. Trước khi chạy lại cần đưa `order.extract` về baseline.
+- Rollback D2 dựa ngưỡng cứng `good/n < 0.99` với n ≥ 10 → dễ rollback do nhiễu mẫu nhỏ (có timeout thoáng qua do Docker VM 1.9GB dùng chung với project khác). Chấp nhận được vì tự thử lại sau cooldown, nhưng có thể đổi sang cận Wilson.
