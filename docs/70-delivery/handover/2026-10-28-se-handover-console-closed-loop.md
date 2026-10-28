@@ -159,3 +159,12 @@ burn-rate SLO bắt buộc cửa sổ dài 1h–2d (không có 5m cho demo); `ap
 **Chưa làm:** M4 (cần gateway phát `reflex.request.under_threshold`), M5 (anomaly), M8 (cost), M12 (chỉ có nghĩa khi webhook Datadog đã nối
 vào control-plane, nếu không sẽ báo liên tục), M13 (LLMObs), `datadog_webhook` (cần URL công khai tới control-plane), dashboards, log pipeline.
 Expectation monitor của runner giờ theo dõi **song song** từ đầu scenario (trước đó đánh giá sau khi hết fault nên M3 đã về `OK`).
+
+## 10. Lần chạy sạch 4/4 (2026-10-28 18:25–18:35 UTC)
+
+`reflex-sim run silent-brownout --fast` → **ALL PASSED**: M3 `Alert` (Datadog thật), incident mở bởi sentinel, incident `resolved`, delivered_sli 1.0000.
+Incident `INC-202610281829-1cb7d5`: Cortex đề xuất → người duyệt 18:30 → verify `PASS` 18:31:36 (không qua `INCONCLUSIVE`) → failback 10/50/100
+(18:31:54 / 18:33:04 / 18:33:59, không rollback) → `resolved` 18:34:08.
+
+Sau failback 100% policy `order.extract` là `vendorA:large` 1.0 / `vendorB:large` 0.0 (thiết kế "100% = trả hết cho target gốc"); chạy lại thí nghiệm
+cần đưa về 90/10 (snapshot vào `policy_history`, version tăng, CAS) và dọn incident/action sót.
