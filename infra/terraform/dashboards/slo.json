@@ -1,1 +1,96 @@
-{ "title": "Reflex — slo", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex · SLO & Error Budget (D2)",
+  "description": "Multi-window Error Budget & Burn Rate tracking for LLM Services",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    },
+    {
+      "name": "route",
+      "prefix": "route",
+      "default": "*"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "title": "Delivered Availability (chat.reply) — 7d SLI",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "(sum:reflex.request{$env, route:chat.reply, outcome:ok}.as_count() / sum:reflex.request{$env, route:chat.reply, !outcome:shed}.as_count()) * 100",
+            "display_type": "line",
+            "style": {
+              "palette": "purple",
+              "line_width": "thick"
+            }
+          }
+        ],
+        "markers": [
+          {
+            "value": "y = 99.5",
+            "display_type": "error dashed",
+            "label": "Target (99.5%)"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Delivered Quality (order.extract) — 7d SLI",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "(sum:reflex.quality.pass{$env, route:order.extract}.as_count() / sum:reflex.quality.total{$env, route:order.extract}.as_count()) * 100",
+            "display_type": "line",
+            "style": {
+              "palette": "cool",
+              "line_width": "thick"
+            }
+          }
+        ],
+        "markers": [
+          {
+            "value": "y = 99.5",
+            "display_type": "error dashed",
+            "label": "Target (99.5%)"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Provider Quality by Target (Raw Vendor SLI)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "(sum:reflex.attempt.quality.pass{$env} by {target}.as_count() / sum:reflex.attempt.quality.total{$env} by {target}.as_count()) * 100",
+            "display_type": "line"
+          }
+        ],
+        "markers": [
+          {
+            "value": "y = 99.0",
+            "display_type": "warning dashed",
+            "label": "Vendor SLA (99.0%)"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Cost of Reliability by Route (Rescue & Hedging Overhead)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:reflex.cost.usd{$env} by {route}.as_count()",
+            "display_type": "bars"
+          }
+        ]
+      }
+    }
+  ]
+}

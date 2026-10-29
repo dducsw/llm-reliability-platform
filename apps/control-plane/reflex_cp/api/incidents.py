@@ -6,6 +6,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from reflex_core.incident import IncidentStatus
 from reflex_mongo.collections import INCIDENTS
+from reflex_mongo.readmodels import get_incident as rm_get_incident
+from reflex_mongo.readmodels import list_incidents as rm_list_incidents
 
 router = APIRouter()
 
@@ -20,13 +22,7 @@ async def list_incidents(
     if db is None:
         return {"incidents": []}
 
-    query: dict[str, Any] = {}
-    if is_open is not None:
-        query["is_open"] = is_open
-
-    items = []
-    async for doc in db[INCIDENTS].find(query).sort("t.detected_at", -1).limit(limit):
-        items.append(doc)
+    items = await rm_list_incidents(db, is_open=is_open, limit=limit)
     return {"incidents": items}
 
 
@@ -36,10 +32,7 @@ async def get_incident(key: str, request: Request) -> dict[str, Any]:
     if db is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    doc = await db[INCIDENTS].find_one({"key": key})
-    if not doc:
-        # Fallback thử _id
-        doc = await db[INCIDENTS].find_one({"_id": key})
+    doc = await rm_get_incident(db, key)
     if not doc:
         raise HTTPException(status_code=404, detail="Incident not found")
     return doc

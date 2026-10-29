@@ -193,3 +193,55 @@ resource "datadog_monitor" "m11_telemetry_dropped" {
   priority            = 3
   tags                = concat(local.common_tags, ["monitor:m11", "meta:telemetry"])
 }
+
+
+# M5 — TTFT p99 anomaly: phát hiện sớm suy thoái upstream
+resource "datadog_monitor" "m5_ttft_anomaly" {
+  name    = "[Reflex] M5_ttft_p99_anomaly"
+  type    = "query alert"
+  query   = "avg(last_5m):anomalies(p99:reflex.attempt.ttft{env:${var.env}} by {target}, 'agile', 3, direction='above', alert_window='last_5m', interval=60, count_default_zero='true') >= 0.8"
+  message = local.alert_message
+
+  monitor_thresholds {
+    critical = 0.8
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m5", "ledger:provider"])
+}
+
+# M8 — Cost burn spike: chi phí retry/hedge tăng vọt bất thường
+resource "datadog_monitor" "m8_cost_burn" {
+  name    = "[Reflex] M8_cost_burn_spike"
+  type    = "query alert"
+  query   = "sum(last_5m):sum:reflex.cost.usd{env:${var.env}}.as_count() > 5.0"
+  message = local.alert_message
+
+  monitor_thresholds {
+    critical = 5.0
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m8"])
+}
+
+# M13 — Cortex health: thời gian điều tra vượt ngưỡng p95
+resource "datadog_monitor" "m13_cortex_duration" {
+  name    = "[Reflex] M13_cortex_investigation_slow"
+  type    = "query alert"
+  query   = "avg(last_5m):avg:reflex.cortex.investigation.duration{env:${var.env}} > 180"
+  message = local.alert_message
+
+  monitor_thresholds {
+    critical = 180
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
+}

@@ -1,1 +1,67 @@
-{ "title": "Reflex — cortex", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex · Cortex Agent (D3)",
+  "description": "Autonomous SRE Agent performance, tool calls, and LLMObs traces",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "title": "Investigation Duration (seconds)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:reflex.cortex.investigation.duration{$env}",
+            "display_type": "line"
+          }
+        ],
+        "markers": [
+          {
+            "value": "y = 60",
+            "display_type": "warning dashed",
+            "label": "Target MTTM (< 60s)"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Tool Calls Distribution",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:reflex.cortex.tool.calls{$env} by {tool}.as_count()",
+            "display_type": "bars"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Hallucinated / Invalid Evidence Rejections",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "sum:reflex.cortex.evidence_invalid{$env}.as_count()"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "Open Incidents Active",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "sum:reflex.incident.open{$env}.as_count()"
+          }
+        ]
+      }
+    }
+  ]
+}

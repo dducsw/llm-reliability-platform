@@ -1,1 +1,140 @@
-{ "title": "Reflex — ops", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex · Operations (D1)",
+  "description": "Operations dashboard: DETECT, INVESTIGATE, RESPOND (Dual Ledger)",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    },
+    {
+      "name": "route",
+      "prefix": "route",
+      "default": "*"
+    },
+    {
+      "name": "target",
+      "prefix": "target",
+      "default": "*"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "title": "DETECT: Delivered vs Provider Quality (Hero Metric)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "(sum:reflex.quality.pass{$env, $route}.as_count() / sum:reflex.quality.total{$env, $route}.as_count()) * 100",
+            "display_type": "line",
+            "style": {
+              "palette": "green",
+              "line_type": "solid",
+              "line_width": "thick"
+            }
+          },
+          {
+            "q": "(sum:reflex.attempt.quality.pass{$env, $target}.as_count() / sum:reflex.attempt.quality.total{$env, $target}.as_count()) * 100",
+            "display_type": "line",
+            "style": {
+              "palette": "red",
+              "line_type": "dashed",
+              "line_width": "normal"
+            }
+          }
+        ],
+        "yaxis": {
+          "min": "50",
+          "max": "100",
+          "label": "% Pass"
+        }
+      }
+    },
+    {
+      "definition": {
+        "title": "DETECT: Request Volume by Outcome",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:reflex.request{$env, $route} by {outcome}.as_count()",
+            "display_type": "bars"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "INVESTIGATE: Attempt Latency p95 by Target",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "p95:reflex.attempt.latency{$env, $target} by {target}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "ms"
+        }
+      }
+    },
+    {
+      "definition": {
+        "title": "INVESTIGATE: TTFT (Time To First Token) p95 by Target",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "p95:reflex.attempt.ttft{$env, $target} by {target}",
+            "display_type": "line"
+          }
+        ],
+        "yaxis": {
+          "label": "ms"
+        }
+      }
+    },
+    {
+      "definition": {
+        "title": "INVESTIGATE: Canary Probes (Direct vs Via Gateway)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "sum:reflex.probe.result{$env, $target} by {path, result}.as_count()",
+            "display_type": "bars"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "RESPOND: Retry Amplification Factor (M7)",
+        "type": "timeseries",
+        "requests": [
+          {
+            "q": "avg:reflex.retry.amplification{$env, $route} by {route}",
+            "display_type": "line"
+          }
+        ],
+        "markers": [
+          {
+            "value": "y = 1.5",
+            "display_type": "error dashed",
+            "label": "Storm Threshold (1.5)"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "title": "RESPOND: Cumulative Reliability Cost (USD)",
+        "type": "query_value",
+        "requests": [
+          {
+            "q": "sum:reflex.cost.usd{$env}.as_count()"
+          }
+        ],
+        "precision": 2
+      }
+    }
+  ]
+}
