@@ -42,3 +42,19 @@ async def test_send_event_and_error_mapping() -> None:
 
     with pytest.raises(DatadogApiError):
         await _api(lambda _: httpx.Response(403, text="forbidden")).get_monitor(1)
+
+
+@pytest.mark.asyncio
+async def test_find_monitors_filters_by_name() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["name"] == "M3_quality"
+        return httpx.Response(
+            200,
+            json=[
+                {"name": "[reflex] M3_quality_fast_burn", "overall_state": "Alert"},
+                {"name": "M30_other", "overall_state": "OK"},
+            ],
+        )
+
+    found = await _api(handler).find_monitors("M3_quality")
+    assert [m["overall_state"] for m in found] == ["Alert"]

@@ -1,0 +1,27 @@
+# Render bởi entrypoint của nginx (envsubst chỉ thay biến môi trường đã định nghĩa; $uri… giữ nguyên).
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    # BFF của control-plane. Token do nginx gắn nên trình duyệt không cần giữ (stack local/dev).
+    # Resolver của Docker + biến upstream: phân giải lại tên khi control-plane được tạo lại (đổi IP)
+    resolver 127.0.0.11 valid=5s ipv6=off;
+    set $control_plane ${CONTROL_PLANE_URL};
+
+    location /api/ {
+        proxy_pass $control_plane;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Authorization "Bearer ${REFLEX_CONSOLE_TOKEN}";
+        proxy_set_header X-Reflex-Token "${REFLEX_LAB_TOKEN}";
+        # SSE /api/stream: không buffer, giữ kết nối lâu
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+    }
+
+    # SPA: route phía client (/incidents/INC-1…) trả về index.html
+    location / {
+        try_files $uri /index.html;
+    }
+}

@@ -14,7 +14,7 @@ from typing import Any, Protocol
 
 import httpx
 from pymongo.asynchronous.database import AsyncDatabase
-from reflex_core.actions import ActionType, validate_params
+from reflex_core.actions import CATALOG, ActionType, validate_params
 from reflex_core.incident import (
     Diagnosis,
     Hypothesis,
@@ -25,21 +25,19 @@ from reflex_core.incident import (
     Side,
     ToolStep,
 )
+from reflex_core.rules import RULES_ACTOR_LLM_REJECTED, RULES_CONFIDENCE, classify
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
+from reflex_mongo.serde import to_doc
 from reflex_telemetry import llmobs
 from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_cortex.context_pack import build as build_context_pack
 from reflex_cortex.evidence import validate
-from reflex_cortex.rules import classify
 from reflex_cortex.settings import Settings
-from reflex_cortex.tools import build_toolbox
+from reflex_cortex.tools import build_toolbox, signature
 from reflex_cortex.tools.propose import propose_action
 
 logger = logging.getLogger(__name__)
-
-# Confidence cố định của rule engine (cortex-agent.md §2): luôn dưới ngưỡng auto 0.7.
-RULES_CONFIDENCE = 0.6
 
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -96,6 +94,38 @@ def parse_json_object(text: str) -> dict[str, Any]:
     return obj
 
 
+def _bounds(prop: dict[str, Any]) -> str:
+    lo = prop.get("minimum", prop.get("exclusiveMinimum"))
+    hi = prop.get("maximum", prop.get("exclusiveMaximum"))
+    if lo is None and hi is None:
+        return ""
+    left = "(" if "exclusiveMinimum" in prop else "["
+    right = ")" if "exclusiveMaximum" in prop else "]"
+    return f" {left}{'' if lo is None else lo}..{'' if hi is None else hi}{right}"
+
+
+def _type_name(prop: dict[str, Any]) -> str:
+    """JSON Schema type; Optional[X] (anyOf [X, null]) → X."""
+    if "type" in prop:
+        return str(prop["type"])
+    kinds = [str(o["type"]) for o in prop.get("anyOf", []) if o.get("type") not in (None, "null")]
+    return kinds[0] if kinds else "any"
+
+
+def action_params_doc() -> str:
+    """Tham số từng action (sinh từ CATALOG, khớp đúng validator) — LLM thật không đoán được."""
+    lines = []
+    for action_type, spec in CATALOG.items():
+        schema = spec.params_model.model_json_schema(by_alias=True)
+        required = set(schema.get("required", []))
+        fields = ", ".join(
+            f"{name}{'' if name in required else '?'}: {_type_name(prop)}{_bounds(prop)}"
+            for name, prop in schema.get("properties", {}).items()
+        )
+        lines.append(f"- {action_type.value}: {{{fields}}}")
+    return "\n".join(lines)
+
+
 def untrusted(text: str) -> str:
     """Bọc kết quả tool (log/span/postmortem…) để LLM coi là dữ liệu, không phải chỉ dẫn."""
     return f"<untrusted_data>\n{text.replace('</untrusted_data>', '')}\n</untrusted_data>"
@@ -131,10 +161,14 @@ class CortexAgent:
         self.llm = llm or GatewayLlm(self.settings.gateway_url, self.settings.reason_route)
         self.datadog = datadog
 
-    async def investigate(self, incident_key: str) -> Investigation:
-        """Dựng context pack → vòng lặp LLM+tool (có giới hạn) → validate evidence → lưu."""
+    async def investigate(self, incident_key: str, lease: str | None = None) -> Investigation:
+        """Dựng context pack → vòng lặp LLM+tool (có giới hạn) → validate evidence → lưu.
+
+        `lease` (từ `claim`): chỉ ghi diagnosis/propose khi incident vẫn do lần claim này giữ —
+        watchdog control-plane có thể đã tiếp quản nếu Cortex chậm quá ngưỡng.
+        """
         with llmobs.span("agent", "cortex.investigate", session_id=incident_key) as s:
-            inv = await self._investigate(incident_key)
+            inv = await self._investigate(incident_key, lease)
             rec = inv.recommendation
             llmobs.annotate(
                 s,
@@ -149,11 +183,12 @@ class CortexAgent:
             )
             return inv
 
-    async def _investigate(self, incident_key: str) -> Investigation:
+    async def _investigate(self, incident_key: str, lease: str | None = None) -> Investigation:
         with llmobs.span("task", "cortex.context_pack") as s:
             context_pack = await build_context_pack(incident_key, self.db)
             llmobs.annotate(s, input_data={"incident_id": incident_key}, output_data=context_pack)
         rule_rec = classify(context_pack)
+        llm_rejected = False  # LLM có trả lời nhưng đề xuất bị loại → có thể bị dắt (injection)
 
         steps: list[ToolStep] = []
         results: dict[str, Any] = {}
@@ -163,6 +198,7 @@ class CortexAgent:
                 llmobs.annotate(ws, output_data=final, metrics={"tool_calls": len(steps)})
             hypotheses = [Hypothesis.model_validate(h) for h in final.get("hypotheses", [])]
             rec = _safe_recommendation(final.get("recommendation"), rule_rec)
+            llm_rejected = bool(final.get("recommendation")) and rec is rule_rec
             side = (
                 Side(final.get("side", "unknown"))
                 if final.get("side") in {s.value for s in Side}
@@ -197,13 +233,19 @@ class CortexAgent:
             hypotheses=validated,
             recommendation=rec,
         )
-        await self._persist(investigation, validated, side)
-        if rec is not None:
+        owned = await self._persist(investigation, validated, side, lease)
+        if not owned:
+            logger.warning(
+                "Cortex lost incident %s to the watchdog; dropping its proposal", incident_key
+            )
+        elif rec is not None:
             best = max((h.confidence for h in validated), default=0.0)
             await self._propose(
                 investigation,
                 rec,
-                actor="rules" if from_rules else "cortex",
+                actor=(RULES_ACTOR_LLM_REJECTED if llm_rejected else "rules")
+                if from_rules
+                else "cortex",
                 confidence=RULES_CONFIDENCE if from_rules else best,
             )
         logger.info(
@@ -229,11 +271,16 @@ class CortexAgent:
             .format(
                 incident_key=incident_key,
                 context_pack=json.dumps(context_pack, default=str, ensure_ascii=False)[:8000],
-                tools="\n".join(f"- {name}" for name in toolbox),
+                tools="\n".join(f"- {signature(name, fn)}" for name, fn in toolbox.items()),
             )
         )
         messages = [
-            {"role": "system", "content": (PROMPTS / "system.md").read_text(encoding="utf-8")},
+            {
+                "role": "system",
+                "content": (PROMPTS / "system.md").read_text(encoding="utf-8")
+                + "\n\n`recommendation.params` theo action (`?` = tùy chọn):\n"
+                + action_params_doc(),
+            },
             {"role": "user", "content": user},
         ]
         deadline = time.monotonic() + self.settings.max_wall_s
@@ -297,10 +344,13 @@ class CortexAgent:
         except Exception:
             logger.exception("propose_action failed for %s", inv.incident_id)
 
-    async def _persist(self, inv: Investigation, hypotheses: list[Hypothesis], side: Side) -> None:
+    async def _persist(
+        self, inv: Investigation, hypotheses: list[Hypothesis], side: Side, lease: str | None
+    ) -> bool:
+        """Lưu investigation (luôn, để audit) + diagnosis; False nếu đã mất quyền với incident."""
         if self.db is None:
-            return
-        await self.db[INVESTIGATIONS].insert_one(inv.model_dump(by_alias=True, mode="json"))
+            return True
+        await self.db[INVESTIGATIONS].insert_one(to_doc(inv))
         best = max(hypotheses, key=lambda h: h.confidence, default=None)
         diag = Diagnosis(
             side=side,
@@ -309,8 +359,11 @@ class CortexAgent:
             by="cortex",
             investigation_id=inv.id,
         )
-        await self.db[INCIDENTS].update_one(
-            {"$or": [{"key": inv.incident_id}, {"_id": inv.incident_id}]},
+        flt: dict[str, Any] = {"$or": [{"key": inv.incident_id}, {"_id": inv.incident_id}]}
+        if lease is not None:
+            flt |= {"investigator": "cortex", "investigating_since": lease}
+        res = await self.db[INCIDENTS].update_one(
+            flt,
             {
                 "$set": {
                     "diagnosis": diag.model_dump(mode="json"),
@@ -318,3 +371,4 @@ class CortexAgent:
                 }
             },
         )
+        return lease is None or res.modified_count == 1

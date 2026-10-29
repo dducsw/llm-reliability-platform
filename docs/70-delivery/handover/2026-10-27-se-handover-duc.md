@@ -10,8 +10,40 @@ Mọi commit có mã task trong message; `git log origin/main..loibui` để xem
 | R1 | **Contract:** thêm `ProposedBy.confidence: float \| None` | `packages/reflex-core/reflex_core/actions.py` | Contract chung; guardrail `confidence` đọc trường này (trước đây luôn pass) |
 | R2 | Runner ghi thêm `time_scale` vào mỗi phase `chaos_runs` | `apps/simulation/reflex_sim/scenario/runner.py` | Code DE-2.2; Console demo clock ("DEMO TIME ×N") cần giá trị này |
 | R3 | `conftest.py` ở root: đặt rỗng `REFLEX_*_TOKEN` trong unit test | `conftest.py` | `Settings()` đọc `.env` thật → API test trả 401 khi chạy pytest ở root |
-| R4 | **Khoảng trống spec:** khi Cortex chết, chưa có fallback rule-based ở control-plane (system-architecture §4) | — | `rules.classify` thuộc DE; control-plane không được import cortex (import-linter). Đề xuất: chuyển `rules.py` sang `reflex-core` hoặc để Sentinel gọi; cần thống nhất |
+| R4 | **Đã làm — Đức review:** fallback khi Cortex chết. `rules.py` chuyển sang `reflex_core/rules.py` (cortex giữ re-export); watchdog ở control-plane; 2 trường mới trên incident `investigator`, `investigating_since` | `reflex_core/rules.py`, `reflex_core/incident.py`, `reflex_cp/incidents/watchdog.py`, `reflex_cortex/main.py` | Nội dung luật vẫn của DE; Cortex đổi `claim()` (lease) — xem §2b |
 | R5 | Fixture `it_db` (reflex-mongo) dùng `dropDatabase` → user Atlas cần role có quyền này | `packages/reflex-mongo/tests/conftest.py` | Lợi đã cấp role cho user mình; ai chạy integration test trên Atlas cũng cần |
+
+## 2b. R4 — fallback khi Cortex chết (2026-10-28)
+
+- **Watchdog** (`reflex_cp/incidents/watchdog.py`, mỗi 10s): incident `detected` quá 15s (demo) / 60s
+  (standard) không ai nhận → `unclaimed`; `investigating` quá 120s / 180s kể từ `investigating_since` → `stale`.
+  Override: `CORTEX_UNCLAIMED_S`, `CORTEX_STALE_S`, tắt bằng `CORTEX_WATCHDOG_ENABLED=false`.
+- Claim có điều kiện (status + `investigating_since` chưa đổi) → không tranh với Cortex còn sống. Chạy
+  `reflex_core.rules.classify` → action `proposed`, `actor=rules`, confidence 0.6 → đi đường cũ
+  (policy engine → guardrails → actuator). Timeline `cortex_fallback:<reason>`, diagnosis `by=rules@control-plane`,
+  Datadog event qua outbox (tag `reflex.cortex.fallback`, `reason:*`).
+- **Lease phía Cortex:** `claim()` ghi `investigator=cortex` + `investigating_since`; Cortex chỉ ghi
+  diagnosis/propose khi lease còn của mình (watchdog đã tiếp quản → bỏ đề xuất, investigation vẫn lưu để audit).
+- **Auto cho luật** (guardrail `confidence`): `actor=rules` (Cortex/LLM offline) được qua dù 0.6 < 0.7 nếu action
+  reversible, không human_only, và `duration_s` (nếu có) ≤ 300s. Các guardrail khác vẫn chạy (healthy_destination,
+  capacity, blast_radius, cooldown, flap). Tắt: `REFLEX_RULES_AUTO_REVERSIBLE=false`.
+  - LLM *có trả lời* nhưng đề xuất bị loại (sai catalog/schema — dấu hiệu bị log độc dắt) → `actor=rules:llm_rejected`,
+    **vẫn chờ duyệt** (test SE-7.6 giữ nguyên ý nghĩa).
+  - Guardrail giờ kiểm confidence cho **mọi actor khác `human`** (trước: chỉ `cortex`/`rules` → actor lạ lọt qua).
+- E2E trên Atlas (2026-10-28): Cortex sống → `actor=cortex`; Cortex tắt → watchdog sau 17s; Cortex bị kill
+  giữa chừng → watchdog sau 122s. (Chạy trước khi bật auto cho luật — lúc đó cả ba `awaiting_approval`;
+  sau khi bật chỉ kiểm bằng unit test, chưa chạy lại E2E để khỏi đổi policy thật trên Atlas.)
+
+## 2c. Cortex chạy LLM thật (DeepSeek `deepseek-flash`)
+
+- chaos-proxy forward route trong `LLM_REAL_ROUTES` (mặc định `cortex.reason`) tới `LLM_BASE_URL` với
+  `LLM_API_KEY`/`LLM_MODEL`; route khác vẫn mock → load test không đốt token. Fault error/429 trả ngay, không gọi vendor.
+  Key chỉ dùng ở chaos-proxy.
+- Bug lộ ra khi chạy LLM thật (mock che mất), đã sửa:
+  - Prompt chỉ có **tên** tool → LLM đoán tham số, 8/12 tool call lỗi. Giờ có chữ ký (`tools.signature`).
+  - Prompt không có schema params action → đề xuất bị validator loại (thiếu `from`, `pct=30`). Giờ sinh từ `CATALOG` kèm min/max.
+  - **Gateway** bỏ qua `policy.deadline_ms` (luôn 8s khi không có header) → `cortex.reason` timeout. Giờ: header > policy.
+  - **Gateway** trả 200 + body không `choices` khi mọi attempt lỗi → giờ trả đúng status lỗi (502/503/504).
 
 ## 2. Đã hoàn thành (SE)
 
@@ -169,4 +201,3 @@ in-flight > `rps × 60`, không treo nữa.
 ## 6. Còn mở
 
 - Deploy `demo` lên VM + TLS + vendor thật (SE-9.3) — cần quyền hạ tầng.
-- R4 (fallback khi Cortex chết) — cần thống nhất vị trí `rules`.

@@ -12,6 +12,7 @@ from reflex_core.actions import (
     ActionType,
     FailbackStepParams,
     ProposedBy,
+    new_action_id,
 )
 from reflex_mongo.collections import ACTIONS
 
@@ -33,6 +34,7 @@ class FailbackOrchestrator:
         """Sinh ra action con failback_step cho từng nấc tỷ lệ."""
         now = datetime.now(tz=UTC)
         return Action(
+            _id=new_action_id(now),
             incident_id=parent_action.incident_id,
             parent_action_id=parent_action.id,
             type=ActionType.FAILBACK_STEP,
@@ -57,6 +59,7 @@ class FailbackOrchestrator:
             next_act = self.create_step_action(parent_action, route, target, next_pct)
             if self.db is not None:
                 doc = next_act.model_dump(by_alias=True, mode="json")
+                doc["created_at"], doc["updated_at"] = next_act.created_at, next_act.updated_at
                 await self.db[ACTIONS].insert_one(doc)
             return next_act
         return None

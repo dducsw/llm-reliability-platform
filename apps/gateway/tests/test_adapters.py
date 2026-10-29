@@ -104,10 +104,15 @@ async def test_openai_compat_forwards_route_header() -> None:
         seen.update(req.headers)
         return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}], "usage": {}})
 
-    target = {"base_url": "http://chaos:8070/vendorA", "route": "order.extract"}
+    target = {
+        "base_url": "http://chaos:8070/vendorA",
+        "route": "order.extract",
+        "target_id": "vendorA:large",
+    }
     res = await OpenaiCompatAdapter(httpx.MockTransport(handler)).complete(target, PAYLOAD, 1.0)
     assert res.status == 200
     assert seen["x-reflex-route"] == "order.extract"
+    assert seen["x-reflex-target"] == "vendorA:large"  # fault theo tier, không chạm vendorA:small
 
 
 async def test_adapters_reuse_one_pooled_client() -> None:

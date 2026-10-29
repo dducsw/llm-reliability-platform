@@ -92,3 +92,16 @@ def test_selector_matching() -> None:
     m3 = injector.select(faults, target="vendorB:large", route="any.route", rng=rng)
     assert len(m3) == 1
     assert m3[0].type == FaultType.ERROR
+
+
+def test_selector_with_tier_matches_vendor_only_target() -> None:
+    """Proxy nhận `/vendorA/…` (không có tier) vẫn phải áp fault của `vendorA:large`."""
+    fault = Fault(
+        type=FaultType.TRUNCATE,
+        selector=FaultSelector(target="vendorA:large", route="order.extract"),
+        params={"probability": 1.0},
+    )
+    rng = random.Random(1)
+    assert injector.select([fault], "vendorA", "order.extract", rng) == [fault]
+    assert injector.select([fault], "vendorB", "order.extract", rng) == []
+    assert injector.select([fault], "vendorA:small", "order.extract", rng) == []

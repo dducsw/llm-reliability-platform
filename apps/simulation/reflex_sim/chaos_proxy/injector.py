@@ -9,12 +9,22 @@ from typing import Any
 from reflex_sim.chaos_proxy.faults import Fault, FaultType
 
 
+def _target_matches(selector: str, target: str) -> bool:
+    """Gateway chỉ gọi `/<vendor>/…` (large và small chung đường dẫn) nên proxy chỉ biết vendor:
+    selector `vendorA:large` khớp target `vendorA`; khi cả hai đều có tier thì phải khớp chính xác."""
+    if selector == target:
+        return True
+    if ":" in selector and ":" in target:
+        return False
+    return selector.split(":")[0] == target.split(":")[0]
+
+
 def select(faults: list[Fault], target: str, route: str | None, rng: random.Random) -> list[Fault]:
     """Chọn danh sách fault khớp với target/route và tỉ lệ traffic."""
     selected: list[Fault] = []
     for f in faults:
         sel = f.selector
-        if sel.target and sel.target != target:
+        if sel.target and not _target_matches(sel.target, target):
             continue
         if sel.route and route and sel.route != route:
             continue

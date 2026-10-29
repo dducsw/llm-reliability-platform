@@ -68,6 +68,10 @@ class GuardrailConfig:
     load_window_s: float = 300.0
     min_confidence: float = 0.7
     budget_low: float = 0.1  # budget còn < 10% → cho phép radius cao hơn một bậc
+    # R4: action của rule engine (Cortex/LLM offline) được auto nếu reversible + có hạn;
+    # các guardrail còn lại (healthy_destination, capacity, blast_radius, cooldown…) vẫn chạy
+    rules_auto_reversible: bool = True
+    rules_max_duration_s: int = 300
 
     @classmethod
     def from_env(cls) -> GuardrailConfig:
@@ -75,6 +79,8 @@ class GuardrailConfig:
         return cls(
             cooldown_s=30.0 if demo else 120.0,
             cost_ceiling_usd_h=float(os.getenv("REFLEX_COST_CEILING_USD_H", "5.0")),
+            rules_auto_reversible=os.getenv("REFLEX_RULES_AUTO_REVERSIBLE", "true").lower()
+            in ("1", "true", "yes"),
         )
 
 
@@ -292,6 +298,21 @@ async def _blast_radius(
     return _ok("blast_radius", detail)
 
 
+def _rules_bounded_reversible(action: Action, cfg: GuardrailConfig) -> bool:
+    """Ngoại lệ R4 chỉ cho `actor=rules` — Cortex/LLM offline. Không cho Cortex confidence thấp,
+    không cho `rules:llm_rejected` (LLM trả đề xuất sai, có thể bị injection). Action phải
+    reversible, không human_only và PHẢI có `duration_s` ≤ `rules_max_duration_s` (tự hết hạn).
+    Action không có thời hạn (vd shift_weight) có thể kẹt vĩnh viễn nếu không ai hoàn tác → cần duyệt.
+    """
+    if not cfg.rules_auto_reversible or action.proposed_by.actor != "rules":
+        return False
+    spec = CATALOG.get(action.type)
+    if spec is None or not spec.reversible or spec.human_only:
+        return False
+    duration = action.params.get("duration_s")
+    return duration is not None and int(duration) <= cfg.rules_max_duration_s
+
+
 async def evaluate_all(
     action: Action,
     db: AsyncDatabase | None = None,
@@ -319,10 +340,16 @@ async def evaluate_all(
     confidence = action.proposed_by.confidence
     if confidence is None:
         confidence = action.params.get("confidence", 1.0)
-    if action.proposed_by.actor in ("cortex", "rules") and confidence < cfg.min_confidence:
-        results.append(
-            _fail("confidence", f"Confidence {confidence:.2f} < {cfg.min_confidence:.2f}")
-        )
+    # Mọi actor không phải người (cortex, rules, rules:llm_rejected, actor lạ…) đều bị kiểm
+    if action.proposed_by.actor != "human" and confidence < cfg.min_confidence:
+        if _rules_bounded_reversible(action, cfg):
+            results.append(
+                _ok("confidence", f"rules fallback: reversible, ≤{cfg.rules_max_duration_s}s")
+            )
+        else:
+            results.append(
+                _fail("confidence", f"Confidence {confidence:.2f} < {cfg.min_confidence:.2f}")
+            )
     else:
         results.append(_ok("confidence"))
 

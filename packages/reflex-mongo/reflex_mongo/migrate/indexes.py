@@ -57,7 +57,10 @@ INDEXES: Final[dict[str, tuple[IndexModel, ...]]] = {
         _ix(("scope", 1), ("key", 1), ("env", 1), ("ts", 1), unique=True),
         _ttl("ts", 45 * DAY_S),
     ),
-    SLI_1H: (_ttl("ts", 400 * DAY_S),),
+    SLI_1H: (
+        _ix(("scope", 1), ("key", 1), ("env", 1), ("ts", 1), unique=True),
+        _ttl("ts", 400 * DAY_S),
+    ),
     # §4.5 — Q5/Q6
     INCIDENTS: (
         _ix(("dedup_key", 1), unique=True, partialFilterExpression={"is_open": True}),
@@ -86,8 +89,16 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, int]:
     created: dict[str, int] = {}
     for name, specs in INDEXES.items():
         collection: AsyncCollection = db[name]
-        existing = {str(doc["name"]) async for doc in await collection.list_indexes()}
-        missing = [ix for ix in specs if ix.document["name"] not in existing]
+        existing = {str(doc["name"]): doc async for doc in await collection.list_indexes()}
+        missing: list[IndexModel] = []
+        for ix in specs:
+            current = existing.get(str(ix.document["name"]))
+            if current is None:
+                missing.append(ix)
+            elif bool(current.get("unique")) != bool(ix.document.get("unique")):
+                # Cùng tên nhưng khác `unique` (vd tạo từ bản migrate cũ): $merge cần unique thật
+                await collection.drop_index(str(ix.document["name"]))
+                missing.append(ix)
         if missing:
             await collection.create_indexes(missing)
             created[name] = len(missing)

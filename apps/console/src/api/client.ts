@@ -10,6 +10,14 @@ export class ApiError extends Error {
 
 const TOKEN_KEY = "reflex.console.token";
 
+export function consoleToken(): string | undefined {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_CONSOLE_TOKEN;
+  } catch {
+    return undefined;
+  }
+}
+
 function authHeaders(): Record<string, string> {
   try {
     const token = sessionStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_CONSOLE_TOKEN;

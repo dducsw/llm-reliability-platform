@@ -5,12 +5,13 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY . .
 # Cache uv dùng chung giữa các image (không tải lại package mỗi lần build)
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable --package reflex-control-plane
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable --package reflex-control-plane --package reflex-sim
 
 FROM python:3.12-slim-bookworm
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY --from=build /app/VERSION /app/VERSION
+# reflex-sim: Chaos Lab chạy scenario bằng subprocess `reflex-sim run`
 # Seed catalog + scenario YAML đọc theo đường dẫn tương đối (fallback khi Mongo chưa có)
 COPY --from=build /app/seeds /app/seeds
 COPY --from=build /app/scenarios /app/scenarios

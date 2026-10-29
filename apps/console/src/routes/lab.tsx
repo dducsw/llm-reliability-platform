@@ -12,7 +12,7 @@ export function LabPage() {
     <Card title="Chaos Lab">
       <label className="mb-3 flex items-center gap-2 text-slate-300">
         <input type="checkbox" checked={fast} onChange={(e) => setFast(e.target.checked)} />
-        --fast (x60)
+        --fast (x5)
       </label>
       <QueryState isLoading={isLoading} error={error}>
         {run.error && <p className="mb-2 text-red-300">{run.error.message}</p>}

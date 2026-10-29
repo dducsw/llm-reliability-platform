@@ -54,3 +54,36 @@ async def test_faults_cleared_when_run_completes() -> None:
         await w.stop()
         await client.drop_database("reflex_it_sim")
         await client.close()
+
+
+async def test_phase_faults_expire_when_runner_dies() -> None:
+    """Scenario runner bị kill giữa phase: fault tự hết hiệu lực theo `ends_at`."""
+    from datetime import UTC, datetime, timedelta
+
+    class _Cursor:
+        def __init__(self, docs: list[dict]) -> None:
+            self.docs = docs
+
+        def __aiter__(self):
+            async def gen():
+                for d in self.docs:
+                    yield d
+
+            return gen()
+
+    fault = {"type": "truncate", "target": "vendorA:large", "params": {}}
+
+    class _Coll:
+        def __init__(self, ends_at: datetime) -> None:
+            self.doc = {"run_id": "r", "phase_index": 1, "faults": [fault], "ends_at": ends_at}
+
+        def find(self, *_a, **_k):
+            return _Cursor([self.doc])
+
+    now = datetime.now(tz=UTC)
+    live = ChaosRunsWatcher(db={"chaos_runs": _Coll(now + timedelta(seconds=60))})  # type: ignore[arg-type]
+    await live.refresh()
+    assert len(live.active_faults) == 1
+    dead = ChaosRunsWatcher(db={"chaos_runs": _Coll(now - timedelta(seconds=1))})  # type: ignore[arg-type]
+    await dead.refresh()
+    assert dead.active_faults == []

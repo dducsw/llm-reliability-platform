@@ -45,11 +45,14 @@ class RequestContext:
     route: str
     priority: int
     session: str | None
-    deadline_ms: int
+    deadline_ms: int | None  # None → theo policy.deadline_ms của route
     trace_id: str | None = None
 
 
 DEGRADED_HEALTH = 0.5
+# Đang shed vẫn cho 1 request/route đi qua mỗi chu kỳ này: health chỉ cập nhật khi có attempt,
+# shed tuyệt đối thì health đứng yên dưới ngưỡng và route bị chặn vĩnh viễn.
+SHED_PROBE_INTERVAL_S = 5.0
 SHED_RETRY_AFTER_S = 5
 
 
@@ -96,6 +99,7 @@ class Orchestrator:
         self._breakers: dict[str, CircuitBreaker] = {}
         self._retry_budgets: dict[str, RetryBudget] = {}
         self._hedge_budgets: dict[str, HedgeBudget] = {}
+        self._shed_probe_at: dict[str, datetime] = {}
 
     def _get_breaker(self, target_id: str, config: BreakerConfig) -> CircuitBreaker:
         if target_id not in self._breakers:
@@ -142,7 +146,19 @@ class Orchestrator:
         all_degraded = all(
             i.breaker_open or not i.eligible or i.health < DEGRADED_HEALTH for i in inputs.values()
         )
-        return should_shed(policy.shed, priority, all_degraded)
+        if not should_shed(policy.shed, priority, all_degraded):
+            if not all_degraded:
+                self._shed_probe_at.pop(route, None)
+            return False
+        now = self.clock()
+        last = self._shed_probe_at.get(route)
+        if last is None:
+            self._shed_probe_at[route] = now
+            return True
+        if (now - last).total_seconds() >= SHED_PROBE_INTERVAL_S:
+            self._shed_probe_at[route] = now
+            return False  # request thăm dò: kết quả cập nhật health để route tự hồi phục
+        return True
 
     def shed(self, ctx: RequestContext) -> OrchestratorResult:
         policy = self.policy_store.get(ctx.route)
@@ -182,8 +198,9 @@ class Orchestrator:
     async def _call(
         self, target_id: str, route: str, payload: dict, timeout_s: float
     ) -> UpstreamResult:
-        # route đi kèm target: mock chọn output theo route, chaos-proxy chọn fault theo route
-        target = {**self.target_catalog.get(target_id), "route": route}
+        # route/target_id đi kèm target: mock chọn output theo route, chaos-proxy chọn fault theo route
+        # và theo target đầy đủ (vendorA:large ≠ vendorA:small dù chung đường dẫn)
+        target = {**self.target_catalog.get(target_id), "route": route, "target_id": target_id}
         adapter = get_adapter(target.get("adapter", "mock"))
         self.state.inflight_start(target_id, route)
         try:
@@ -284,7 +301,7 @@ class Orchestrator:
             self._get_hedge_budget(ctx.route, policy).record_request()
 
         # 1. Thu thập inputs cho routing
-        deadline = Deadline(ctx.deadline_ms)
+        deadline = Deadline(ctx.deadline_ms or (policy.deadline_ms if policy else 8000))
         if policy and policy.candidates:
             target_inputs = self._candidate_inputs(policy, ctx.route)
             route_decision = decide(policy, target_inputs, self.rng)
@@ -484,10 +501,15 @@ class Orchestrator:
         self.telemetry_queue.put_nowait(req_event)
         metrics.emit_request(req_event)
 
+        # Hết attempt mà lần cuối vẫn lỗi → trả lỗi thật, không 200 + body không có `choices`
+        status = 200
+        if req_outcome == RequestOutcome.ERROR:
+            status = last_att.http_status if (last_att.http_status or 0) >= 400 else 502
         return OrchestratorResult(
             body=final_response or {},
             request_event=req_event,
             attempt_events=attempt_events,
+            status=status,
         )
 
     async def stream(self, ctx: RequestContext, payload: dict) -> AsyncIterator[dict]:

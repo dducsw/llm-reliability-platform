@@ -78,6 +78,8 @@ class FakeCollection:
         if doc is None:
             return _Res(0)
         doc.update(update.get("$set", {}))
+        for k, v in update.get("$push", {}).items():
+            doc.setdefault(k, []).append(v)
         return _Res(1)
 
 

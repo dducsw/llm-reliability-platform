@@ -109,3 +109,14 @@ async def test_llm_failure_still_produces_rule_based_recommendation() -> None:
 
     inv = await CortexAgent(db=None, llm=Down(), settings=Settings()).investigate("INC-1")
     assert inv.recommendation is not None and inv.hypotheses[0].id == "H-rules"
+
+
+def test_action_params_doc_matches_catalog_aliases() -> None:
+    from reflex_cortex.agent import action_params_doc
+
+    doc = action_params_doc()
+    assert (
+        "- shift_weight: {route: string, from: string, to: string, pct: number (0.0..1.0],"
+        " duration_s?: integer}" in doc
+    )
+    assert "page_human" in doc

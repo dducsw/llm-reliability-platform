@@ -1,3 +1,5 @@
+import { consoleToken } from "@/api/client";
+
 // SSE client cho /api/stream?topics=… (EventSource tự reconnect và gửi Last-Event-ID)
 export type StreamTopic = "health" | "incidents" | "actions" | "policies" | "lab" | "replays";
 
@@ -8,7 +10,8 @@ export interface StreamEvent<T = unknown> {
 }
 
 export function subscribe(topics: StreamTopic[], onEvent: (e: StreamEvent) => void): () => void {
-  const source = new EventSource(`/api/stream?topics=${topics.join(",")}`);
+  const token = consoleToken();
+  const source = new EventSource(`/api/stream?topics=${topics.join(",")}${token ? `&token=${encodeURIComponent(token)}` : ""}`);
   source.addEventListener("change", (msg) => {
     try {
       onEvent(JSON.parse((msg as MessageEvent<string>).data) as StreamEvent);

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -11,10 +12,13 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from pymongo import AsyncMongoClient
 from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import make_statsd
+from reflex_telemetry.tags import SVC_CONTROL_PLANE
 
 from reflex_cp.actuator.apply import Actuator
+from reflex_cp.actuator.expiry import ActionExpirer
 from reflex_cp.api.actions import router as actions_router
-from reflex_cp.api.auth import require_console_token
+from reflex_cp.api.auth import require_console_token, require_console_token_query
 from reflex_cp.api.demo import router as demo_router
 from reflex_cp.api.incidents import router as incidents_router
 from reflex_cp.api.lab import router as lab_router
@@ -28,9 +32,11 @@ from reflex_cp.api.slos import router as slos_router
 from reflex_cp.api.stream import router as stream_router
 from reflex_cp.hooks.datadog import router as datadog_router
 from reflex_cp.incidents.service import IncidentService
+from reflex_cp.incidents.watchdog import CortexWatchdog
 from reflex_cp.outbox.publisher import OutboxPublisher
 from reflex_cp.sentinel.loop import Sentinel
 from reflex_cp.settings import Settings
+from reflex_cp.verifier.loop import MitigationLoop
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +54,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         actuator: Actuator | None = None
         outbox: OutboxPublisher | None = None
         outbox_task: asyncio.Task | None = None
+        watchdog: CortexWatchdog | None = None
+        watchdog_task: asyncio.Task | None = None
+        mitigation: MitigationLoop | None = None
+        mitigation_task: asyncio.Task | None = None
+        expirer: ActionExpirer | None = None
+        expirer_task: asyncio.Task | None = None
 
         if settings.mongodb_uri:
             try:
@@ -55,6 +67,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 db = client[settings.mongodb_db]
                 app.state.client = client
                 app.state.db = db
+                IncidentService.statsd = make_statsd(
+                    SVC_CONTROL_PLANE,
+                    os.getenv("REFLEX_ENV", "local"),
+                    os.getenv("DD_VERSION", "0"),
+                )
                 app.state.incident_service = IncidentService(db)
 
                 # Khởi động Sentinel background loop
@@ -79,6 +96,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 outbox_task = asyncio.create_task(outbox.run())
                 app.state.outbox_task = outbox_task
 
+                # Verify (Recovery Proof) → failback 10/50/100 → resolve incident
+                if settings.mitigation_loop_enabled:
+                    verify_s, stable_s = settings.mitigation_thresholds()
+                    mitigation = MitigationLoop(db, verify_after_s=verify_s, stable_s=stable_s)
+                    mitigation_task = asyncio.create_task(mitigation.run())
+
+                # Action có thời hạn (rules shift_weight) hết hạn → rollback policy
+                expirer = ActionExpirer(db)
+                expirer_task = asyncio.create_task(expirer.run())
+
+                # Watchdog R4: Cortex im lặng → rule engine ngay tại control-plane
+                if settings.cortex_watchdog_enabled:
+                    unclaimed_s, stale_s = settings.watchdog_thresholds()
+                    watchdog = CortexWatchdog(db, unclaimed_s=unclaimed_s, stale_s=stale_s)
+                    watchdog_task = asyncio.create_task(watchdog.run())
+
                 logger.info("Control plane connected to MongoDB: %s", settings.mongodb_db)
             except Exception as e:
                 logger.error("Failed to initialize MongoDB connection or background tasks: %s", e)
@@ -96,6 +129,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             outbox.stop()
         if outbox_task and not outbox_task.done():
             outbox_task.cancel()
+        if mitigation:
+            mitigation.stop()
+        if mitigation_task and not mitigation_task.done():
+            mitigation_task.cancel()
+        if expirer:
+            expirer.stop()
+        if expirer_task and not expirer_task.done():
+            expirer_task.cancel()
+        if watchdog:
+            watchdog.stop()
+        if watchdog_task and not watchdog_task.done():
+            watchdog_task.cancel()
 
         if client:
             await client.close()
@@ -112,7 +157,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         pulse_router,
         incidents_router,
         policies_router,
-        stream_router,
         series_router,
         slos_router,
         replays_router,
@@ -122,6 +166,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         demo_router,
     ):
         app.include_router(router, dependencies=protected)
+
+    app.include_router(stream_router, dependencies=[Depends(require_console_token_query)])
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

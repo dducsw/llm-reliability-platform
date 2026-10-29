@@ -14,9 +14,31 @@ class Settings(BaseSettings):
     mongodb_uri: str = ""
     mongodb_db: str = "reflex"
     sentinel_tick_s: float = 10.0
+    # Watchdog R4 (Cortex chết): 0 = theo profile (demo 15s/120s, standard 60s/180s)
+    cortex_unclaimed_s: float = 0.0
+    cortex_stale_s: float = 0.0
+    cortex_watchdog_enabled: bool = True
+    # Vòng verify → failback → resolve; 0 = theo profile (demo 60s/60s, standard 300s/300s)
+    verify_after_s: float = 0.0
+    failback_stable_s: float = 0.0
+    mitigation_loop_enabled: bool = True
     reflex_webhook_token: str = ""
     reflex_console_token: str = ""
     reflex_lab_token: str = ""
     dd_api_key: str = ""
     dd_app_key: str = ""
     dd_site: str = "datadoghq.com"
+
+    def mitigation_thresholds(self) -> tuple[float, float]:
+        demo = self.reflex_profile == "demo"
+        return (
+            self.verify_after_s or (60.0 if demo else 300.0),
+            self.failback_stable_s or (60.0 if demo else 300.0),
+        )
+
+    def watchdog_thresholds(self) -> tuple[float, float]:
+        demo = self.reflex_profile == "demo"
+        unclaimed = self.cortex_unclaimed_s or (15.0 if demo else 60.0)
+        # > max_wall_s (90s) của Cortex để không cướp một investigation còn đang chạy
+        stale = self.cortex_stale_s or (120.0 if demo else 180.0)
+        return unclaimed, stale

@@ -14,4 +14,48 @@
     - { tier: page, long: 3m, short: 30s, factor: 14.4 }
     - { tier: ticket, long: 30m, short: 5m, factor: 6 }
   owner: team-shopmate
-# TODO: availability/latency/ttft cho từng route + Provider SLO theo target
+# Provider SLO (ledger theo target): silent brownout bị rescue che nên SLI route vẫn ~100%;
+# chỉ ledger của target mới thấy. `route` để incident có route cho rules/Cortex hành động.
+- _id: target:vendorA:large:quality
+  scope: target
+  key: vendorA:large
+  target: vendorA:large
+  route: order.extract
+  sli: quality
+  threshold_ms: null
+  objective: 0.995
+  window: { standard: 30d, demo: 6h }
+  alerts:
+    - { tier: page, long: 1h, short: 5m, factor: 14.4, severity: critical, hint: auto_mitigate }
+  demo_alerts:
+    - { tier: page, long: 3m, short: 30s, factor: 14.4 }
+  owner: team-shopmate
+- _id: target:vendorB:large:quality
+  scope: target
+  key: vendorB:large
+  target: vendorB:large
+  route: order.extract
+  sli: quality
+  threshold_ms: null
+  objective: 0.995
+  window: { standard: 30d, demo: 6h }
+  alerts:
+    - { tier: page, long: 1h, short: 5m, factor: 14.4, severity: critical, hint: auto_mitigate }
+  demo_alerts:
+    - { tier: page, long: 3m, short: 30s, factor: 14.4 }
+  owner: team-shopmate
+- _id: target:vendorA:small:quality
+  scope: target
+  key: vendorA:small
+  target: vendorA:small
+  route: support.triage
+  sli: quality
+  threshold_ms: null
+  objective: 0.995
+  window: { standard: 30d, demo: 6h }
+  alerts:
+    - { tier: page, long: 1h, short: 5m, factor: 14.4, severity: critical, hint: auto_mitigate }
+  demo_alerts:
+    - { tier: page, long: 3m, short: 30s, factor: 14.4 }
+  owner: team-shopmate
+# TODO: availability/latency/ttft cho từng route

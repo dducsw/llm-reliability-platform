@@ -36,3 +36,36 @@ async def test_propose_action_tool() -> None:
         db=None,
     )
     assert action_id.startswith("act-")
+
+
+def test_prompt_signatures_hide_bound_args() -> None:
+    from reflex_cortex.tools import build_toolbox, signature
+
+    box = build_toolbox(object(), None, "INC-1")  # type: ignore[arg-type]
+    sig = signature("mongo.sli_window", box["mongo.sli_window"])
+    assert sig.startswith("mongo.sli_window(scope: str, key: str")
+    assert "db" not in sig
+
+
+@pytest.mark.asyncio
+async def test_proposed_action_timestamps_are_datetimes() -> None:
+    """Chuỗi ISO làm sort(created_at) lẫn kiểu với seed → action mới biến mất khỏi /api/actions."""
+    from datetime import datetime
+
+    class _Coll:
+        def __init__(self) -> None:
+            self.docs: list[dict] = []
+
+        async def insert_one(self, doc: dict) -> None:
+            self.docs.append(doc)
+
+    coll = _Coll()
+    await propose.propose_action(
+        incident_key="INC-1",
+        action_type="shift_weight",
+        params={"route": "r", "from": "A", "to": "B", "pct": 0.5},
+        confidence=0.5,
+        db={"actions": coll},  # type: ignore[arg-type]
+    )
+    doc = coll.docs[0]
+    assert isinstance(doc["created_at"], datetime) and isinstance(doc["updated_at"], datetime)

@@ -100,6 +100,9 @@ class Incident(_Model):
     links: dict[str, str] = {}
     timeline: list[TimelineEntry] = []
     postmortem_id: str | None = None
+    # Ai đang điều tra ("cortex" | "rules@control-plane") + từ lúc nào — lease cho watchdog R4
+    investigator: str | None = None
+    investigating_since: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

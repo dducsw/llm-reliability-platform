@@ -2,7 +2,7 @@
 
 1. (tuỳ chọn) `demo_reset --yes` để bắt đầu từ trạng thái sạch.
 2. Mở Console với `?present=1`: chữ to, narration ribbon, demo clock, che chuỗi giống secret.
-3. Chạy `reflex-sim run <scenario>` (mặc định silent-brownout, `--fast` = ×60).
+3. Chạy `reflex-sim run <scenario>` (mặc định silent-brownout, `--fast` = ×5).
 
     uv run python tools/record_demo.py                       # silent-brownout --fast
     uv run python tools/record_demo.py --scenario 429-storm --realtime --reset

@@ -16,11 +16,15 @@ from reflex_core.incident import (
     TimelineEntry,
 )
 from reflex_mongo.collections import INCIDENTS
+from reflex_mongo.serde import to_doc
 
 logger = logging.getLogger(__name__)
 
 
 class IncidentService:
+    # Gắn một lần ở main (DogStatsD dùng chung); None khi không có telemetry (test, CLI)
+    statsd: Any = None
+
     def __init__(self, db: AsyncDatabase | None = None) -> None:
         self.db = db
         self._memory_incidents: dict[str, dict[str, Any]] = {}
@@ -52,7 +56,7 @@ class IncidentService:
             if existing:
                 await self.db[INCIDENTS].update_one(
                     {"_id": existing["_id"]},
-                    {"$push": {"signals": sig_model.model_dump(mode="json")}},
+                    {"$push": {"signals": to_doc(sig_model)}},
                 )
                 logger.info("Merged signal into active incident %s", existing.get("key"))
                 return existing
@@ -71,12 +75,17 @@ class IncidentService:
                 status=IncidentStatus.DETECTED,
                 signals=[sig_model],
                 t=IncidentTimes(first_bad_at=now, detected_at=now),
+                created_at=now,
             )
-            doc = new_inc.model_dump(by_alias=True, mode="json")
+            doc = to_doc(new_inc)  # datetime giữ BSON Date để sort("t.detected_at") không lẫn kiểu
             doc["_id"] = inc_key
             try:
                 await self.db[INCIDENTS].insert_one(doc)
                 logger.info("Opened new incident %s (dedup=%s)", inc_key, dedup_key)
+                if self.statsd is not None:  # M12: so sánh số incident theo nguồn phát hiện
+                    self.statsd.increment(
+                        "reflex.incident.open", tags=[f"source:{sig_model.source}"]
+                    )
                 return doc
             except DuplicateKeyError:
                 # Race condition: một tiến trình khác vừa tạo xong
@@ -113,20 +122,20 @@ class IncidentService:
         now = datetime.now(tz=UTC)
         entry = TimelineEntry(at=now, kind="status_change", actor=actor, ref=ref)
 
-        update: dict[str, Any] = {
-            "status": new_status.value,
-            "$push": {"timeline": entry.model_dump(mode="json")},
-        }
+        fields: dict[str, Any] = {"status": new_status.value}
         if new_status in (IncidentStatus.RESOLVED, IncidentStatus.FALSE_POSITIVE):
-            update["is_open"] = False
-            update["t.resolved_at"] = now
+            fields["is_open"] = False
+            fields["t.resolved_at"] = now
         elif new_status == IncidentStatus.MITIGATED:
-            update["t.mitigated_at"] = now
+            fields["t.mitigated_at"] = now
 
         if self.db is not None:
-            await self.db[INCIDENTS].update_one({"key": key}, {"$set": update})
+            await self.db[INCIDENTS].update_one(
+                {"key": key},
+                {"$set": fields, "$push": {"timeline": to_doc(entry)}},
+            )
         elif key in self._memory_incidents:
-            self._memory_incidents[key].update(update)
+            self._memory_incidents[key].update(fields)
 
     async def compute_signature(self, key: str) -> None:
         """A8 first-bad-at + A9 signature vector."""

@@ -18,6 +18,9 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 import uvicorn
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import BENCH_TS
+from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import init as telemetry_init
+from reflex_telemetry.tags import SVC_PROBER
 
 from reflex_sim.bench.importer import import_bench
 from reflex_sim.bench.runners import rebuild_baselines, top_incidents
@@ -53,7 +56,7 @@ def chaos_proxy(port: int = 8070) -> None:
 @app.command()
 def traffic(rps: float = 8.0, duration: float = 0.0) -> None:
     """ShopMate traffic generator."""
-    gen = TrafficGenerator(base_rps=rps)
+    gen = TrafficGenerator(gateway_url=Settings().gateway_url, base_rps=rps)
     dur = None if duration <= 0 else duration
     asyncio.run(gen.run(duration_s=dur))
 
@@ -64,7 +67,16 @@ def prober() -> None:
 
     async def _main() -> None:
         client, db = _client_db()
-        p = Prober(db=db)
+        s = Settings()
+        statsd = telemetry_init(SVC_PROBER).statsd
+        p = Prober(
+            statsd=statsd,
+            db=db,
+            gateway_url=s.gateway_url,
+            chaos_proxy_url=s.chaos_proxy_url,
+            interval_s=s.probe_interval_s,
+            env=s.reflex_env,
+        )
         try:
             await p.run()
         finally:
@@ -80,13 +92,20 @@ def run(scenario: str, seed: int = 42, fast: bool = False) -> None:
     async def _main() -> None:
         sc = load_scenario(scenario)
         client, db = _client_db()
-        runner = ScenarioRunner(db=db)
+        s = Settings()
+        dd = (
+            DatadogApi(s.dd_api_key, s.dd_app_key, s.dd_site)
+            if s.dd_api_key and s.dd_app_key
+            else None
+        )
+        runner = ScenarioRunner(db=db, dd=dd)
         try:
             res = await runner.run(sc, seed=seed, fast=fast)
             print(f"Scenario {sc.name}: {res['status'].upper()} (phases: {res['phases_run']})")
             print(f"Expectations check: {'ALL PASSED' if res['all_passed'] else 'FAILED'}")
             for exp in res["expectations"]:
-                print(f"  - {exp['expectation']}: {'PASS' if exp['passed'] else 'FAIL'}")
+                verdict = {True: "PASS", False: "FAIL", None: "SKIP"}[exp["passed"]]
+                print(f"  - {exp['expectation']}: {verdict} ({exp['detail']})")
         finally:
             await client.close()
 
