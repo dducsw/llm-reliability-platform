@@ -27,6 +27,11 @@ from typing import Any
 
 import httpx
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
+
 REQUEST_DEADLINE_S = 70  # 2 gateway × timeout 30s + dư
 STALL_S = 60
 

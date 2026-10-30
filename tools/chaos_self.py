@@ -26,10 +26,15 @@ from pathlib import Path
 
 import httpx
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8")
+
 sys.path.insert(0, str(Path(__file__).parent))
 from loadtest import run
 
-COMPOSE = ["docker", "compose", "-f", "infra/compose/docker-compose.yml"]
+COMPOSE = ["docker", "compose", "--env-file", ".env", "-f", "infra/compose/docker-compose.yml"]
 GATEWAYS = ["http://localhost:8080", "http://localhost:8081"]
 EXPERIMENTS: dict[str, float] = {  # service → success ratio tối thiểu khi service đó chết
     "mongo": 0.95,
