@@ -13,6 +13,8 @@ from typing import Any
 import pytest
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import ATTEMPTS_TS, SLI_1M
+from reflex_mongo.migrate.collections import ensure_collections
+from reflex_mongo.migrate.indexes import ensure_indexes
 from reflex_mongo.pipelines import (
     a01_attempt_rollup,
     a04_burn_rate,
@@ -52,22 +54,33 @@ def assert_no_collscan(explain_result: dict[str, Any]) -> None:
 
 @pytest.mark.asyncio
 async def test_a01_explain_has_bucket_skip(it_db: AsyncDatabase[dict[str, Any]]) -> None:
-    """A1 Attempt rollup trn Time Series: c b? l?c th?i gian d? bucket filter."""
+    """A1 Attempt rollup trên Time Series: có bộ lọc thời gian để bucket filter."""
+    await ensure_collections(it_db)
     now = datetime.now(tz=UTC)
     pipeline = a01_attempt_rollup.build(
-        from_time=now - timedelta(minutes=5), to_time=now, env="local"
+        now=now, from_=now - timedelta(minutes=5), to=now, env="local"
     )
 
-    explain = await it_db[ATTEMPTS_TS].aggregate(pipeline).explain()
+    explain = await it_db.command(
+        "explain",
+        {"aggregate": ATTEMPTS_TS, "pipeline": pipeline, "cursor": {}},
+        verbosity="executionStats",
+    )
     assert explain is not None
 
 
 @pytest.mark.asyncio
 async def test_a04_burn_rate_explain(it_db: AsyncDatabase[dict[str, Any]]) -> None:
-    """A4 Burn rate: explain trn sli_1m."""
+    """A4 Burn rate: explain trên sli_1m."""
+    await ensure_collections(it_db)
+    await ensure_indexes(it_db)
     now = datetime.now(tz=UTC)
     pipeline = a04_burn_rate.build(now=now, scope="target", keys=["vendorA:large"])
 
-    explain = await it_db[SLI_1M].aggregate(pipeline).explain()
+    explain = await it_db.command(
+        "explain",
+        {"aggregate": SLI_1M, "pipeline": pipeline, "cursor": {}},
+        verbosity="executionStats",
+    )
     assert explain is not None
     assert_no_collscan(explain)
