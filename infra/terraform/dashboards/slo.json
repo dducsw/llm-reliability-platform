@@ -1,6 +1,6 @@
 {
-  "title": "Reflex — SLO",
-  "description": "Dual-ledger: Delivered vs Provider, đối chiếu good/total cùng khoảng thời gian.",
+  "title": "Reflex · SLO & Error Budget (D2)",
+  "description": "Dual-ledger: Delivered vs Provider SLIs, good/total across matched evaluation windows.",
   "layout_type": "ordered",
   "template_variables": [
     {
@@ -45,7 +45,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Delivered quality (order.extract)",
+        "title": "Delivered Quality (order.extract)",
         "type": "timeseries",
         "yaxis": {
           "min": "0.8",
@@ -87,7 +87,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Provider quality theo target",
+        "title": "Provider Quality by Target",
         "type": "timeseries",
         "yaxis": {
           "min": "0",
@@ -129,7 +129,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Delivered latency <2000ms (chat.reply)",
+        "title": "Delivered Latency <2000ms (chat.reply)",
         "type": "timeseries",
         "yaxis": {
           "min": "0",
@@ -171,7 +171,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Delivered availability (chat.reply)",
+        "title": "Delivered Availability (chat.reply)",
         "type": "timeseries",
         "yaxis": {
           "min": "0.8",

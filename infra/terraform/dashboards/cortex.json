@@ -1,6 +1,6 @@
 {
-  "title": "Reflex — cortex",
-  "description": "Sức khỏe Cortex: lỗi, thời lượng, incident.",
+  "title": "Reflex · Cortex Agent (D3)",
+  "description": "Autonomous SRE Agent performance: errors, duration, tool distribution and incident investigations.",
   "layout_type": "ordered",
   "template_variables": [
     {
@@ -40,7 +40,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Số lần điều tra theo status",
+        "title": "Investigations Count by Status",
         "type": "timeseries"
       },
       "id": 4884876417239466
@@ -65,7 +65,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Thời lượng điều tra p95",
+        "title": "Investigation Duration p95",
         "type": "timeseries",
         "markers": [
           {

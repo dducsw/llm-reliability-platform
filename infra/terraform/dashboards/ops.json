@@ -1,6 +1,6 @@
 {
-  "title": "Reflex — ops",
-  "description": "Vận hành: traffic, latency, probe, retry, mù telemetry.",
+  "title": "Reflex · Operations (D1)",
+  "description": "Operations dashboard: Traffic, latency, probes, retry, dropped telemetry.",
   "layout_type": "ordered",
   "template_variables": [
     {
@@ -40,7 +40,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Request rate theo outcome",
+        "title": "Request Volume by Outcome",
         "type": "timeseries"
       },
       "id": 8764997831952085
@@ -70,7 +70,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Delivered availability",
+        "title": "Delivered Availability",
         "type": "timeseries"
       },
       "id": 4116219986125270
@@ -95,7 +95,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Request latency p95",
+        "title": "Request Latency p95",
         "type": "timeseries"
       },
       "id": 7179447215667332
@@ -120,7 +120,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Attempt latency p99 theo target",
+        "title": "Attempt Latency p99 by Target",
         "type": "timeseries"
       },
       "id": 8704859273724263
@@ -145,7 +145,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Retry amplification",
+        "title": "Retry Amplification Factor",
         "type": "timeseries"
       },
       "id": 6525783336586039
@@ -170,7 +170,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Probe result",
+        "title": "Canary Probes Result (Direct vs Via GW)",
         "type": "timeseries"
       },
       "id": 1624740292923166
@@ -195,7 +195,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Telemetry dropped",
+        "title": "Dropped Telemetry",
         "type": "timeseries"
       },
       "id": 3416436226324049
@@ -220,7 +220,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Incident mở theo nguồn",
+        "title": "Open Incidents by Source",
         "type": "timeseries"
       },
       "id": 3691851913546224
@@ -245,7 +245,7 @@
             "response_format": "timeseries"
           }
         ],
-        "title": "Cost USD/s",
+        "title": "Reliability Cost USD/s",
         "type": "timeseries"
       },
       "id": 1186142354379118
