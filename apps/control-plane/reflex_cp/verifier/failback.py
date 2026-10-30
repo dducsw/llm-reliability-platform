@@ -14,7 +14,9 @@ from reflex_core.actions import (
     ProposedBy,
     new_action_id,
 )
-from reflex_mongo.collections import ACTIONS, POLICY_HISTORY
+from reflex_mongo.collections import ACTIONS
+
+from reflex_cp.actuator.apply import Actuator
 
 logger = logging.getLogger(__name__)
 
@@ -69,12 +71,9 @@ class FailbackOrchestrator:
 
     async def baseline_weight(self, parent_action: Action, target: str) -> float | None:
         """Trọng số của target gốc trong policy ngay trước mitigation (snapshot `version_before`)."""
-        ex = parent_action.execution
-        if self.db is None or ex is None:
+        if self.db is None:
             return None
-        hist = await self.db[POLICY_HISTORY].find_one(
-            {"policy_id": ex.policy_id, "version": ex.version_before}
-        )
+        hist = await Actuator(self.db).snapshot_before(parent_action)
         for c in ((hist or {}).get("doc") or {}).get("candidates", []):
             if c.get("target") == target:
                 return float(c.get("weight", 0.0))
