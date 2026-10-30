@@ -10,6 +10,8 @@ locals {
   # burn = tỷ lệ lỗi / error budget ≥ 14.4  ⇔  tỷ lệ lỗi ≥ 14.4 × (1 - objective)
   quality_error_threshold = tonumber(format("%.4f", local.fast_burn_factor * (1 - local.provider_slo_objective)))
 
+  quality_min_samples = 20
+
   quality_error_ratio = "(sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count() - sum:reflex.attempt.quality.pass{env:${var.env}} by {target,route}.as_count()) / sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count()"
 
   alert_message = <<-EOT
@@ -58,6 +60,26 @@ resource "datadog_monitor" "m3_short" {
   include_tags        = true
   priority            = 1
   tags                = concat(local.common_tags, ["monitor:m3", "ledger:provider"])
+}
+
+# M3v — đủ mẫu: ≥ 20 lần kiểm tra chất lượng trong cửa sổ dài cho {target, route}. Thiếu vế này, target ít traffic
+# (vd secondary 10% sau failback, 1–4 mẫu/phút) chỉ cần 1 lỗi là vượt ngưỡng 7.2% → báo giả (2026-10-30 05:02).
+resource "datadog_monitor" "m3_volume" {
+  name    = "[Reflex] M3v Provider quality — đủ mẫu"
+  type    = "query alert"
+  query   = "sum(${local.burn_windows.long}):sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count() >= ${local.quality_min_samples}"
+  message = "Thành phần của M3_quality_fast_burn (đủ mẫu để đánh giá)."
+
+  monitor_thresholds {
+    critical = local.quality_min_samples
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  evaluation_delay    = 30
+  include_tags        = true
+  priority            = 5
+  tags                = concat(local.common_tags, ["monitor:m3-part", "ledger:provider"])
 }
 
 # M7 — retry amplification: số attempt trung bình mỗi request vượt 1.5 (retry storm)

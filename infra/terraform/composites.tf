@@ -1,8 +1,8 @@
-# M3 = M3a && M3b — tên khớp expectation `M3_quality_fast_burn` của scenarios/silent-brownout.yaml
+# M3 = M3a && M3b && M3v (đủ mẫu) — tên khớp expectation `M3_quality_fast_burn` của scenarios/silent-brownout.yaml
 resource "datadog_monitor" "m3" {
   name    = "[Reflex] M3_quality_fast_burn"
   type    = "composite"
-  query   = "${datadog_monitor.m3_long.id} && ${datadog_monitor.m3_short.id}"
+  query   = "${datadog_monitor.m3_long.id} && ${datadog_monitor.m3_short.id} && ${datadog_monitor.m3_volume.id}"
   message = local.alert_message
 
   notify_no_data    = false
@@ -16,7 +16,7 @@ resource "datadog_monitor" "m9_provider_side" {
   name = "[Reflex] M9_provider_side_confirmed"
   type = "composite"
   # Composite không được chứa composite (M3) → dùng thẳng hai nửa của M3
-  query   = "${datadog_monitor.m3_long.id} && ${datadog_monitor.m3_short.id} && ${datadog_monitor.p_direct.id}"
+  query   = "${datadog_monitor.m3_long.id} && ${datadog_monitor.m3_short.id} && ${datadog_monitor.m3_volume.id} && ${datadog_monitor.p_direct.id}"
   message = "diagnosis:provider_side\n${local.alert_message}"
 
   notify_no_data    = false

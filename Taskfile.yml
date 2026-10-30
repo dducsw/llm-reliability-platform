@@ -110,6 +110,11 @@ tasks:
     cmds:
       - terraform apply tfplan
 
+  infra:datadog:sync:
+    desc: Ghi id SLO/monitor Datadog vào slos.datadog (dry-run; `-- --yes` để ghi). Chạy lại sau `task seed`
+    cmds:
+      - uv run python tools/sync_datadog_ids.py {{.CLI_ARGS}}
+
   demo:up:
     desc: Stack demo (Atlas, nginx TLS, vendor thật)
     cmds:
