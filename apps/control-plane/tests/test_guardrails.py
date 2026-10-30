@@ -270,8 +270,9 @@ async def test_all_guardrails_reported(fake_db: Any) -> None:
     ("other_open", "same_incident", "passed"),
     [(True, False, False), (False, False, True), (True, True, True)],
 )
+@pytest.mark.parametrize("other_state", ["succeeded", "awaiting_approval"])
 async def test_no_overlapping_mitigation(
-    fake_db: Any, other_open: bool, same_incident: bool, passed: bool
+    fake_db: Any, other_open: bool, same_incident: bool, passed: bool, other_state: str
 ) -> None:
     other = "INC-NEW" if same_incident else "INC-OLD"
     await fake_db[INCIDENTS].insert_one({"key": other, "is_open": other_open})
@@ -280,7 +281,7 @@ async def test_no_overlapping_mitigation(
             "_id": "old",
             "incident_id": other,
             "type": "shift_weight",
-            "state": "succeeded",
+            "state": other_state,
             "params": {"route": "r", "from": "A", "to": "B", "pct": 0.9},
         }
     )

@@ -43,3 +43,19 @@ async def test_lowercased_datadog_tag_maps_back_to_catalog_target() -> None:
     assert await canonical_target(db, "vendora:large") == "vendorA:large"
     assert await canonical_target(db, "unknown:x") == "unknown:x"
     assert await canonical_target(db, None) is None
+
+
+@pytest.mark.asyncio
+async def test_route_only_signal_merges_into_open_incident_on_route() -> None:
+    """M7 chỉ group theo route → không có target; vẫn phải gộp vào incident Sentinel trên route đó."""
+    svc = IncidentService()
+    a = await svc.open_or_merge(
+        signal={"source": "sentinel"},
+        slo_id="target:vendorA:large:quality",
+        target="vendorA:large",
+        route="order.extract",
+    )
+    b = await svc.open_or_merge(
+        signal={"source": "datadog"}, slo_id="dd:15405615", route="order.extract"
+    )
+    assert a["key"] == b["key"]

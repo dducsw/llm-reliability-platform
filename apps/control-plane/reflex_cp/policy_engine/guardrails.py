@@ -192,12 +192,18 @@ async def _flap_guard(
 
 
 _MITIGATIONS = (ActionType.SHIFT_WEIGHT, ActionType.DOWNGRADE_TIER)
+_PENDING_OR_LIVE = (
+    ActionState.PROPOSED,
+    ActionState.AWAITING_APPROVAL,
+    *_LIVE,
+)
 
 
 async def _no_overlapping_mitigation(action: Action, db: AsyncDatabase | None) -> GuardrailResult:
-    """Một route chỉ một mitigation sống: incident khác đã chuyển traffic và chưa failback xong → chặn.
+    """Một route chỉ một mitigation sống: incident khác đang mở đã đề xuất/áp dụng chuyển traffic → chặn.
 
     Hai mitigation chồng nhau nhân trọng số (90% của 90% → 0.009) và failback của cái sau lấy baseline sai.
+    Tính cả action đang chờ duyệt: hai đề xuất cách nhau 1 giây đều qua guardrail nếu chỉ xét `succeeded`.
     """
     route = action.params.get("route")
     if db is None or not route or action.type not in _MITIGATIONS:
@@ -207,7 +213,7 @@ async def _no_overlapping_mitigation(action: Action, db: AsyncDatabase | None) -
             "_id": {"$ne": action.id},
             "params.route": route,
             "type": {"$in": [t.value for t in _MITIGATIONS]},
-            "state": ActionState.SUCCEEDED.value,
+            "state": {"$in": [s.value for s in _PENDING_OR_LIVE]},
         }
     ):
         other = d.get("incident_id")
