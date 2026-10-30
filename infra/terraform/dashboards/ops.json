@@ -1,140 +1,257 @@
 {
-  "title": "Reflex · Operations (D1)",
-  "description": "Operations dashboard: DETECT, INVESTIGATE, RESPOND (Dual Ledger)",
+  "title": "Reflex — ops",
+  "description": "Vận hành: traffic, latency, probe, retry, mù telemetry.",
   "layout_type": "ordered",
   "template_variables": [
     {
+      "default": "local",
       "name": "env",
-      "prefix": "env",
-      "default": "local"
+      "prefix": "env"
     },
     {
-      "name": "route",
-      "prefix": "route",
-      "default": "*"
-    },
-    {
+      "default": "*",
       "name": "target",
-      "prefix": "target",
-      "default": "*"
+      "prefix": "target"
+    },
+    {
+      "default": "*",
+      "name": "route",
+      "prefix": "route"
     }
   ],
   "widgets": [
     {
       "definition": {
-        "title": "DETECT: Delivered vs Provider Quality (Hero Metric)",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "(sum:reflex.quality.pass{$env, $route}.as_count() / sum:reflex.quality.total{$env, $route}.as_count()) * 100",
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.request{$env,$route} by {outcome}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Request rate theo outcome",
+        "type": "timeseries"
+      },
+      "id": 8764997831952085
+    },
+    {
+      "definition": {
+        "requests": [
+          {
             "display_type": "line",
-            "style": {
-              "palette": "green",
-              "line_type": "solid",
-              "line_width": "thick"
-            }
-          },
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request{$env,$route,outcome:ok}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,$route,!outcome:shed}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered availability",
+        "type": "timeseries"
+      },
+      "id": 4116219986125270
+    },
+    {
+      "definition": {
+        "requests": [
           {
-            "q": "(sum:reflex.attempt.quality.pass{$env, $target}.as_count() / sum:reflex.attempt.quality.total{$env, $target}.as_count()) * 100",
             "display_type": "line",
-            "style": {
-              "palette": "red",
-              "line_type": "dashed",
-              "line_width": "normal"
-            }
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p95:reflex.request.latency{$env,$route} by {route}"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "yaxis": {
-          "min": "50",
-          "max": "100",
-          "label": "% Pass"
-        }
-      }
+        "title": "Request latency p95",
+        "type": "timeseries"
+      },
+      "id": 7179447215667332
     },
     {
       "definition": {
-        "title": "DETECT: Request Volume by Outcome",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "sum:reflex.request{$env, $route} by {outcome}.as_count()",
-            "display_type": "bars"
-          }
-        ]
-      }
-    },
-    {
-      "definition": {
-        "title": "INVESTIGATE: Attempt Latency p95 by Target",
-        "type": "timeseries",
-        "requests": [
-          {
-            "q": "p95:reflex.attempt.latency{$env, $target} by {target}",
-            "display_type": "line"
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p99:reflex.attempt.latency{$env,$target,$route} by {target}"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "yaxis": {
-          "label": "ms"
-        }
-      }
+        "title": "Attempt latency p99 theo target",
+        "type": "timeseries"
+      },
+      "id": 8704859273724263
     },
     {
       "definition": {
-        "title": "INVESTIGATE: TTFT (Time To First Token) p95 by Target",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "p95:reflex.attempt.ttft{$env, $target} by {target}",
-            "display_type": "line"
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "avg:reflex.retry.amplification{$env,$route} by {route}"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "yaxis": {
-          "label": "ms"
-        }
-      }
+        "title": "Retry amplification",
+        "type": "timeseries"
+      },
+      "id": 6525783336586039
     },
     {
       "definition": {
-        "title": "INVESTIGATE: Canary Probes (Direct vs Via Gateway)",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "sum:reflex.probe.result{$env, $target} by {path, result}.as_count()",
-            "display_type": "bars"
-          }
-        ]
-      }
-    },
-    {
-      "definition": {
-        "title": "RESPOND: Retry Amplification Factor (M7)",
-        "type": "timeseries",
-        "requests": [
-          {
-            "q": "avg:reflex.retry.amplification{$env, $route} by {route}",
-            "display_type": "line"
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.probe.result{$env,$target} by {path,result}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "markers": [
-          {
-            "value": "y = 1.5",
-            "display_type": "error dashed",
-            "label": "Storm Threshold (1.5)"
-          }
-        ]
-      }
+        "title": "Probe result",
+        "type": "timeseries"
+      },
+      "id": 1624740292923166
     },
     {
       "definition": {
-        "title": "RESPOND: Cumulative Reliability Cost (USD)",
-        "type": "query_value",
         "requests": [
           {
-            "q": "sum:reflex.cost.usd{$env}.as_count()"
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.telemetry.dropped{$env}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "precision": 2
-      }
+        "title": "Telemetry dropped",
+        "type": "timeseries"
+      },
+      "id": 3416436226324049
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.incident.open{$env} by {source}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Incident mở theo nguồn",
+        "type": "timeseries"
+      },
+      "id": 3691851913546224
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cost.usd{$env,$route} by {route}.as_rate()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Cost USD/s",
+        "type": "timeseries"
+      },
+      "id": 1186142354379118
     }
-  ]
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
 }

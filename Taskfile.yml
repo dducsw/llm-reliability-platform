@@ -103,6 +103,7 @@ tasks:
   infra:datadog:apply:
     dir: infra/terraform
     cmds:
+      - uv run python ../../tools/setup_datadog_metrics.py
       - terraform init -upgrade
       - terraform apply
 

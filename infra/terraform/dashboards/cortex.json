@@ -1,56 +1,84 @@
 {
-  "title": "Reflex · Cortex Agent (D3)",
-  "description": "Autonomous SRE Agent performance, tool calls, and LLMObs traces",
+  "title": "Reflex — cortex",
+  "description": "Sức khỏe Cortex: lỗi, thời lượng, incident.",
   "layout_type": "ordered",
   "template_variables": [
     {
+      "default": "local",
       "name": "env",
-      "prefix": "env",
-      "default": "local"
+      "prefix": "env"
+    },
+    {
+      "default": "*",
+      "name": "target",
+      "prefix": "target"
+    },
+    {
+      "default": "*",
+      "name": "route",
+      "prefix": "route"
     }
   ],
   "widgets": [
     {
       "definition": {
-        "title": "Investigation Duration (seconds)",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "avg:reflex.cortex.investigation.duration{$env}",
-            "display_type": "line"
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.investigation{$env} by {status}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
+        "title": "Số lần điều tra theo status",
+        "type": "timeseries"
+      },
+      "id": 4884876417239466
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p95:reflex.cortex.investigation.duration{$env}"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Thời lượng điều tra p95",
+        "type": "timeseries",
         "markers": [
           {
             "value": "y = 60",
             "display_type": "warning dashed",
             "label": "Target MTTM (< 60s)"
           }
-        ]
-      }
-    },
-    {
-      "definition": {
-        "title": "Tool Calls Distribution",
-        "type": "timeseries",
-        "requests": [
-          {
-            "q": "sum:reflex.cortex.tool.calls{$env} by {tool}.as_count()",
-            "display_type": "bars"
-          }
-        ]
-      }
-    },
-    {
-      "definition": {
-        "title": "Hallucinated / Invalid Evidence Rejections",
-        "type": "query_value",
-        "requests": [
-          {
-            "q": "sum:reflex.cortex.evidence_invalid{$env}.as_count()"
-          }
-        ]
-      }
+        ],
+        "yaxis": {
+          "label": "Seconds"
+        }
+      },
+      "id": 6665244710773951
     },
     {
       "definition": {
@@ -58,10 +86,77 @@
         "type": "query_value",
         "requests": [
           {
-            "q": "sum:reflex.incident.open{$env}.as_count()"
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.incident.open{}.as_count()"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "precision": 0
+      },
+      "id": 5523360790480244
+    },
+    {
+      "definition": {
+        "title": "Tool Calls Distribution",
+        "type": "timeseries",
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.tool.calls{*} by {tool}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ]
-      }
+      },
+      "id": 3001982264947800
+    },
+    {
+      "definition": {
+        "title": "Hallucinated / Invalid Evidence Rejections",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.evidence_invalid{*}.as_count()"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "precision": 0
+      },
+      "id": 3818102487502498
     }
-  ]
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
 }

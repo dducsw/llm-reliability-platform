@@ -1,96 +1,195 @@
 {
-  "title": "Reflex · SLO & Error Budget (D2)",
-  "description": "Multi-window Error Budget & Burn Rate tracking for LLM Services",
+  "title": "Reflex — SLO",
+  "description": "Dual-ledger: Delivered vs Provider, đối chiếu good/total cùng khoảng thời gian.",
   "layout_type": "ordered",
   "template_variables": [
     {
+      "default": "local",
       "name": "env",
-      "prefix": "env",
-      "default": "local"
+      "prefix": "env"
     },
     {
+      "default": "*",
+      "name": "target",
+      "prefix": "target"
+    },
+    {
+      "default": "*",
       "name": "route",
-      "prefix": "route",
-      "default": "*"
+      "prefix": "route"
     }
   ],
   "widgets": [
     {
       "definition": {
-        "title": "Delivered Availability (chat.reply) — 7d SLI",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "(sum:reflex.request{$env, route:chat.reply, outcome:ok}.as_count() / sum:reflex.request{$env, route:chat.reply, !outcome:shed}.as_count()) * 100",
             "display_type": "line",
-            "style": {
-              "palette": "purple",
-              "line_width": "thick"
-            }
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.quality.pass{$env,route:order.extract}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.quality.total{$env,route:order.extract}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
+        "title": "Delivered quality (order.extract)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0.8",
+          "max": "1.05",
+          "label": "Ratio"
+        },
         "markers": [
           {
-            "value": "y = 99.5",
+            "value": "y = 0.995",
             "display_type": "error dashed",
-            "label": "Target (99.5%)"
+            "label": "SLO Target (99.5%)"
           }
         ]
-      }
+      },
+      "id": 2284315183050129
     },
     {
       "definition": {
-        "title": "Delivered Quality (order.extract) — 7d SLI",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "(sum:reflex.quality.pass{$env, route:order.extract}.as_count() / sum:reflex.quality.total{$env, route:order.extract}.as_count()) * 100",
             "display_type": "line",
-            "style": {
-              "palette": "cool",
-              "line_width": "thick"
-            }
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.attempt.quality.pass{$env,$target} by {target}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.attempt.quality.total{$env,$target} by {target}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
           }
         ],
-        "markers": [
-          {
-            "value": "y = 99.5",
-            "display_type": "error dashed",
-            "label": "Target (99.5%)"
-          }
-        ]
-      }
-    },
-    {
-      "definition": {
-        "title": "Provider Quality by Target (Raw Vendor SLI)",
+        "title": "Provider quality theo target",
         "type": "timeseries",
-        "requests": [
-          {
-            "q": "(sum:reflex.attempt.quality.pass{$env} by {target}.as_count() / sum:reflex.attempt.quality.total{$env} by {target}.as_count()) * 100",
-            "display_type": "line"
-          }
-        ],
+        "yaxis": {
+          "min": "0",
+          "max": "1.05",
+          "label": "Ratio"
+        },
         "markers": [
           {
-            "value": "y = 99.0",
+            "value": "y = 0.99",
             "display_type": "warning dashed",
             "label": "Vendor SLA (99.0%)"
           }
         ]
-      }
+      },
+      "id": 1997873691499748
     },
     {
       "definition": {
-        "title": "Cost of Reliability by Route (Rescue & Hedging Overhead)",
-        "type": "timeseries",
         "requests": [
           {
-            "q": "sum:reflex.cost.usd{$env} by {route}.as_count()",
-            "display_type": "bars"
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request.under_threshold{$env,route:chat.reply,threshold:2000}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered latency <2000ms (chat.reply)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.95",
+            "display_type": "error dashed",
+            "label": "SLO Target (95%)"
           }
         ]
-      }
+      },
+      "id": 6669778362321753
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,!outcome:shed}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered availability (chat.reply)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0.8",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.995",
+            "display_type": "error dashed",
+            "label": "SLO Target (99.5%)"
+          }
+        ]
+      },
+      "id": 3158217458741423
     }
-  ]
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
 }
