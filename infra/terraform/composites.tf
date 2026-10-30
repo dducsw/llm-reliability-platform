@@ -25,11 +25,11 @@ resource "datadog_monitor" "m9_provider_side" {
   tags              = concat(local.common_tags, ["monitor:m9", "diagnosis:provider_side"])
 }
 
-# M10 Gateway-side suspected = M1 && !P_direct && P_via_gw  (M4 chưa có → bỏ vế "|| M4")
+# M10 Gateway-side suspected = (M1 || M4) && !P_direct && P_via_gw
 resource "datadog_monitor" "m10_gateway_side" {
   name    = "[Reflex] M10_gateway_side_suspected"
   type    = "composite"
-  query   = "${datadog_monitor.m1_availability_fast_burn.id} && !${datadog_monitor.p_direct.id} && ${datadog_monitor.p_via_gw.id}"
+  query   = "(${datadog_monitor.m1_availability_fast_burn.id} || ${datadog_monitor.m4_latency_burn.id}) && !${datadog_monitor.p_direct.id} && ${datadog_monitor.p_via_gw.id}"
   message = "diagnosis:gateway_side\n${local.alert_message}"
 
   notify_no_data    = false

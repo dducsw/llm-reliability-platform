@@ -1,2 +1,5 @@
-# Dashboards từ JSON (templatefile): ops, slo, cortex
-# TODO(P3): datadog_dashboard_json cho từng file trong dashboards/
+# Dashboards từ JSON: ops, slo, cortex (template variable env/target/route)
+resource "datadog_dashboard_json" "reflex" {
+  for_each  = toset(["ops", "slo", "cortex"])
+  dashboard = file("${path.module}/dashboards/${each.key}.json")
+}

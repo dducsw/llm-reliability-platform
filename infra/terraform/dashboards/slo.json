@@ -1,1 +1,141 @@
-{ "title": "Reflex — slo", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex — SLO",
+  "description": "Dual-ledger: Delivered vs Provider, đối chiếu good/total cùng khoảng thời gian.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    },
+    {
+      "name": "target",
+      "prefix": "target",
+      "default": "*"
+    },
+    {
+      "name": "route",
+      "prefix": "route",
+      "default": "*"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered quality (order.extract)",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.quality.pass{$env,route:order.extract}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.quality.total{$env,route:order.extract}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Provider quality theo target",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.attempt.quality.pass{$env,$target} by {target}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.attempt.quality.total{$env,$target} by {target}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered latency <2000ms (chat.reply)",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request.under_threshold{$env,route:chat.reply,threshold:2000}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered availability (chat.reply)",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,!outcome:shed}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    }
+  ],
+  "notify_list": null
+}

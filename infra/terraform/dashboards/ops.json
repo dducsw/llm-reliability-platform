@@ -1,1 +1,246 @@
-{ "title": "Reflex — ops", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex — ops",
+  "description": "Vận hành: traffic, latency, probe, retry, mù telemetry.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    },
+    {
+      "name": "target",
+      "prefix": "target",
+      "default": "*"
+    },
+    {
+      "name": "route",
+      "prefix": "route",
+      "default": "*"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Request rate theo outcome",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.request{$env,$route} by {outcome}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered availability",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request{$env,$route,outcome:ok}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,$route,!outcome:shed}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Request latency p95",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p95:reflex.request.latency{$env,$route} by {route}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Attempt latency p99 theo target",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p99:reflex.attempt.latency{$env,$target,$route} by {target}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Retry amplification",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "avg:reflex.retry.amplification{$env,$route} by {route}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Probe result",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.probe.result{$env,$target} by {path,result}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Telemetry dropped",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.telemetry.dropped{$env}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Incident mở theo nguồn",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.incident.open{$env} by {source}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Cost USD/s",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cost.usd{$env,$route} by {route}.as_rate()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    }
+  ],
+  "notify_list": null
+}

@@ -1,1 +1,97 @@
-{ "title": "Reflex — cortex", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex — cortex",
+  "description": "Sức khỏe Cortex: lỗi, thời lượng, incident.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "name": "env",
+      "prefix": "env",
+      "default": "local"
+    },
+    {
+      "name": "target",
+      "prefix": "target",
+      "default": "*"
+    },
+    {
+      "name": "route",
+      "prefix": "route",
+      "default": "*"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Số lần điều tra theo status",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.investigation{$env} by {status}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Thời lượng điều tra p95",
+        "requests": [
+          {
+            "display_type": "line",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p95:reflex.cortex.investigation.duration{$env}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Incident mở theo nguồn",
+        "requests": [
+          {
+            "display_type": "bars",
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.incident.open{$env} by {source}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    }
+  ],
+  "notify_list": null
+}

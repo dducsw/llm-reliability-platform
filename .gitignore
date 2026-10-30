@@ -34,3 +34,4 @@ reports/
 # OS
 .DS_Store
 infra/compose/nginx/allow/*.conf
+infra/terraform/tfplan

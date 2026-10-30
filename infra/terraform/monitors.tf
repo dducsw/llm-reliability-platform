@@ -1,6 +1,4 @@
 # M3 (hai nửa), M7 — docs/40-observability/monitors-and-slos.md
-# Chưa làm: M4 (cần `reflex.request.under_threshold`), M5, M8, M13 (LLMObs), M12 (chỉ có nghĩa khi webhook Datadog
-# đã nối vào control-plane, nếu không sẽ báo liên tục vì không có incident nguồn `datadog`).
 # `env` phải trùng REFLEX_ENV của stack (compose local = "local"), vì metric gắn tag env đó.
 
 locals {
@@ -192,4 +190,119 @@ resource "datadog_monitor" "m11_telemetry_dropped" {
   require_full_window = false
   priority            = 3
   tags                = concat(local.common_tags, ["monitor:m11", "meta:telemetry"])
+}
+
+# M4 — Delivered latency burn (chat.reply). Doc gốc gọi là "TTFT"; gateway chưa đo TTFT cấp request nên dùng latency toàn request.
+resource "datadog_monitor" "m4_latency_burn" {
+  name    = "[Reflex] M4_latency_burn"
+  type    = "slo alert"
+  query   = "burn_rate(\"${datadog_service_level_objective.delivered_latency_chat_reply.id}\").over(\"7d\").long_window(\"1h\").short_window(\"5m\") > ${local.fast_burn_factor}"
+  message = local.alert_message
+
+  monitor_thresholds {
+    critical = local.fast_burn_factor
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  renotify_interval   = 60
+  priority            = 2
+  tags                = concat(local.common_tags, ["monitor:m4", "ledger:delivered", "sli:latency"])
+}
+
+# M5 — p99 latency của primary attempt lệch khỏi band lịch sử, theo target (phát hiện sớm, cảnh báo mức thấp)
+resource "datadog_monitor" "m5_latency_anomaly" {
+  name    = "[Reflex] M5_latency_p99_anomaly"
+  type    = "query alert"
+  query   = "avg(last_4h):anomalies(p99:reflex.attempt.latency{env:${var.env},attempt_kind:primary} by {target}, 'agile', 3, direction='above', interval=60, alert_window='last_15m', count_default_zero='true', seasonality='hourly') >= 1"
+  message = "Latency p99 của {{target.name}} bất thường so với band lịch sử. Cảnh báo sớm, chưa chắc vi phạm SLO."
+
+  monitor_thresholds {
+    critical          = 1
+    critical_recovery = 0
+  }
+
+  monitor_threshold_windows {
+    trigger_window  = "last_15m"
+    recovery_window = "last_15m"
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m5", "sli:latency"])
+}
+
+# M8 — chi phí tăng bất thường (tiền): chỉ thông báo, không kích hoạt mitigation
+resource "datadog_monitor" "m8_cost_anomaly" {
+  name    = "[Reflex] M8_cost_anomaly"
+  type    = "query alert"
+  query   = "avg(last_4h):anomalies(sum:reflex.cost.usd{env:${var.env}}.as_rate(), 'basic', 3, direction='above', interval=60, alert_window='last_15m', count_default_zero='true') >= 1"
+  message = "Chi phí LLM ($/s) vượt band thường lệ. Kiểm tra retry/hedge storm hoặc route đổi sang model đắt."
+
+  monitor_thresholds {
+    critical          = 1
+    critical_recovery = 0
+  }
+
+  monitor_threshold_windows {
+    trigger_window  = "last_15m"
+    recovery_window = "last_15m"
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m8", "meta:cost"])
+}
+
+# M13 — Cortex health: tỉ lệ điều tra lỗi > 20% (metric phát từ CortexAgent.investigate)
+resource "datadog_monitor" "m13_cortex_errors" {
+  name    = "[Reflex] M13_cortex_error_rate"
+  type    = "query alert"
+  query   = "sum(last_30m):sum:reflex.cortex.investigation{env:${var.env},status:error}.as_count() / sum:reflex.cortex.investigation{env:${var.env}}.as_count() > 0.2"
+  message = "Cortex điều tra lỗi > 20% trong 30 phút — Reflex sẽ rơi về rules fallback (R4)."
+
+  monitor_thresholds {
+    critical = 0.2
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
+}
+
+# M13b — Cortex chậm: p95 thời lượng điều tra > 180s
+resource "datadog_monitor" "m13_cortex_slow" {
+  name    = "[Reflex] M13_cortex_slow"
+  type    = "query alert"
+  query   = "percentile(last_30m):p95:reflex.cortex.investigation.duration{env:${var.env}} > 180"
+  message = "Cortex p95 thời lượng điều tra > 180s."
+
+  monitor_thresholds {
+    critical = 180
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
+}
+
+# M12 — Detector disagreement: Sentinel và Datadog mở số incident khác nhau trong 10 phút (cần webhook đã nối, webhooks.tf)
+resource "datadog_monitor" "m12_detector_disagreement" {
+  name    = "[Reflex] M12_detector_disagreement"
+  type    = "query alert"
+  query   = "sum(last_10m):abs(default_zero(sum:reflex.incident.open{env:${var.env},source:sentinel}.as_count()) - default_zero(sum:reflex.incident.open{env:${var.env},source:datadog}.as_count())) > 0"
+  message = "Sentinel và Datadog không đồng thuận về incident trong 10 phút — một detector đang mù hoặc báo giả."
+
+  monitor_thresholds {
+    critical = 0
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m12", "meta:detector"])
 }
