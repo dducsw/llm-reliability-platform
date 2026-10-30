@@ -191,3 +191,23 @@ cần đưa về 90/10 (snapshot vào `policy_history`, version tăng, CAS) và 
 **Quy ước vận hành đã rút ra (để người sau không dẫm lại):** dùng `127.0.0.1` thay `localhost` cho Console; `terraform plan -out` rồi apply file đó (không `-auto-approve`);
 composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h; ghi vào Mongo luôn dùng `reflex_mongo.serde.to_doc` và `_id` chuỗi
 (`reflex_core.actions.new_action_id`); thay đổi dữ liệu hàng loạt trên Atlas dùng chung phải theo ID cụ thể.
+
+## 12. Cập nhật 2026-10-30 (đã apply lên Datadog; chưa chạy stack thật)
+
+Đã qua unit test và **đã apply** lên Datadog (`ap1`, `env=local`); `plan` sau apply = `No changes`:
+- T3: gateway phát `reflex.request.under_threshold{threshold:2000}`; SLO Delivered latency `chat.reply` và monitor M4 (burn latency, không phải TTFT cấp request); M10 giờ là `(M1 || M4) && !P_direct && P_via_gw`.
+- T4: M5 (anomaly p99 `agile`), M8 (anomaly cost `basic`) — API Datadog đã nhận khi tạo. M13 dùng metric mới `reflex.cortex.investigation{status}` và `.duration` do `CortexAgent` phát (không dùng LLMObs).
+- T5: `dashboards.tf` (3 dashboard JSON đã có widget), `logs.tf` (pipeline + log metric `reflex.log.finish_reason`; facet không có resource trong provider).
+- T7: `outputs.tf` xuất `slo_ids`, `monitor_ids`. Việc seed vào `slos.datadog` vẫn phải làm tay/script từ output.
+- T9: rollback failback chỉ khi cận trên Wilson 95% < 0.99 (`confidently_degraded`).
+- T8: `failback_step` mang `baseline` = trọng số target gốc trong snapshot `policy_history` (`version_before` của shift_weight cha);
+  nấc pct trả về pct% baseline → 100% về đúng tỷ lệ trước sự cố (vd 90/10), không còn bỏ đói secondary. Thiếu snapshot → hành vi cũ (1.0).
+  Thêm field tùy chọn vào `FailbackStepParams` (reflex_core) — tương thích ngược, nên báo DE.
+
+- T1/T2: `datadog_webhook` `reflex-control-plane-local` trỏ tới ngrok static domain `https://lethargy-badly-reforest.ngrok-free.dev/hooks/datadog`
+  (biến `REFLEX_WEBHOOK_URL` trong `.env`). Chỉ nhận được khi stack chạy **và** `ngrok http 8090` đang mở. M12 đã tạo.
+- `task infra:datadog:plan` / `:apply` nạp key từ `.env` (TF_VAR_*), plan ra file `tfplan` rồi apply đúng file đó.
+- Dashboard JSON phải có `response_format: timeseries` cho request dạng formula và `notify_list: null` (nếu không sẽ diff mãi).
+- T10: Docker Desktop đã tăng RAM.
+
+- T6: state trên Terraform Cloud (org/workspace `llm-reliability-platform`, CLI-driven, Execution Mode Local), 30 resource. Cần `terraform login` trên máy mới. Chưa quan sát trên stack thật: webhook → incident nguồn `datadog`, M4/M12/M13 có dữ liệu, failback có `baseline`.
