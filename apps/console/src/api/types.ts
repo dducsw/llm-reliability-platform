@@ -49,6 +49,14 @@ export interface Candidate {
   role: string;
 }
 
+export interface PolicyHistoryEntry {
+  _id: string;
+  policy_id: string;
+  version: number;
+  doc: Policy;
+  at: string;
+}
+
 export interface Policy {
   _id: string;
   version: number;
@@ -63,6 +71,40 @@ export interface Action {
   state: string;
   proposed_by?: { actor: string };
   created_at?: string;
+  /** Recovery proof của Verifier (A16): Wilson CI + z-test trước/sau action. */
+  verification?: { verdict?: string; p_value?: number } | null;
+}
+
+export interface Postmortem {
+  _id: string;
+  incident_id: string;
+  title: string;
+  summary: string;
+  body_md: string;
+  generated_by?: string;
+  created_at?: string;
+}
+
+export interface SloAlert {
+  tier: string;
+  long: string;
+  short: string;
+  factor: number;
+  severity?: string;
+  hint?: string;
+}
+
+export interface Slo {
+  _id: string;
+  scope: string;
+  key: string;
+  sli: string;
+  objective: number;
+  threshold_ms?: number | null;
+  window?: { standard?: string; demo?: string };
+  alerts?: SloAlert[];
+  owner?: string;
+  datadog?: { slo_id?: string; monitor_ids?: string[] };
 }
 
 export interface PipelineInfo {
@@ -74,10 +116,22 @@ export interface PipelineInfo {
   source: string;
 }
 
+export interface PulseKpis {
+  quality?: number | null;
+  availability?: number | null;
+  mttd_p50_s?: number | null;
+  mttr_p50_s?: number | null;
+  cost_usd_today: number;
+  tokens_in_today: number;
+  tokens_out_today: number;
+  requests_today: number;
+}
+
 export interface Pulse {
   health: HealthState[];
   incidents: Incident[];
   policies: Policy[];
+  kpis?: PulseKpis | null;
 }
 
 export interface LedgerPoint {

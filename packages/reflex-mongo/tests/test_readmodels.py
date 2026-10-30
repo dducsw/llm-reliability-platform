@@ -11,6 +11,7 @@ from reflex_mongo.collections import (
     INVESTIGATIONS,
     POLICIES,
     POLICY_HISTORY,
+    SLI_1M,
 )
 from reflex_mongo.readmodels import (
     PulseReadModel,
@@ -45,6 +46,10 @@ class AsyncCursorMock:
 
     def limit(self, *args, **kwargs):
         return self
+
+    async def to_list(self, n: int | None):
+        """pymongo async: to_list(length); None/-1 = hết cursor."""
+        return list(self.docs) if n in (None, -1) else list(self.docs[:n])
 
 
 def make_mock_db(collections_data: dict[str, list[dict[str, Any]]]):
@@ -82,6 +87,12 @@ def make_mock_db(collections_data: dict[str, list[dict[str, Any]]]):
 
         coll.find = MagicMock(side_effect=mock_find)
         coll.find_one = AsyncMock(side_effect=mock_find_one)
+
+        def mock_aggregate(pipeline=None, *args, **kwargs):
+            # pymongo async: aggregate() là coroutine trả cursor — dùng AsyncMock cho khớp thật.
+            return AsyncMock(return_value=AsyncCursorMock(docs))()
+
+        coll.aggregate = MagicMock(side_effect=mock_aggregate)
         return coll
 
     db.__getitem__.side_effect = get_collection
@@ -104,6 +115,39 @@ async def test_get_pulse():
     assert len(pulse.incidents) == 1
     assert len(pulse.policies) == 1
     assert pulse.incidents[0]["title"] == "429 storm"
+    assert pulse.kpis is not None
+    assert pulse.kpis.quality is None  # không có sli_1m → KPI ẩn, không bịa số
+
+
+@pytest.mark.asyncio
+async def test_get_pulse_kpis_from_sli_1m():
+    db = make_mock_db(
+        {
+            SLI_1M: [
+                {
+                    "total": 10,
+                    "ok": 9,
+                    "q_eligible": 8,
+                    "q_good": 7,
+                    "cost_usd": 1.5,
+                    "tokens_in": 100,
+                    "tokens_out": 200,
+                    "requests": 10,
+                }
+            ],
+            INCIDENTS: [],
+        }
+    )
+
+    pulse = await get_pulse(db)
+    assert pulse.kpis is not None
+    assert pulse.kpis.availability == 0.9
+    assert pulse.kpis.quality == 0.875
+    assert pulse.kpis.mttd_p50_s is None  # không có incident → MTTX trống
+    assert pulse.kpis.cost_usd_today == 1.5
+    assert pulse.kpis.tokens_in_today == 100
+    assert pulse.kpis.tokens_out_today == 200
+    assert pulse.kpis.requests_today == 10
 
 
 @pytest.mark.asyncio

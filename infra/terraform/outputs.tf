@@ -15,6 +15,11 @@ output "dashboard_cortex_id" {
   value       = datadog_dashboard_json.cortex.id
 }
 
+output "dashboard_mongo_id" {
+  description = "ID của dashboard MongoDB Atlas Observability (D4)"
+  value       = datadog_dashboard_json.mongo.id
+}
+
 output "slo_chat_reply_id" {
   description = "SLO ID cho Delivered availability (chat.reply)"
   value       = datadog_service_level_objective.delivered_availability_chat_reply.id

@@ -13,10 +13,13 @@ import type {
   MemoryPoint,
   PipelineInfo,
   Policy,
+  PolicyHistoryEntry,
+  Postmortem,
   Pulse,
   Replay,
   ReplayVariantInfo,
   SimilarIncident,
+  Slo,
 } from "./types";
 
 export const usePulse = () => useQuery({ queryKey: ["pulse"], queryFn: () => apiGet<Pulse>("/api/pulse") });
@@ -48,6 +51,33 @@ export const usePolicies = () =>
   useQuery({
     queryKey: ["policies"],
     queryFn: async () => (await apiGet<{ policies: Policy[] }>("/api/policies")).policies,
+  });
+
+export const usePolicyHistory = (route: string | undefined) =>
+  useQuery({
+    queryKey: ["policies", "history", route],
+    queryFn: async () =>
+      (
+        await apiGet<{ history: PolicyHistoryEntry[] }>(
+          `/api/policies/${encodeURIComponent(route ?? "")}/history`,
+        )
+      ).history,
+    enabled: Boolean(route),
+    staleTime: 30_000,
+  });
+
+export const useSlos = () =>
+  useQuery({
+    queryKey: ["slos"],
+    queryFn: async () => (await apiGet<{ slos: Slo[] }>("/api/slos")).slos,
+  });
+
+export const usePostmortem = (key: string | undefined) =>
+  useQuery({
+    queryKey: ["postmortems", key],
+    queryFn: () => apiGet<Postmortem>(`/api/incidents/${key}/postmortem`),
+    enabled: Boolean(key),
+    retry: false,
   });
 
 export const usePipelines = () =>
@@ -138,6 +168,24 @@ export function useRunScenario() {
   return useMutation({
     mutationFn: ({ name, fast }: { name: string; fast: boolean }) =>
       apiPost(`/api/lab/scenarios/${name}/run?fast=${fast}`),
+  });
+}
+
+/** Nhận incident (status → investigating, ghi acknowledged_at cho A17). */
+export function useAckIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => apiPost(`/api/incidents/${key}/ack`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+
+/** Đánh dấu false positive (đóng incident, không tính vào MTTX). */
+export function useFalsePositiveIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => apiPost(`/api/incidents/${key}/false-positive`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["incidents"] }),
   });
 }
 

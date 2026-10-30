@@ -11,3 +11,7 @@ resource "datadog_dashboard_json" "slo" {
 resource "datadog_dashboard_json" "cortex" {
   dashboard = file("${path.module}/dashboards/cortex.json")
 }
+
+resource "datadog_dashboard_json" "mongo" {
+  dashboard = file("${path.module}/dashboards/mongo.json")
+}

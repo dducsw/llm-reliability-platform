@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from reflex_core.incident import IncidentStatus
-from reflex_mongo.collections import INCIDENTS
+from reflex_mongo.collections import INCIDENTS, POSTMORTEMS
 from reflex_mongo.readmodels import get_incident as rm_get_incident
 from reflex_mongo.readmodels import list_incidents as rm_list_incidents
 
@@ -35,6 +35,20 @@ async def get_incident(key: str, request: Request) -> dict[str, Any]:
     doc = await rm_get_incident(db, key)
     if not doc:
         raise HTTPException(status_code=404, detail="Incident not found")
+    return doc
+
+
+@router.get("/api/incidents/{key}/postmortem")
+async def get_postmortem(key: str, request: Request) -> dict[str, Any]:
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise HTTPException(status_code=404, detail="Database not configured")
+
+    doc = await db[POSTMORTEMS].find_one({"incident_id": key}) or await db[POSTMORTEMS].find_one(
+        {"_id": f"pm-{key}"}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Postmortem for {key} not found")
     return doc
 
 

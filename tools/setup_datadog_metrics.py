@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 
 import requests
 from dotenv import load_dotenv
@@ -72,7 +71,9 @@ def setup_metric_percentiles() -> None:
         if resp.status_code in (200, 201):
             logger.info("Đã bật percentiles thành công cho %s", metric_id)
         else:
-            logger.warning("Không thể bật percentiles cho %s: %s %s", metric_id, resp.status_code, resp.text)
+            logger.warning(
+                "Không thể bật percentiles cho %s: %s %s", metric_id, resp.status_code, resp.text
+            )
 
 
 if __name__ == "__main__":

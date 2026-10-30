@@ -82,8 +82,7 @@
     },
     {
       "definition": {
-        "title": "Open Incidents Active",
-        "type": "query_value",
+        "precision": 0,
         "requests": [
           {
             "formulas": [
@@ -101,7 +100,8 @@
             "response_format": "scalar"
           }
         ],
-        "precision": 0
+        "title": "Open Incidents Active",
+        "type": "query_value"
       },
       "id": 5523360790480244
     },
@@ -137,7 +137,7 @@
           {
             "formulas": [
               {
-                "formula": "q0"
+                "formula": "default_zero(q0)"
               }
             ],
             "queries": [
