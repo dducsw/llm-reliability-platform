@@ -28,8 +28,9 @@ from reflex_core.incident import (
 from reflex_core.rules import RULES_ACTOR_LLM_REJECTED, RULES_CONFIDENCE, classify
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
 from reflex_mongo.serde import to_doc
-from reflex_telemetry import llmobs
+from reflex_telemetry import llmobs, tags as t
 from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import make_statsd
 
 from reflex_cortex.context_pack import build as build_context_pack
 from reflex_cortex.evidence import validate
@@ -160,6 +161,7 @@ class CortexAgent:
         self.settings = settings or Settings()
         self.llm = llm or GatewayLlm(self.settings.gateway_url, self.settings.reason_route)
         self.datadog = datadog
+        self._statsd = make_statsd('reflex-cortex', self.settings.reflex_env, '0.1.0')
 
     async def investigate(self, incident_key: str, lease: str | None = None) -> Investigation:
         """Dựng context pack → vòng lặp LLM+tool (có giới hạn) → validate evidence → lưu.
@@ -184,6 +186,7 @@ class CortexAgent:
             return inv
 
     async def _investigate(self, incident_key: str, lease: str | None = None) -> Investigation:
+        start_time = time.monotonic()
         with llmobs.span("task", "cortex.context_pack") as s:
             context_pack = await build_context_pack(incident_key, self.db)
             llmobs.annotate(s, input_data={"incident_id": incident_key}, output_data=context_pack)
@@ -248,12 +251,32 @@ class CortexAgent:
                 else "cortex",
                 confidence=RULES_CONFIDENCE if from_rules else best,
             )
+        duration_s = time.monotonic() - start_time
+        invalid_count = sum(1 for h in validated if h.confidence < 0.50 and any(ev.ref not in set(results.keys()) | {s.result_ref for s in steps if s.result_ref} for ev in h.evidence))
+        try:
+            self._statsd.increment(
+                "reflex.cortex.investigation",
+                tags=[f"status:{investigation.status.value}"],
+            )
+            self._statsd.distribution(
+                t.M_CORTEX_DURATION,
+                duration_s,
+                tags=[f"status:{investigation.status.value}"],
+            )
+            for s in steps:
+                self._statsd.increment(t.M_CORTEX_TOOL_CALLS, tags=[f"tool:{s.tool}"])
+            if invalid_count > 0:
+                self._statsd.increment(t.M_CORTEX_EVIDENCE_INVALID, value=invalid_count)
+        except Exception:
+            logger.debug("Failed emitting cortex metrics to statsd", exc_info=True)
+
         logger.info(
-            "Cortex completed investigation %s for incident %s (action=%s, steps=%d)",
+            "Cortex completed investigation %s for incident %s (action=%s, steps=%d, duration=%.2fs)",
             investigation.id,
             incident_key,
             rec.action_type if rec else "none",
             len(steps),
+            duration_s,
         )
         return investigation
 
