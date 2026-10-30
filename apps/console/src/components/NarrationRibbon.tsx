@@ -38,22 +38,22 @@ export function NarrationRibbon({ incident, actions }: { incident: Incident; act
   const current = stage === "RESOLVED" ? STAGES.length : STAGES.indexOf(stage);
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3">
-      <ol className="flex flex-wrap items-center gap-2 font-semibold tracking-wider">
+      <ol className="flex flex-wrap items-center gap-2">
         {STAGES.map((s, i) => (
           <li key={s} className="flex items-center gap-2">
             <span
-              className={`rounded px-2 py-0.5 text-xs ${
+              className={`rounded px-2 py-0.5 text-[11px] font-semibold tracking-wider ring-1 ring-inset ${
                 i === current
-                  ? "bg-sky-500 text-slate-950"
+                  ? "bg-sky-500 text-slate-950 ring-sky-400"
                   : i < current
-                    ? "bg-emerald-500/20 text-emerald-300"
-                    : "bg-slate-800 text-slate-500"
+                    ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30"
+                    : "bg-slate-800/50 text-slate-500 ring-slate-700/50"
               }`}
             >
               {i < current ? "✓ " : ""}
               {s}
             </span>
-            {i < STAGES.length - 1 && <span className="text-slate-600">→</span>}
+            {i < STAGES.length - 1 && <span aria-hidden className="text-slate-600">→</span>}
           </li>
         ))}
       </ol>

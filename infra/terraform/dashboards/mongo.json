@@ -1,0 +1,240 @@
+{
+  "title": "Reflex · MongoDB Atlas Observability (D4)",
+  "description": "MongoDB Atlas Cluster & Application Telemetry: ping latency, connection pools, collections & time-series throughput, WiredTiger compression efficiency, and vector search health.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "default": "local",
+      "name": "env",
+      "prefix": "env"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "markers": [
+          {
+            "display_type": "warning dashed",
+            "label": "Target RTT (< 50ms)",
+            "value": "y = 50"
+          }
+        ],
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "avg:reflex.mongo.ping.latency_ms{*}"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Atlas Cluster Ping Latency (Round-Trip Time)",
+        "type": "timeseries",
+        "yaxis": {
+          "label": "ms",
+          "min": "0"
+        }
+      },
+      "id": 7266128002815970
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.mongo.connections.current{*} by {service}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Active Client Connection Pool by Service",
+        "type": "timeseries"
+      },
+      "id": 2993755549279316
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.mongo.opcount{command:insert} by {command}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Document Write & Ingestion Operations",
+        "type": "timeseries",
+        "yaxis": {
+          "label": "docs/s"
+        }
+      },
+      "id": 1444642845067166
+    },
+    {
+      "definition": {
+        "title": "Vector Search Index Status & Capacity",
+        "type": "query_value",
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "max:reflex.mongo.collection.doc_count{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "precision": 0,
+        "custom_unit": "vectors"
+      },
+      "id": 4454008648508527
+    },
+    {
+      "definition": {
+        "precision": 0,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "default_zero(q0)"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "max:reflex.mongo.collection.doc_count{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Total Documents in Incident Memory",
+        "type": "query_value"
+      },
+      "id": 6137721162071931
+    },
+    {
+      "definition": {
+        "precision": 2,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "data_sz / storage_sz"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "data_sz",
+                "query": "sum:reflex.mongo.stats.data_size_bytes{*}"
+              },
+              {
+                "data_source": "metrics",
+                "name": "storage_sz",
+                "query": "sum:reflex.mongo.stats.storage_size_bytes{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "WiredTiger Storage Compression Ratio (Data / Storage)",
+        "type": "query_value"
+      },
+      "id": 3860671716590512
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.mongo.opcount{command:query} by {command}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Read Operations (Queries) by Command",
+        "type": "timeseries",
+        "yaxis": {
+          "label": "ms"
+        }
+      },
+      "id": 7053549229485451
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.mongo.opcount{*} by {command}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Mongo Operations by Command (insert, find, update)",
+        "type": "timeseries"
+      },
+      "id": 2360856073326147
+    }
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
+}

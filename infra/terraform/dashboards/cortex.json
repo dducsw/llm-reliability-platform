@@ -1,1 +1,162 @@
-{ "title": "Reflex — cortex", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex · Cortex Agent (D3)",
+  "description": "Autonomous SRE Agent performance: errors, duration, tool distribution and incident investigations.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "default": "local",
+      "name": "env",
+      "prefix": "env"
+    },
+    {
+      "default": "*",
+      "name": "target",
+      "prefix": "target"
+    },
+    {
+      "default": "*",
+      "name": "route",
+      "prefix": "route"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.investigation{*} by {status}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Investigations Count by Status",
+        "type": "timeseries"
+      },
+      "id": 4884876417239466
+    },
+    {
+      "definition": {
+        "markers": [
+          {
+            "display_type": "warning dashed",
+            "label": "Target MTTM (< 60s)",
+            "value": "y = 60"
+          }
+        ],
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "p95:reflex.cortex.investigation.duration{*}"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Investigation Duration p95",
+        "type": "timeseries",
+        "yaxis": {
+          "label": "Seconds"
+        }
+      },
+      "id": 6665244710773951
+    },
+    {
+      "definition": {
+        "precision": 0,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.incident.open{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Open Incidents Active",
+        "type": "query_value"
+      },
+      "id": 5523360790480244
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "bars",
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.tool.calls{*} by {tool}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Tool Calls Distribution",
+        "type": "timeseries"
+      },
+      "id": 3001982264947800
+    },
+    {
+      "definition": {
+        "precision": 0,
+        "requests": [
+          {
+            "formulas": [
+              {
+                "formula": "default_zero(q0)"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "q0",
+                "query": "sum:reflex.cortex.evidence_invalid{*}"
+              }
+            ],
+            "response_format": "scalar"
+          }
+        ],
+        "title": "Hallucinated / Invalid Evidence Rejections",
+        "type": "query_value"
+      },
+      "id": 3818102487502498
+    }
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
+}

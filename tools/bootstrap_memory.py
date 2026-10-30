@@ -12,8 +12,11 @@ import random
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from dotenv import load_dotenv
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import ACTIONS, INCIDENTS
+
+load_dotenv()
 
 DEFAULT_DB = "reflex"
 

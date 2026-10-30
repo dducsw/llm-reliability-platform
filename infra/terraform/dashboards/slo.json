@@ -1,1 +1,195 @@
-{ "title": "Reflex — slo", "layout_type": "ordered", "widgets": [] }
+{
+  "title": "Reflex · SLO & Error Budget (D2)",
+  "description": "Dual-ledger: Delivered vs Provider SLIs, good/total across matched evaluation windows.",
+  "layout_type": "ordered",
+  "template_variables": [
+    {
+      "default": "local",
+      "name": "env",
+      "prefix": "env"
+    },
+    {
+      "default": "*",
+      "name": "target",
+      "prefix": "target"
+    },
+    {
+      "default": "*",
+      "name": "route",
+      "prefix": "route"
+    }
+  ],
+  "widgets": [
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.quality.pass{$env,route:order.extract}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.quality.total{$env,route:order.extract}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered Quality (order.extract)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0.8",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.995",
+            "display_type": "error dashed",
+            "label": "SLO Target (99.5%)"
+          }
+        ]
+      },
+      "id": 2284315183050129
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.attempt.quality.pass{$env,$target} by {target}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.attempt.quality.total{$env,$target} by {target}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Provider Quality by Target",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.99",
+            "display_type": "warning dashed",
+            "label": "Vendor SLA (99.0%)"
+          }
+        ]
+      },
+      "id": 1997873691499748
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request.under_threshold{$env,route:chat.reply,threshold:2000}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered Latency <2000ms (chat.reply)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.95",
+            "display_type": "error dashed",
+            "label": "SLO Target (95%)"
+          }
+        ]
+      },
+      "id": 6669778362321753
+    },
+    {
+      "definition": {
+        "requests": [
+          {
+            "display_type": "line",
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
+            "queries": [
+              {
+                "data_source": "metrics",
+                "name": "num",
+                "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
+              },
+              {
+                "data_source": "metrics",
+                "name": "den",
+                "query": "sum:reflex.request{$env,route:chat.reply,!outcome:shed}.as_count()"
+              }
+            ],
+            "response_format": "timeseries"
+          }
+        ],
+        "title": "Delivered Availability (chat.reply)",
+        "type": "timeseries",
+        "yaxis": {
+          "min": "0.8",
+          "max": "1.05",
+          "label": "Ratio"
+        },
+        "markers": [
+          {
+            "value": "y = 0.995",
+            "display_type": "error dashed",
+            "label": "SLO Target (99.5%)"
+          }
+        ]
+      },
+      "id": 3158217458741423
+    }
+  ],
+  "notify_list": null,
+  "experience_type": "default",
+  "restricted_roles": []
+}

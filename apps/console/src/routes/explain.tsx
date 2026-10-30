@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 import { usePipeline, usePipelines } from "../api/hooks";
-import { Card, QueryState } from "../components/ui";
+import { Card, Empty, QueryState } from "../components/ui";
 
 export function ExplainPage() {
   const list = usePipelines();
@@ -12,14 +12,17 @@ export function ExplainPage() {
     <div className="grid gap-4 lg:grid-cols-3">
       <Card title="Pipelines">
         <QueryState isLoading={list.isLoading} error={list.error}>
-          <ul className="space-y-1">
+          <ul className="-mx-2">
             {list.data?.map((p) => (
               <li key={p.id}>
                 <button
-                  className={`w-full text-left hover:text-white ${selected === p.id ? "text-white" : "text-slate-400"}`}
+                  className={`flex w-full items-baseline gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-800/60 ${
+                    selected === p.id ? "bg-slate-800 text-slate-50" : "text-slate-400"
+                  }`}
                   onClick={() => setSelected(p.id)}
                 >
-                  <span className="font-mono">{p.id}</span> {p.summary}
+                  <span className="font-mono">{p.id}</span>
+                  <span className="text-xs">{p.summary}</span>
                 </button>
               </li>
             ))}
@@ -27,11 +30,15 @@ export function ExplainPage() {
         </QueryState>
       </Card>
       <Card title={selected ? `${selected} · ${detail.data?.collection ?? ""}` : "Chọn một pipeline"} className="lg:col-span-2">
-        {detail.data && (
+        {detail.data ? (
           <>
-            <p className="mb-2 whitespace-pre-wrap text-slate-300">{detail.data.doc}</p>
-            <pre className="overflow-x-auto rounded bg-slate-950 p-3 text-xs">{detail.data.source}</pre>
+            <p className="mb-3 whitespace-pre-wrap text-slate-300">{detail.data.doc}</p>
+            <pre className="overflow-x-auto rounded bg-slate-950 p-3 font-mono text-xs text-slate-400 ring-1 ring-inset ring-slate-800">
+              {detail.data.source}
+            </pre>
           </>
+        ) : (
+          <Empty>Chọn một pipeline bên trái để xem explain.</Empty>
         )}
       </Card>
     </div>

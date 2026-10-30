@@ -10,11 +10,8 @@ export function ratio(p: LedgerPoint, metric: LedgerMetric): number | null {
   return n > 0 ? good / n : null;
 }
 
-const toSeries = (name: string, color: string, pts: LedgerPoint[], metric: LedgerMetric): Series => ({
-  name,
-  color,
-  data: pts.map((p) => [new Date(p.ts).getTime(), ratio(p, metric)]),
-});
+const toPoints = (pts: LedgerPoint[], metric: LedgerMetric): Series["data"] =>
+  pts.map((p) => [new Date(p.ts).getTime(), ratio(p, metric)]);
 
 export function DualLedgerChart({
   delivered,
@@ -27,15 +24,13 @@ export function DualLedgerChart({
   events?: OverlayEvent[];
   metric: LedgerMetric;
 }) {
-  return (
-    <TimeSeriesChart
-      percent
-      yMax={1}
-      series={[
-        toSeries("Delivered (người dùng nhận)", "#34d399", delivered, metric),
-        toSeries("Provider (vendor trả về)", "#f87171", provider, metric),
-      ]}
-      events={events}
-    />
-  );
+  // Delivered = SLI chính (solid); Provider = tham chiếu vendor (dashed, trung tính).
+  // Màu đỏ/đậm để dành cho trạng thái lỗi ở badge — không tô luôn trên đường biểu đồ.
+  const series: Series[] = [
+    { name: "Delivered", color: "#10b981", data: toPoints(delivered, metric) },
+    { name: "Provider", color: "#64748b", dash: true, data: toPoints(provider, metric) },
+  ];
+
+  return <TimeSeriesChart percent yMax={1} series={series} events={events} />;
 }
+

@@ -48,6 +48,11 @@ tasks:
     cmds:
       - uv run python tools/bootstrap_memory.py
 
+  cortex:eval:
+    desc: Chạy eval harness cho Cortex Agent và xuất báo cáo cortex-eval.md (DE-7.4)
+    cmds:
+      - uv run python tools/eval_cortex.py
+
   migrate:
     desc: Tạo collections, TS, index, TTL, validators, search indexes (idempotent)
     cmds:
@@ -98,6 +103,7 @@ tasks:
   infra:datadog:apply:
     dir: infra/terraform
     cmds:
+      - uv run python ../../tools/setup_datadog_metrics.py
       - terraform init -upgrade
       - terraform apply
 

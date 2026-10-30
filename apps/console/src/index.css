@@ -1,3 +1,97 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    @apply text-[13px] leading-relaxed;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-200 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    @apply bg-sky-500/30 text-slate-100;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.slate.700") transparent;
+  }
+
+  *::-webkit-scrollbar {
+    @apply h-2 w-2;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-700;
+  }
+
+  *::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+}
+
+@layer components {
+  /* ---- Card ---- */
+  .card {
+    @apply rounded-md border border-slate-800 bg-slate-900;
+  }
+
+  .card-header {
+    @apply flex min-h-10 items-center justify-between gap-3 border-b border-slate-800 px-4;
+  }
+
+  .card-title {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-slate-400;
+  }
+
+  .card-body {
+    @apply p-4;
+  }
+
+  /* ---- Form controls ---- */
+  .field {
+    @apply rounded border border-slate-700 bg-slate-800/60 px-2.5 py-1.5 text-slate-200 transition-colors
+      hover:border-slate-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .checkbox {
+    @apply size-3.5 shrink-0 cursor-pointer accent-sky-500;
+  }
+
+  /* ---- Table ---- */
+  .table {
+    @apply w-full text-left align-middle;
+  }
+
+  .table thead th {
+    @apply border-b border-slate-800 pb-2 text-[11px] font-medium uppercase tracking-wider text-slate-500;
+  }
+
+  .table tbody td {
+    @apply border-b border-slate-800/50 py-2;
+  }
+
+  .table tbody tr {
+    @apply transition-colors hover:bg-slate-800/40;
+  }
+
+  /* ---- Inline code ---- */
+  .code {
+    @apply rounded bg-slate-800/80 px-1.5 py-0.5 font-mono text-[0.92em] text-slate-300;
+  }
+
+  .glass {
+    font-family: theme("fontFamily.mono");
+    @apply text-slate-400;
+  }
+
+  /* ---- Section label (giữa card, như "Lần chạy trước") ---- */
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+}
