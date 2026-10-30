@@ -191,6 +191,37 @@ async def _flap_guard(
     return _ok("flap_guard", f"{flips} flip(s) in window")
 
 
+_MITIGATIONS = (ActionType.SHIFT_WEIGHT, ActionType.DOWNGRADE_TIER)
+
+
+async def _no_overlapping_mitigation(action: Action, db: AsyncDatabase | None) -> GuardrailResult:
+    """Một route chỉ một mitigation sống: incident khác đã chuyển traffic và chưa failback xong → chặn.
+
+    Hai mitigation chồng nhau nhân trọng số (90% của 90% → 0.009) và failback của cái sau lấy baseline sai.
+    """
+    route = action.params.get("route")
+    if db is None or not route or action.type not in _MITIGATIONS:
+        return _ok("no_overlapping_mitigation")
+    async for d in db[ACTIONS].find(
+        {
+            "_id": {"$ne": action.id},
+            "params.route": route,
+            "type": {"$in": [t.value for t in _MITIGATIONS]},
+            "state": ActionState.SUCCEEDED.value,
+        }
+    ):
+        other = d.get("incident_id")
+        if other == action.incident_id:
+            continue
+        inc = await db[INCIDENTS].find_one({"key": other}) if other else None
+        if inc is not None and inc.get("is_open"):
+            return _fail(
+                "no_overlapping_mitigation",
+                f"Route {route} đang được {other} mitigate ({d['_id']}) — chờ failback xong",
+            )
+    return _ok("no_overlapping_mitigation")
+
+
 async def _healthy_destination(action: Action, db: AsyncDatabase | None) -> GuardrailResult:
     dest = _destination(action)
     if db is None or not dest:
@@ -320,7 +351,7 @@ async def evaluate_all(
     db: AsyncDatabase | None = None,
     cfg: GuardrailConfig | None = None,
 ) -> list[GuardrailResult]:
-    """Chạy toàn bộ 10 guardrails cho action trước khi quyết định thực thi."""
+    """Chạy toàn bộ 11 guardrails cho action trước khi quyết định thực thi."""
     cfg = cfg or GuardrailConfig.from_env()
     results: list[GuardrailResult] = []
 
@@ -388,5 +419,8 @@ async def evaluate_all(
 
     # 10. Blast radius
     results.append(await _blast_radius(action, db, cfg))
+
+    # 11. Không chồng mitigation của incident khác lên cùng route
+    results.append(await _no_overlapping_mitigation(action, db))
 
     return results
