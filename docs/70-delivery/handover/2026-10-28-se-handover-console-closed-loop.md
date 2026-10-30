@@ -198,7 +198,8 @@ composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h;
 - T3: gateway phát `reflex.request.under_threshold{threshold:2000}`; SLO Delivered latency `chat.reply` và monitor M4 (burn latency, không phải TTFT cấp request); M10 giờ là `(M1 || M4) && !P_direct && P_via_gw`.
 - T4: M5 (anomaly p99 `agile`), M8 (anomaly cost `basic`) — API Datadog đã nhận khi tạo. M13 dùng metric mới `reflex.cortex.investigation{status}` và `.duration` do `CortexAgent` phát (không dùng LLMObs).
 - T5: `dashboards.tf` (3 dashboard JSON đã có widget), `logs.tf` (pipeline + log metric `reflex.log.finish_reason`; facet không có resource trong provider).
-- T7: `outputs.tf` xuất `slo_ids`, `monitor_ids`. Việc seed vào `slos.datadog` vẫn phải làm tay/script từ output.
+- T7: output `mongo_slo_links` (khóa = `_id` của `slos`) → `task infra:datadog:sync -- --yes` ghi `slos.datadog` (đã ghi 4 SLO).
+  `task seed` ghi đè cả document `slos` → chạy lại sync sau mỗi lần seed. SLO availability/latency `chat.reply` chưa có bản Sentinel nên không được ghi.
 - T9: rollback failback chỉ khi cận trên Wilson 95% < 0.99 (`confidently_degraded`).
 - T8: `failback_step` mang `baseline` = trọng số target gốc trong snapshot `policy_history` (`version_before` của shift_weight cha);
   nấc pct trả về pct% baseline → 100% về đúng tỷ lệ trước sự cố (vd 90/10), không còn bỏ đói secondary. Thiếu snapshot → hành vi cũ (1.0).
@@ -239,3 +240,22 @@ Giờ có hysteresis: rollback khi cận trên Wilson < 0.95, tiến nấc khi c
 cùng incident 04:42** (không có incident thứ hai), duyệt tay 04:43 → failback 10/50/100 (04:44 / 04:45 / 04:46, `baseline=0.9`, không rollback)
 → `resolved`; policy cuối 0.9/0.1. Lần chạy này **chưa có** hysteresis/guardrail mới (deploy sau, 04:50) — chưa quan sát trên stack thật.
 Control-plane cold start ~2 phút với Docker 2.8 GB.
+
+## 15. Lần chạy thứ ba (2026-10-30 05:05–05:28 UTC) — lộ thêm một đường trùng incident
+
+Trước khi chạy: incident `INC-202610300502-e27ab4` do **M3 báo giả** trên `vendorB:large`/`support.triage` (1–4 mẫu/phút sau failback,
+không có chaos); Cortex đề xuất chuyển traffic **sang chính target đang báo động** (confidence 0.4, chờ duyệt). Đã từ chối action và đóng
+`false_positive` theo ID. Sửa: monitor **M3v** (≥ 20 lần kiểm tra chất lượng trong cửa sổ dài); M3/M9 = … && M3v. Lần chạy sau M3 vẫn `Alert`.
+⚠ Cortex đề xuất đích là target đang alert mà `healthy_destination` không chặn (health_state của vendorB vẫn healthy) — cần DE/Cortex xem.
+
+Trong lần chạy: **M7 (retry amplification, group theo route, không có target)** gọi webhook → `dedup_key = quality:*:order.extract` không
+khớp incident Sentinel → incident thứ hai `INC-202610300509-28c3dc`; hai `shift_weight` được đề xuất cách nhau 1s nên guardrail
+`no_overlapping_mitigation` (khi đó chỉ xét `succeeded`) không chặn; cả hai được duyệt → hai vòng failback giẫm nhau (baseline 0.09 vs 0.9).
+Dọn theo ID: failback baseline sai → `rejected`, `INC-202610300508-70a2a3` → `false_positive` (trùng 28c3dc). `28c3dc` failback 10/50/100
+baseline 0.9 → `resolved` 05:27, policy 0.9/0.1. Runner: 3/4 (resolved hết hạn chờ trong lúc hai incident giẫm nhau).
+
+Sửa (đã deploy 05:2x, **chưa chạy lại để quan sát**): signal không khớp `dedup_key` mà có route → gộp vào incident đang mở trên route đó
+(một route một incident); guardrail tính cả action `proposed/awaiting_approval` của incident khác. Hysteresis 0.95/0.99 chưa được thử thật
+(lần này không có nấc nào rơi vào vùng xám/xấu).
+
+Integration test 2026-10-30: 9 passed, 3 skipped (stub DE).
