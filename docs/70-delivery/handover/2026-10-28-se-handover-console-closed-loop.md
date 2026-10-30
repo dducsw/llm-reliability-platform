@@ -227,9 +227,15 @@ Hai `shift_weight` 90% chồng nhau → policy 0.009/0.991. Sửa: `dedup_key = 
 (không phân biệt hoa thường). Dọn theo ID: failback chờ duyệt của incident trùng → `rejected`, incident → `false_positive`.
 **Chưa chạy lại scenario để thấy signal `datadog` gộp vào incident của sentinel.**
 
-**Hạn chế T9 quan sát được:** nấc failback 10% bị rollback một lần (04:23) vì vendorA chỉ có 2 mẫu/phút, 1 mẫu lỗi; ở ngưỡng 0.99 cận trên
-Wilson chỉ vượt ngưỡng khi n cỡ vài trăm, nên một lỗi đơn lẻ ở mẫu nhỏ vẫn gây rollback. Tự thử lại sau cooldown nên chỉ chậm ~1 phút.
-Hướng cải thiện: đòi n tối thiểu lớn hơn trước khi rollback, hoặc so với ngưỡng thấp hơn (vd SLO provider 0.99 − biên).
+**Hạn chế T9 quan sát được → đã sửa:** nấc failback 10% bị rollback một lần (04:23) vì vendorA chỉ có 2 mẫu/phút, 1 mẫu lỗi.
+Giờ có hysteresis: rollback khi cận trên Wilson < 0.95, tiến nấc khi cận trên ≥ 0.99, ở giữa thì chờ thêm mẫu (`plausibly_healthy`).
 
-**Chưa có guardrail chặn hai mitigation cùng route** từ hai incident khác nhau — dedup sửa nguồn gốc, nhưng policy engine vẫn nên từ chối
-`shift_weight` thứ hai khi route đang có mitigation `succeeded` chưa failback xong.
+**Guardrail mới `no_overlapping_mitigation`** (guardrail thứ 11): `shift_weight`/`downgrade_tier` bị chặn khi một incident **khác** đang mở
+đã chuyển traffic (`succeeded`) trên cùng route.
+
+## 14. Chạy lại sau khi sửa dedup (2026-10-30 04:37–04:47 UTC) — 4/4 PASS
+
+`reflex-sim run silent-brownout --fast` → **ALL PASSED**. Incident `INC-202610300441-bd0f78`: sentinel mở 04:41, **signal `datadog` gộp vào
+cùng incident 04:42** (không có incident thứ hai), duyệt tay 04:43 → failback 10/50/100 (04:44 / 04:45 / 04:46, `baseline=0.9`, không rollback)
+→ `resolved`; policy cuối 0.9/0.1. Lần chạy này **chưa có** hysteresis/guardrail mới (deploy sau, 04:50) — chưa quan sát trên stack thật.
+Control-plane cold start ~2 phút với Docker 2.8 GB.
