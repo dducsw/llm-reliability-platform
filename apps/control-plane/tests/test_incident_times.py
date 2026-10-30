@@ -47,4 +47,7 @@ async def test_new_incident_emits_open_metric_by_source() -> None:
     svc = IncidentService(db={"incidents": _Coll()})  # type: ignore[arg-type]
     svc.statsd = sd  # type: ignore[misc]
     await svc.open_or_merge(signal={"source": "datadog"}, slo_id="route:r:quality", route="r")
-    assert sd.calls == [("reflex.incident.open", ["source:datadog"])]
+    assert sd.calls == [
+        ("reflex.incident.signal", ["source:datadog"]),
+        ("reflex.incident.open", ["source:datadog"]),
+    ]

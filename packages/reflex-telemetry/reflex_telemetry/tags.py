@@ -44,6 +44,8 @@ M_COST_USD: Final = "reflex.cost.usd"
 M_PROBE_RESULT: Final = "reflex.probe.result"
 M_TELEMETRY_DROPPED: Final = "reflex.telemetry.dropped"
 M_INCIDENT_OPEN: Final = "reflex.incident.open"
+# Mỗi signal (mở mới hoặc gộp) theo nguồn: M12 so sánh nguồn nào thấy sự cố, không phụ thuộc ai mở trước
+M_INCIDENT_SIGNAL: Final = "reflex.incident.signal"
 M_CORTEX_DURATION: Final = "reflex.cortex.investigation.duration"
 M_CORTEX_INVESTIGATION: Final = "reflex.cortex.investigation"
 M_CORTEX_TOOL_CALLS: Final = "reflex.cortex.tool.calls"

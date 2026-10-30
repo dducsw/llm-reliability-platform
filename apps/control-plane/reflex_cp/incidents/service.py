@@ -40,7 +40,9 @@ class IncidentService:
     ) -> dict[str, Any]:
         """Tạo incident mới hoặc gộp signal vào incident đang mở (chống trùng lặp qua dedup_key)."""
         now = datetime.now(tz=UTC)
-        dedup_key = f"{slo_id}:{target or '*'}:{route or '*'}"
+        # Không chứa slo_id/nguồn: Sentinel (`target:…:quality`) và Datadog (`dd:<monitor>`) cùng thấy
+        # một sự cố trên {target, route, sli} phải gộp vào một incident, nếu không sẽ mitigation chồng nhau.
+        dedup_key = f"{sli}:{target or '*'}:{route or '*'}"
         sig_model = Signal(
             source=signal.get("source", "sentinel"),
             at=signal.get("at") or now,
@@ -49,6 +51,9 @@ class IncidentService:
             alert_id=signal.get("alert_id"),
             diagnosis=signal.get("diagnosis"),
         )
+
+        if self.statsd is not None:
+            self.statsd.increment("reflex.incident.signal", tags=[f"source:{sig_model.source}"])
 
         if self.db is not None:
             # Tìm incident đang mở có cùng dedup_key

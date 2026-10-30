@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from reflex_core.incident import Severity
+from reflex_mongo.collections import TARGETS
 
 from reflex_cp.hooks.payload import DatadogWebhookPayload
 from reflex_cp.incidents.service import IncidentService
@@ -24,6 +26,16 @@ def _parse_tags(tags: list[str]) -> dict[str, str]:
             k, v = t.split(":", 1)
             res[k.strip()] = v.strip()
     return res
+
+
+async def canonical_target(db: Any, target: str | None) -> str | None:
+    """Datadog hạ chữ thường giá trị tag (`vendora:large`) → tra lại tên thật trong catalog targets."""
+    if not target or db is None:
+        return target
+    doc = await db[TARGETS].find_one(
+        {"_id": {"$regex": f"^{re.escape(target)}$", "$options": "i"}}, {"_id": 1}
+    )
+    return doc["_id"] if doc else target
 
 
 @router.post("/hooks/datadog")
@@ -44,7 +56,7 @@ async def datadog_webhook(
     )
 
     tag_map = _parse_tags(payload.tags)
-    target = tag_map.get("target")
+    target = await canonical_target(db, tag_map.get("target"))
     route = tag_map.get("route")
     sli = tag_map.get("sli", "quality")
     slo_id = tag_map.get("slo") or tag_map.get("slo_id") or f"dd:{payload.monitor_id}"
