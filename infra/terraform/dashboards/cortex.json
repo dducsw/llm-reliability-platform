@@ -34,7 +34,7 @@
               {
                 "data_source": "metrics",
                 "name": "q0",
-                "query": "sum:reflex.cortex.investigation{$env} by {status}.as_count()"
+                "query": "sum:reflex.cortex.investigation{*} by {status}.as_count()"
               }
             ],
             "response_format": "timeseries"
@@ -66,7 +66,7 @@
               {
                 "data_source": "metrics",
                 "name": "q0",
-                "query": "p95:reflex.cortex.investigation.duration{$env}"
+                "query": "p95:reflex.cortex.investigation.duration{*}"
               }
             ],
             "response_format": "timeseries"
@@ -82,7 +82,8 @@
     },
     {
       "definition": {
-        "precision": 0,
+        "title": "Open Incidents Active",
+        "type": "query_value",
         "requests": [
           {
             "formulas": [
@@ -94,14 +95,13 @@
               {
                 "data_source": "metrics",
                 "name": "q0",
-                "query": "sum:reflex.incident.open{}.as_count()"
+                "query": "sum:reflex.incident.open{*}"
               }
             ],
             "response_format": "scalar"
           }
         ],
-        "title": "Open Incidents Active",
-        "type": "query_value"
+        "precision": 0
       },
       "id": 5523360790480244
     },
@@ -144,7 +144,7 @@
               {
                 "data_source": "metrics",
                 "name": "q0",
-                "query": "sum:reflex.cortex.evidence_invalid{*}.as_count()"
+                "query": "sum:reflex.cortex.evidence_invalid{*}"
               }
             ],
             "response_format": "scalar"
