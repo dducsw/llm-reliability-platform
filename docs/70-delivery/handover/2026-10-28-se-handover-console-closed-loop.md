@@ -259,3 +259,24 @@ Sửa (đã deploy 05:2x, **chưa chạy lại để quan sát**): signal không
 (lần này không có nấc nào rơi vào vùng xám/xấu).
 
 Integration test 2026-10-30: 9 passed, 3 skipped (stub DE).
+
+## 16. Lần chạy thứ tư và thứ năm (2026-10-30 05:31–05:57 UTC)
+
+**05:31 — 4/4 PASS.** Một incident duy nhất `INC-202610300535-30eef5` có cả signal `datadog` và `sentinel` (gộp theo route chạy đúng, M7 không
+mở incident riêng). Mitigation đi đường rules R4 (`shift_weight` 100%, `duration_s: 300`, tự áp dụng). **Nhưng policy kết thúc 1.0/0.0**:
+nấc 10% và 100% không có `baseline`, chỉ nấc 50% có.
+
+Nguyên nhân: trong khoảng 05:28–05:35 có người/tiến trình khác chạy **`reflex-mongo seed`** trên Atlas dùng chung (mọi policy về
+`version: 1`, `updated_by` rỗng; `slos.datadog` bị xoá). `policy_history` có hai snapshot `version: 1`; `find_one` theo version không sort
+trả bản tùy ý giữa các lần gọi. Sửa: `Actuator.snapshot_before` lấy snapshot mới nhất có `at ≤ execution.applied_at`, dùng cho cả
+baseline failback và rollback. Policy `order.extract` đưa về seed theo ID (v6), `slos.datadog` ghi lại bằng `task infra:datadog:sync`.
+
+**05:47 — 3/4.** Một incident (`INC-202610300552-4a9b57`, `datadog`+`sentinel`), Cortex đề xuất (confidence 0.4) → duyệt tay → áp dụng
+05:53:25 → failback 10/50/100 **đều `baseline=0.9`** → `resolved` 05:57:17, policy **0.9/0.1**. FAIL ở `delivered_sli` = 0.9778: trong cửa sổ
+`--fast` chỉ ~45 request, đúng **1** request rescue sang `vendorB:large` không qua validator (vendorB không có fault) → 44/45. Expectation này
+dễ dao động với mẫu nhỏ; cân nhắc tăng traffic hoặc nới cửa sổ cho `--fast`.
+
+Chưa quan sát được: guardrail `no_overlapping_mitigation` thực sự chặn (sau khi sửa dedup không còn incident thứ hai để chặn) và
+hysteresis 0.95/0.99 (không nấc nào rơi vào vùng xám/xấu). Cả hai đã có unit test.
+
+**Vận hành:** sau mỗi lần ai đó chạy `task seed` trên Atlas dùng chung phải chạy lại `task infra:datadog:sync -- --yes`.
