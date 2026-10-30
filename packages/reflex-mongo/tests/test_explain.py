@@ -56,6 +56,7 @@ def assert_no_collscan(explain_result: dict[str, Any]) -> None:
 async def test_a01_explain_has_bucket_skip(it_db: AsyncDatabase[dict[str, Any]]) -> None:
     """A1 Attempt rollup trên Time Series: có bộ lọc thời gian để bucket filter."""
     await ensure_collections(it_db)
+    await ensure_indexes(it_db)
     now = datetime.now(tz=UTC)
     pipeline = a01_attempt_rollup.build(
         now=now, from_=now - timedelta(minutes=5), to=now, env="local"
