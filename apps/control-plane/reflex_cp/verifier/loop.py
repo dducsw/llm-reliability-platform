@@ -21,6 +21,7 @@ from reflex_core.actions import (
     new_action_id,
 )
 from reflex_core.incident import IncidentStatus
+from reflex_core.stats import wilson_interval
 from reflex_mongo.collections import ACTIONS, INCIDENTS, PROBES_TS, SLI_1M
 
 from reflex_cp.actuator.apply import Actuator
@@ -45,6 +46,11 @@ _PENDING = (
 )
 BASELINE_LOOKBACK = timedelta(minutes=15)
 HEALTHY_QUALITY = 0.99
+
+
+def confidently_degraded(good: int, n: int) -> bool:
+    """Cận trên Wilson 95% vẫn dưới ngưỡng khỏe → chắc chắn xấu, không phải nhiễu mẫu nhỏ."""
+    return wilson_interval(good, n)[1] < HEALTHY_QUALITY
 
 
 def _parse(ts: Any) -> datetime | None:
@@ -260,7 +266,7 @@ class MitigationLoop:
             good, n = await self._quality("target", origin, last)
             if n < min(self.min_n, 10):
                 return None
-            if good / n < HEALTHY_QUALITY:
+            if confidently_degraded(good, n):
                 await self._rollback_step(inc, max(done, key=lambda d: int(d["params"]["pct"])))
                 return "failback_rolled_back"
         nxt = await self.failback.advance(Action.model_validate(parent), current_pct)

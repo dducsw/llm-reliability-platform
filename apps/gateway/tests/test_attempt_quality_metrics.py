@@ -79,3 +79,41 @@ def test_full_queue_emits_telemetry_dropped() -> None:
     finally:
         metrics.configure(None)
     assert fake.incs == [("reflex.telemetry.dropped", None)]
+
+
+def _request(latency_ms: float, outcome: str = "ok") -> Any:
+    from reflex_core.events import RequestEvent, RequestMeta, RequestOutcome
+
+    return RequestEvent(
+        ts=datetime(2026, 10, 28, tzinfo=UTC),
+        meta=RequestMeta(env="local", route="chat.reply"),
+        request_id="r1",
+        outcome=RequestOutcome(outcome),
+        final_target="vendorA:large",
+        latency_ms=latency_ms,
+        policy_version=1,
+    )
+
+
+def _under(latency_ms: float, outcome: str = "ok") -> list[list[str]]:
+    class _S(_Statsd):
+        def gauge(self, *_a: Any, **_k: Any) -> None:
+            pass
+
+    fake = _S()
+    metrics.configure(fake)  # type: ignore[arg-type]
+    try:
+        metrics.emit_request(_request(latency_ms, outcome))
+    finally:
+        metrics.configure(None)
+    return [tags or [] for n, tags in fake.incs if n == "reflex.request.under_threshold"]
+
+
+def test_fast_ok_request_counts_under_threshold() -> None:
+    emitted = _under(1500.0)
+    assert len(emitted) == 1 and "threshold:2000" in emitted[0]
+
+
+def test_slow_or_failed_request_not_under_threshold() -> None:
+    assert _under(2500.0) == []
+    assert _under(100.0, "error") == []

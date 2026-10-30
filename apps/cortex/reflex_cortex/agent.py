@@ -29,6 +29,7 @@ from reflex_core.rules import RULES_ACTOR_LLM_REJECTED, RULES_CONFIDENCE, classi
 from reflex_mongo.collections import INCIDENTS, INVESTIGATIONS
 from reflex_mongo.serde import to_doc
 from reflex_telemetry import llmobs
+from reflex_telemetry import tags as tm
 from reflex_telemetry.datadog_api import DatadogApi
 
 from reflex_cortex.context_pack import build as build_context_pack
@@ -154,7 +155,9 @@ class CortexAgent:
         llm: LlmClient | None = None,
         settings: Settings | None = None,
         datadog: DatadogApi | None = None,
+        statsd: Any = None,
     ) -> None:
+        self.statsd = statsd
         self.db = db
         self.model = model
         self.settings = settings or Settings()
@@ -167,6 +170,24 @@ class CortexAgent:
         `lease` (từ `claim`): chỉ ghi diagnosis/propose khi incident vẫn do lần claim này giữ —
         watchdog control-plane có thể đã tiếp quản nếu Cortex chậm quá ngưỡng.
         """
+        started = time.monotonic()
+        try:
+            inv = await self._traced_investigate(incident_key, lease)
+        except Exception:
+            self._emit_investigation(time.monotonic() - started, failed=True)
+            raise
+        self._emit_investigation(time.monotonic() - started, failed=False)
+        return inv
+
+    def _emit_investigation(self, seconds: float, *, failed: bool) -> None:
+        """Metric cho monitor M13 (Cortex health): thời lượng + số lần lỗi."""
+        if self.statsd is None:
+            return
+        tags = [f"status:{'error' if failed else 'ok'}"]
+        self.statsd.distribution(tm.M_CORTEX_DURATION, seconds, tags=tags)
+        self.statsd.increment(tm.M_CORTEX_INVESTIGATION, tags=tags)
+
+    async def _traced_investigate(self, incident_key: str, lease: str | None) -> Investigation:
         with llmobs.span("agent", "cortex.investigate", session_id=incident_key) as s:
             inv = await self._investigate(incident_key, lease)
             rec = inv.recommendation

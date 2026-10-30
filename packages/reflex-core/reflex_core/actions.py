@@ -90,6 +90,13 @@ class FailbackStepParams(_Model):
     route: str
     to: str
     pct: int  # 10 | 50 | 100
+    # Trọng số của `to` trước sự cố (snapshot policy_history); None = 1.0 (hành vi cũ)
+    baseline: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    def share(self) -> float:
+        """Tỷ trọng traffic của `to` sau nấc này: pct% của baseline (100% = về đúng policy trước sự cố)."""
+        base = 1.0 if self.baseline is None else self.baseline
+        return round(base * self.pct / 100, 4)
 
 
 class RollbackFlagParams(_Model):

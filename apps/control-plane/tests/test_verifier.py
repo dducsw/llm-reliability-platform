@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from reflex_core.actions import (
     Action,
@@ -66,3 +68,42 @@ async def test_failback_steps() -> None:
 
     step4 = await orch.advance(parent_act, current_pct=100)
     assert step4 is None
+
+
+@pytest.mark.asyncio
+async def test_failback_step_carries_baseline_from_policy_history(fake_db: Any) -> None:
+    from datetime import UTC, datetime
+
+    from reflex_core.actions import Execution
+    from reflex_mongo.collections import POLICY_HISTORY
+
+    await fake_db[POLICY_HISTORY].insert_one(
+        {
+            "policy_id": "order.extract",
+            "version": 7,
+            "doc": {
+                "candidates": [
+                    {"target": "vendorA:large", "weight": 0.9},
+                    {"target": "vendorB:large", "weight": 0.1},
+                ]
+            },
+        }
+    )
+    parent = Action(
+        type=ActionType.SHIFT_WEIGHT,
+        params={
+            "route": "order.extract",
+            "from": "vendorA:large",
+            "to": "vendorB:large",
+            "pct": 1.0,
+        },
+        proposed_by=ProposedBy(actor="cortex"),
+        execution=Execution(
+            policy_id="order.extract",
+            version_before=7,
+            version_after=8,
+            applied_at=datetime.now(tz=UTC),
+        ),
+    )
+    step = await FailbackOrchestrator(db=fake_db).advance(parent, current_pct=50)
+    assert step is not None and step.params["pct"] == 100 and step.params["baseline"] == 0.9

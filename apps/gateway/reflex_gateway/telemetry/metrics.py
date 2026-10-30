@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from datadog.dogstatsd import DogStatsd
-from reflex_core.events import AttemptEvent, RequestEvent
+from reflex_core.events import AttemptEvent, RequestEvent, RequestOutcome
 from reflex_telemetry import tags as t
 
 _statsd: DogStatsd | None = None
+
+# Ngưỡng latency (ms) cho SLO Delivered latency; chat.reply cam kết < 2000ms
+LATENCY_THRESHOLDS_MS = (2000,)
 
 
 def configure(statsd: DogStatsd | None) -> None:
@@ -30,6 +33,13 @@ def emit_request(event: RequestEvent) -> None:
     ]
     _statsd.increment(t.M_REQUEST, tags=tags)
     _statsd.distribution(t.M_REQUEST_LATENCY, event.latency_ms, tags=tags)
+    if event.outcome is RequestOutcome.OK:
+        # SLO metric-based cần count: request ok có latency dưới từng ngưỡng (Delivered latency, M4)
+        for threshold in LATENCY_THRESHOLDS_MS:
+            if event.latency_ms <= threshold:
+                _statsd.increment(
+                    t.M_REQUEST_UNDER_THRESHOLD, tags=[*tags, f"threshold:{threshold}"]
+                )
     _statsd.distribution(t.M_COST_USD, event.cost_usd, tags=tags)
     if event.quality is not None:
         _statsd.increment(t.M_QUALITY_TOTAL, tags=tags)

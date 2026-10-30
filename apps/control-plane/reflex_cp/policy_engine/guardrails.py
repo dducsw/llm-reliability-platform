@@ -21,6 +21,7 @@ from reflex_core.actions import (
     ActionState,
     ActionType,
     BlastRadius,
+    FailbackStepParams,
     GuardrailResult,
     validate_params,
 )
@@ -110,7 +111,8 @@ def _moved_share(action: Action, weights: dict[str, float]) -> float:
     if action.type == ActionType.SHIFT_WEIGHT:
         return weights.get(str(p.get("from")), 1.0) * float(p.get("pct", 0))
     if action.type == ActionType.FAILBACK_STEP:
-        return max(0.0, float(p.get("pct", 0)) / 100 - weights.get(str(p.get("to")), 0.0))
+        share = FailbackStepParams.model_validate(p).share()
+        return max(0.0, share - weights.get(str(p.get("to")), 0.0))
     return 1.0  # downgrade_tier: cả route
 
 
