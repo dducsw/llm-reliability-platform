@@ -205,9 +205,31 @@ composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h;
   Thêm field tùy chọn vào `FailbackStepParams` (reflex_core) — tương thích ngược, nên báo DE.
 
 - T1/T2: `datadog_webhook` `reflex-control-plane-local` trỏ tới ngrok static domain `https://lethargy-badly-reforest.ngrok-free.dev/hooks/datadog`
-  (biến `REFLEX_WEBHOOK_URL` trong `.env`). Chỉ nhận được khi stack chạy **và** `ngrok http 8090` đang mở. M12 đã tạo.
+  (biến `REFLEX_WEBHOOK_URL` trong `.env`). Chỉ nhận được khi stack chạy **và** `ngrok http 8090` đang mở.
+  M12 = composite XOR của 2 monitor "có signal từ sentinel/datadog trong 10m" trên metric `reflex.incident.signal{source}` (phát cả khi gộp).
 - `task infra:datadog:plan` / `:apply` nạp key từ `.env` (TF_VAR_*), plan ra file `tfplan` rồi apply đúng file đó.
 - Dashboard JSON phải có `response_format: timeseries` cho request dạng formula và `notify_list: null` (nếu không sẽ diff mãi).
 - T10: Docker Desktop đã tăng RAM.
 
-- T6: state trên Terraform Cloud (org/workspace `llm-reliability-platform`, CLI-driven, Execution Mode Local), 30 resource. Cần `terraform login` trên máy mới. Chưa quan sát trên stack thật: webhook → incident nguồn `datadog`, M4/M12/M13 có dữ liệu, failback có `baseline`.
+- T6: state trên Terraform Cloud (org/workspace `llm-reliability-platform`, CLI-driven, Execution Mode Local), Cần `terraform login` trên máy mới.
+
+## 13. Lần chạy silent-brownout trên stack thật (2026-10-30 03:55–04:28 UTC)
+
+Policy `order.extract` được đưa về seed 90/10 theo ID (v27) trước khi chạy; không dùng `demo_reset` (xoá hàng loạt trên Atlas dùng chung).
+Kết quả runner: M3 `Alert` PASS, incident mở bởi sentinel PASS, delivered quality 1.0000 PASS, `resolved` FAIL — chỉ vì action chờ duyệt tay quá hạn chờ của runner.
+
+Incident `INC-202610300359-af5254`: duyệt tay → verify → failback 10/50/100 **đều mang `baseline=0.9`** → `resolved` 04:27:46;
+policy cuối **vendorA 0.9 / vendorB 0.1** (T8 kiểm chứng trên stack thật).
+
+**Bug phát hiện và đã sửa:** webhook Datadog tới được (`200`) nhưng **mở incident thứ hai** `INC-202610300400-6f1c6e` thay vì gộp:
+(1) `dedup_key` chứa `slo_id` — Sentinel `target:vendorA:large:quality` ≠ Datadog `dd:<monitor_id>`; (2) Datadog hạ chữ thường tag (`vendora:large`).
+Hai `shift_weight` 90% chồng nhau → policy 0.009/0.991. Sửa: `dedup_key = {sli}:{target}:{route}`; hook tra lại tên target trong catalog `targets`
+(không phân biệt hoa thường). Dọn theo ID: failback chờ duyệt của incident trùng → `rejected`, incident → `false_positive`.
+**Chưa chạy lại scenario để thấy signal `datadog` gộp vào incident của sentinel.**
+
+**Hạn chế T9 quan sát được:** nấc failback 10% bị rollback một lần (04:23) vì vendorA chỉ có 2 mẫu/phút, 1 mẫu lỗi; ở ngưỡng 0.99 cận trên
+Wilson chỉ vượt ngưỡng khi n cỡ vài trăm, nên một lỗi đơn lẻ ở mẫu nhỏ vẫn gây rollback. Tự thử lại sau cooldown nên chỉ chậm ~1 phút.
+Hướng cải thiện: đòi n tối thiểu lớn hơn trước khi rollback, hoặc so với ngưỡng thấp hơn (vd SLO provider 0.99 − biên).
+
+**Chưa có guardrail chặn hai mitigation cùng route** từ hai incident khác nhau — dedup sửa nguồn gốc, nhưng policy engine vẫn nên từ chối
+`shift_weight` thứ hai khi route đang có mitigation `succeeded` chưa failback xong.
