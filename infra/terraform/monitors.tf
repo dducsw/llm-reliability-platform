@@ -290,12 +290,20 @@ resource "datadog_monitor" "m13_cortex_slow" {
   tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
 }
 
-# M12 — Detector disagreement: Sentinel và Datadog mở số incident khác nhau trong 10 phút (cần webhook đã nối, webhooks.tf)
-resource "datadog_monitor" "m12_detector_disagreement" {
-  name    = "[Reflex] M12_detector_disagreement"
-  type    = "query alert"
-  query   = "sum(last_10m):abs(default_zero(sum:reflex.incident.open{env:${var.env},source:sentinel}.as_count()) - default_zero(sum:reflex.incident.open{env:${var.env},source:datadog}.as_count())) > 0"
-  message = "Sentinel và Datadog không đồng thuận về incident trong 10 phút — một detector đang mù hoặc báo giả."
+# M12 — Detector disagreement: trong 10 phút một detector có signal còn detector kia im lặng (một bên đang mù hoặc báo giả).
+# Đếm signal (gồm cả signal gộp vào incident sẵn có) chứ không đếm incident mở: sau dedup chỉ nguồn đến trước mới mở incident.
+locals {
+  incident_signal = { for src in ["sentinel", "datadog"] :
+    src => "default_zero(sum:reflex.incident.signal{env:${var.env},source:${src}}.as_count())"
+  }
+}
+
+resource "datadog_monitor" "m12_signal_present" {
+  for_each = local.incident_signal
+  name     = "[Reflex] M12 thành phần — có signal từ ${each.key}"
+  type     = "query alert"
+  query    = "sum(last_10m):${each.value} > 0"
+  message  = "Thành phần của M12_detector_disagreement."
 
   monitor_thresholds {
     critical = 0
@@ -303,6 +311,6 @@ resource "datadog_monitor" "m12_detector_disagreement" {
 
   notify_no_data      = false
   require_full_window = false
-  priority            = 3
-  tags                = concat(local.common_tags, ["monitor:m12", "meta:detector"])
+  priority            = 5
+  tags                = concat(local.common_tags, ["monitor:m12-part", "source:${each.key}"])
 }

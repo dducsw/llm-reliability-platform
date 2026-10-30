@@ -37,3 +37,15 @@ resource "datadog_monitor" "m10_gateway_side" {
   priority          = 1
   tags              = concat(local.common_tags, ["monitor:m10", "diagnosis:gateway_side"])
 }
+
+# M12 Detector disagreement = đúng một trong hai detector có signal (XOR)
+resource "datadog_monitor" "m12_detector_disagreement" {
+  name    = "[Reflex] M12_detector_disagreement"
+  type    = "composite"
+  query   = "(${datadog_monitor.m12_signal_present["sentinel"].id} && !${datadog_monitor.m12_signal_present["datadog"].id}) || (${datadog_monitor.m12_signal_present["datadog"].id} && !${datadog_monitor.m12_signal_present["sentinel"].id})"
+  message = "Sentinel và Datadog không đồng thuận trong 10 phút: một detector có signal, detector kia im lặng."
+
+  notify_no_data = false
+  priority       = 3
+  tags           = concat(local.common_tags, ["monitor:m12", "meta:detector"])
+}
