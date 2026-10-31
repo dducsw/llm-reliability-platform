@@ -1,5 +1,14 @@
 terraform {
   required_version = ">= 1.6"
+
+  # State trên Terraform Cloud; workspace để Execution Mode = Local (key Datadog đọc từ .env qua TF_VAR_*)
+  cloud {
+    organization = "llm-reliability-platform"
+    workspaces {
+      name = "llm-reliability-platform"
+    }
+  }
+
   required_providers {
     datadog = {
       source  = "DataDog/datadog"

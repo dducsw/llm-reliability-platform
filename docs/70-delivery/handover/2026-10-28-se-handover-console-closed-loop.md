@@ -191,3 +191,92 @@ cần đưa về 90/10 (snapshot vào `policy_history`, version tăng, CAS) và 
 **Quy ước vận hành đã rút ra (để người sau không dẫm lại):** dùng `127.0.0.1` thay `localhost` cho Console; `terraform plan -out` rồi apply file đó (không `-auto-approve`);
 composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h; ghi vào Mongo luôn dùng `reflex_mongo.serde.to_doc` và `_id` chuỗi
 (`reflex_core.actions.new_action_id`); thay đổi dữ liệu hàng loạt trên Atlas dùng chung phải theo ID cụ thể.
+
+## 12. Cập nhật 2026-10-30 (đã apply lên Datadog; chưa chạy stack thật)
+
+Đã qua unit test và **đã apply** lên Datadog (`ap1`, `env=local`); `plan` sau apply = `No changes`:
+- T3: gateway phát `reflex.request.under_threshold{threshold:2000}`; SLO Delivered latency `chat.reply` và monitor M4 (burn latency, không phải TTFT cấp request); M10 giờ là `(M1 || M4) && !P_direct && P_via_gw`.
+- T4: M5 (anomaly p99 `agile`), M8 (anomaly cost `basic`) — API Datadog đã nhận khi tạo. M13 dùng metric mới `reflex.cortex.investigation{status}` và `.duration` do `CortexAgent` phát (không dùng LLMObs).
+- T5: `dashboards.tf` (3 dashboard JSON đã có widget), `logs.tf` (pipeline + log metric `reflex.log.finish_reason`; facet không có resource trong provider).
+- T7: output `mongo_slo_links` (khóa = `_id` của `slos`) → `task infra:datadog:sync -- --yes` ghi `slos.datadog` (đã ghi 4 SLO).
+  `task seed` ghi đè cả document `slos` → chạy lại sync sau mỗi lần seed. SLO availability/latency `chat.reply` chưa có bản Sentinel nên không được ghi.
+- T9: rollback failback chỉ khi cận trên Wilson 95% < 0.99 (`confidently_degraded`).
+- T8: `failback_step` mang `baseline` = trọng số target gốc trong snapshot `policy_history` (`version_before` của shift_weight cha);
+  nấc pct trả về pct% baseline → 100% về đúng tỷ lệ trước sự cố (vd 90/10), không còn bỏ đói secondary. Thiếu snapshot → hành vi cũ (1.0).
+  Thêm field tùy chọn vào `FailbackStepParams` (reflex_core) — tương thích ngược, nên báo DE.
+
+- T1/T2: `datadog_webhook` `reflex-control-plane-local` trỏ tới ngrok static domain `https://lethargy-badly-reforest.ngrok-free.dev/hooks/datadog`
+  (biến `REFLEX_WEBHOOK_URL` trong `.env`). Chỉ nhận được khi stack chạy **và** `ngrok http 8090` đang mở.
+  M12 = composite XOR của 2 monitor "có signal từ sentinel/datadog trong 10m" trên metric `reflex.incident.signal{source}` (phát cả khi gộp).
+- `task infra:datadog:plan` / `:apply` nạp key từ `.env` (TF_VAR_*), plan ra file `tfplan` rồi apply đúng file đó.
+- Dashboard JSON phải có `response_format: timeseries` cho request dạng formula và `notify_list: null` (nếu không sẽ diff mãi).
+- T10: Docker Desktop đã tăng RAM.
+
+- T6: state trên Terraform Cloud (org/workspace `llm-reliability-platform`, CLI-driven, Execution Mode Local), Cần `terraform login` trên máy mới.
+
+## 13. Lần chạy silent-brownout trên stack thật (2026-10-30 03:55–04:28 UTC)
+
+Policy `order.extract` được đưa về seed 90/10 theo ID (v27) trước khi chạy; không dùng `demo_reset` (xoá hàng loạt trên Atlas dùng chung).
+Kết quả runner: M3 `Alert` PASS, incident mở bởi sentinel PASS, delivered quality 1.0000 PASS, `resolved` FAIL — chỉ vì action chờ duyệt tay quá hạn chờ của runner.
+
+Incident `INC-202610300359-af5254`: duyệt tay → verify → failback 10/50/100 **đều mang `baseline=0.9`** → `resolved` 04:27:46;
+policy cuối **vendorA 0.9 / vendorB 0.1** (T8 kiểm chứng trên stack thật).
+
+**Bug phát hiện và đã sửa:** webhook Datadog tới được (`200`) nhưng **mở incident thứ hai** `INC-202610300400-6f1c6e` thay vì gộp:
+(1) `dedup_key` chứa `slo_id` — Sentinel `target:vendorA:large:quality` ≠ Datadog `dd:<monitor_id>`; (2) Datadog hạ chữ thường tag (`vendora:large`).
+Hai `shift_weight` 90% chồng nhau → policy 0.009/0.991. Sửa: `dedup_key = {sli}:{target}:{route}`; hook tra lại tên target trong catalog `targets`
+(không phân biệt hoa thường). Dọn theo ID: failback chờ duyệt của incident trùng → `rejected`, incident → `false_positive`.
+**Chưa chạy lại scenario để thấy signal `datadog` gộp vào incident của sentinel.**
+
+**Hạn chế T9 quan sát được → đã sửa:** nấc failback 10% bị rollback một lần (04:23) vì vendorA chỉ có 2 mẫu/phút, 1 mẫu lỗi.
+Giờ có hysteresis: rollback khi cận trên Wilson < 0.95, tiến nấc khi cận trên ≥ 0.99, ở giữa thì chờ thêm mẫu (`plausibly_healthy`).
+
+**Guardrail mới `no_overlapping_mitigation`** (guardrail thứ 11): `shift_weight`/`downgrade_tier` bị chặn khi một incident **khác** đang mở
+đã chuyển traffic (`succeeded`) trên cùng route.
+
+## 14. Chạy lại sau khi sửa dedup (2026-10-30 04:37–04:47 UTC) — 4/4 PASS
+
+`reflex-sim run silent-brownout --fast` → **ALL PASSED**. Incident `INC-202610300441-bd0f78`: sentinel mở 04:41, **signal `datadog` gộp vào
+cùng incident 04:42** (không có incident thứ hai), duyệt tay 04:43 → failback 10/50/100 (04:44 / 04:45 / 04:46, `baseline=0.9`, không rollback)
+→ `resolved`; policy cuối 0.9/0.1. Lần chạy này **chưa có** hysteresis/guardrail mới (deploy sau, 04:50) — chưa quan sát trên stack thật.
+Control-plane cold start ~2 phút với Docker 2.8 GB.
+
+## 15. Lần chạy thứ ba (2026-10-30 05:05–05:28 UTC) — lộ thêm một đường trùng incident
+
+Trước khi chạy: incident `INC-202610300502-e27ab4` do **M3 báo giả** trên `vendorB:large`/`support.triage` (1–4 mẫu/phút sau failback,
+không có chaos); Cortex đề xuất chuyển traffic **sang chính target đang báo động** (confidence 0.4, chờ duyệt). Đã từ chối action và đóng
+`false_positive` theo ID. Sửa: monitor **M3v** (≥ 20 lần kiểm tra chất lượng trong cửa sổ dài); M3/M9 = … && M3v. Lần chạy sau M3 vẫn `Alert`.
+⚠ Cortex đề xuất đích là target đang alert mà `healthy_destination` không chặn (health_state của vendorB vẫn healthy) — cần DE/Cortex xem.
+
+Trong lần chạy: **M7 (retry amplification, group theo route, không có target)** gọi webhook → `dedup_key = quality:*:order.extract` không
+khớp incident Sentinel → incident thứ hai `INC-202610300509-28c3dc`; hai `shift_weight` được đề xuất cách nhau 1s nên guardrail
+`no_overlapping_mitigation` (khi đó chỉ xét `succeeded`) không chặn; cả hai được duyệt → hai vòng failback giẫm nhau (baseline 0.09 vs 0.9).
+Dọn theo ID: failback baseline sai → `rejected`, `INC-202610300508-70a2a3` → `false_positive` (trùng 28c3dc). `28c3dc` failback 10/50/100
+baseline 0.9 → `resolved` 05:27, policy 0.9/0.1. Runner: 3/4 (resolved hết hạn chờ trong lúc hai incident giẫm nhau).
+
+Sửa (đã deploy 05:2x, **chưa chạy lại để quan sát**): signal không khớp `dedup_key` mà có route → gộp vào incident đang mở trên route đó
+(một route một incident); guardrail tính cả action `proposed/awaiting_approval` của incident khác. Hysteresis 0.95/0.99 chưa được thử thật
+(lần này không có nấc nào rơi vào vùng xám/xấu).
+
+Integration test 2026-10-30: 9 passed, 3 skipped (stub DE).
+
+## 16. Lần chạy thứ tư và thứ năm (2026-10-30 05:31–05:57 UTC)
+
+**05:31 — 4/4 PASS.** Một incident duy nhất `INC-202610300535-30eef5` có cả signal `datadog` và `sentinel` (gộp theo route chạy đúng, M7 không
+mở incident riêng). Mitigation đi đường rules R4 (`shift_weight` 100%, `duration_s: 300`, tự áp dụng). **Nhưng policy kết thúc 1.0/0.0**:
+nấc 10% và 100% không có `baseline`, chỉ nấc 50% có.
+
+Nguyên nhân: trong khoảng 05:28–05:35 có người/tiến trình khác chạy **`reflex-mongo seed`** trên Atlas dùng chung (mọi policy về
+`version: 1`, `updated_by` rỗng; `slos.datadog` bị xoá). `policy_history` có hai snapshot `version: 1`; `find_one` theo version không sort
+trả bản tùy ý giữa các lần gọi. Sửa: `Actuator.snapshot_before` lấy snapshot mới nhất có `at ≤ execution.applied_at`, dùng cho cả
+baseline failback và rollback. Policy `order.extract` đưa về seed theo ID (v6), `slos.datadog` ghi lại bằng `task infra:datadog:sync`.
+
+**05:47 — 3/4.** Một incident (`INC-202610300552-4a9b57`, `datadog`+`sentinel`), Cortex đề xuất (confidence 0.4) → duyệt tay → áp dụng
+05:53:25 → failback 10/50/100 **đều `baseline=0.9`** → `resolved` 05:57:17, policy **0.9/0.1**. FAIL ở `delivered_sli` = 0.9778: trong cửa sổ
+`--fast` chỉ ~45 request, đúng **1** request rescue sang `vendorB:large` không qua validator (vendorB không có fault) → 44/45. Expectation này
+dễ dao động với mẫu nhỏ; cân nhắc tăng traffic hoặc nới cửa sổ cho `--fast`.
+
+Chưa quan sát được: guardrail `no_overlapping_mitigation` thực sự chặn (sau khi sửa dedup không còn incident thứ hai để chặn) và
+hysteresis 0.95/0.99 (không nấc nào rơi vào vùng xám/xấu). Cả hai đã có unit test.
+
+**Vận hành:** sau mỗi lần ai đó chạy `task seed` trên Atlas dùng chung phải chạy lại `task infra:datadog:sync -- --yes`.

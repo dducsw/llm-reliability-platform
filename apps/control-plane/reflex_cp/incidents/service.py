@@ -40,7 +40,9 @@ class IncidentService:
     ) -> dict[str, Any]:
         """Tạo incident mới hoặc gộp signal vào incident đang mở (chống trùng lặp qua dedup_key)."""
         now = datetime.now(tz=UTC)
-        dedup_key = f"{slo_id}:{target or '*'}:{route or '*'}"
+        # Không chứa slo_id/nguồn: Sentinel (`target:…:quality`) và Datadog (`dd:<monitor>`) cùng thấy
+        # một sự cố trên {target, route, sli} phải gộp vào một incident, nếu không sẽ mitigation chồng nhau.
+        dedup_key = f"{sli}:{target or '*'}:{route or '*'}"
         sig_model = Signal(
             source=signal.get("source", "sentinel"),
             at=signal.get("at") or now,
@@ -50,9 +52,16 @@ class IncidentService:
             diagnosis=signal.get("diagnosis"),
         )
 
+        if self.statsd is not None:
+            self.statsd.increment("reflex.incident.signal", tags=[f"source:{sig_model.source}"])
+
         if self.db is not None:
-            # Tìm incident đang mở có cùng dedup_key
+            # Tìm incident đang mở có cùng dedup_key; không có thì incident đang mở trên cùng route —
+            # một route một incident: M7 (chỉ group theo route) và Sentinel (target+route) cùng thấy một
+            # silent-brownout, tách ra hai incident là hai shift_weight chồng nhau (2026-10-30 05:09).
             existing = await self.db[INCIDENTS].find_one({"dedup_key": dedup_key, "is_open": True})
+            if existing is None and route:
+                existing = await self.db[INCIDENTS].find_one({"routes": route, "is_open": True})
             if existing:
                 await self.db[INCIDENTS].update_one(
                     {"_id": existing["_id"]},
@@ -94,7 +103,10 @@ class IncidentService:
         else:
             # In-memory fallback
             for inc in self._memory_incidents.values():
-                if inc.get("dedup_key") == dedup_key and inc.get("is_open"):
+                same = inc.get("dedup_key") == dedup_key or (
+                    route and route in inc.get("routes", [])
+                )
+                if same and inc.get("is_open"):
                     inc["signals"].append(sig_model.model_dump(mode="json"))
                     return inc
 

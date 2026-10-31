@@ -1,35 +1,32 @@
 {
-  "title": "Reflex · SLO & Error Budget (D2)",
-  "description": "Dual-ledger: Delivered vs Provider SLIs, good/total across matched evaluation windows.",
+  "title": "Reflex — SLO",
+  "description": "Dual-ledger: Delivered vs Provider, đối chiếu good/total cùng khoảng thời gian.",
   "layout_type": "ordered",
   "template_variables": [
     {
-      "default": "local",
       "name": "env",
-      "prefix": "env"
+      "prefix": "env",
+      "default": "local"
     },
     {
-      "default": "*",
       "name": "target",
-      "prefix": "target"
+      "prefix": "target",
+      "default": "*"
     },
     {
-      "default": "*",
       "name": "route",
-      "prefix": "route"
+      "prefix": "route",
+      "default": "*"
     }
   ],
   "widgets": [
     {
       "definition": {
+        "type": "timeseries",
+        "title": "Delivered quality (order.extract)",
         "requests": [
           {
             "display_type": "line",
-            "formulas": [
-              {
-                "formula": "num / den"
-              }
-            ],
             "queries": [
               {
                 "data_source": "metrics",
@@ -42,36 +39,23 @@
                 "query": "sum:reflex.quality.total{$env,route:order.extract}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Delivered Quality (order.extract)",
-        "type": "timeseries",
-        "yaxis": {
-          "min": "0.8",
-          "max": "1.05",
-          "label": "Ratio"
-        },
-        "markers": [
-          {
-            "value": "y = 0.995",
-            "display_type": "error dashed",
-            "label": "SLO Target (99.5%)"
-          }
-        ]
-      },
-      "id": 2284315183050129
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "num / den"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Provider quality theo target",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -84,36 +68,23 @@
                 "query": "sum:reflex.attempt.quality.total{$env,$target} by {target}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Provider Quality by Target",
-        "type": "timeseries",
-        "yaxis": {
-          "min": "0",
-          "max": "1.05",
-          "label": "Ratio"
-        },
-        "markers": [
-          {
-            "value": "y = 0.99",
-            "display_type": "warning dashed",
-            "label": "Vendor SLA (99.0%)"
-          }
-        ]
-      },
-      "id": 1997873691499748
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "num / den"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered latency <2000ms (chat.reply)",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -126,36 +97,23 @@
                 "query": "sum:reflex.request{$env,route:chat.reply,outcome:ok}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Delivered Latency <2000ms (chat.reply)",
-        "type": "timeseries",
-        "yaxis": {
-          "min": "0",
-          "max": "1.05",
-          "label": "Ratio"
-        },
-        "markers": [
-          {
-            "value": "y = 0.95",
-            "display_type": "error dashed",
-            "label": "SLO Target (95%)"
-          }
-        ]
-      },
-      "id": 6669778362321753
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "num / den"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Delivered availability (chat.reply)",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -168,28 +126,16 @@
                 "query": "sum:reflex.request{$env,route:chat.reply,!outcome:shed}.as_count()"
               }
             ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
             "response_format": "timeseries"
           }
-        ],
-        "title": "Delivered Availability (chat.reply)",
-        "type": "timeseries",
-        "yaxis": {
-          "min": "0.8",
-          "max": "1.05",
-          "label": "Ratio"
-        },
-        "markers": [
-          {
-            "value": "y = 0.995",
-            "display_type": "error dashed",
-            "label": "SLO Target (99.5%)"
-          }
         ]
-      },
-      "id": 3158217458741423
+      }
     }
   ],
-  "notify_list": null,
-  "experience_type": "default",
-  "restricted_roles": []
+  "notify_list": null
 }

@@ -95,17 +95,31 @@ tasks:
       - pnpm --dir apps/console gen:api
 
   infra:datadog:plan:
+    desc: terraform plan -out tfplan (key lấy từ .env; REFLEX_WEBHOOK_URL = URL công khai tới /hooks/datadog)
     dir: infra/terraform
+    env: &tfenv
+      TF_VAR_dd_api_key: "{{.DD_API_KEY}}"
+      TF_VAR_dd_app_key: "{{.DD_APP_KEY}}"
+      TF_VAR_dd_site: "{{.DD_SITE}}"
+      TF_VAR_env: '{{.REFLEX_ENV | default "local"}}'
+      TF_VAR_webhook_token: "{{.REFLEX_WEBHOOK_TOKEN}}"
+      TF_VAR_webhook_url: "{{.REFLEX_WEBHOOK_URL}}"
     cmds:
       - terraform init -upgrade
-      - terraform plan
+      - terraform plan -out tfplan
 
   infra:datadog:apply:
+    desc: Apply đúng file tfplan đã plan (không -auto-approve)
     dir: infra/terraform
+    env: *tfenv
     cmds:
       - uv run python ../../tools/setup_datadog_metrics.py
-      - terraform init -upgrade
-      - terraform apply
+      - terraform apply tfplan
+
+  infra:datadog:sync:
+    desc: Ghi id SLO/monitor Datadog vào slos.datadog (dry-run; `-- --yes` để ghi). Chạy lại sau `task seed`
+    cmds:
+      - uv run python tools/sync_datadog_ids.py {{.CLI_ARGS}}
 
   demo:up:
     desc: Stack demo (Atlas, nginx TLS, vendor thật)

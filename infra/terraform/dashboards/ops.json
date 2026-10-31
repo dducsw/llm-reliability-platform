@@ -1,35 +1,32 @@
 {
-  "title": "Reflex · Operations (D1)",
-  "description": "Operations dashboard: Traffic, latency, probes, retry, dropped telemetry.",
+  "title": "Reflex — ops",
+  "description": "Vận hành: traffic, latency, probe, retry, mù telemetry.",
   "layout_type": "ordered",
   "template_variables": [
     {
-      "default": "local",
       "name": "env",
-      "prefix": "env"
+      "prefix": "env",
+      "default": "local"
     },
     {
-      "default": "*",
       "name": "target",
-      "prefix": "target"
+      "prefix": "target",
+      "default": "*"
     },
     {
-      "default": "*",
       "name": "route",
-      "prefix": "route"
+      "prefix": "route",
+      "default": "*"
     }
   ],
   "widgets": [
     {
       "definition": {
+        "type": "timeseries",
+        "title": "Request rate theo outcome",
         "requests": [
           {
             "display_type": "bars",
-            "formulas": [
-              {
-                "formula": "q0"
-              }
-            ],
             "queries": [
               {
                 "data_source": "metrics",
@@ -37,24 +34,23 @@
                 "query": "sum:reflex.request{$env,$route} by {outcome}.as_count()"
               }
             ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
             "response_format": "timeseries"
           }
-        ],
-        "title": "Request Volume by Outcome",
-        "type": "timeseries"
-      },
-      "id": 8764997831952085
+        ]
+      }
     },
     {
       "definition": {
+        "type": "timeseries",
+        "title": "Delivered availability",
         "requests": [
           {
             "display_type": "line",
-            "formulas": [
-              {
-                "formula": "num / den"
-              }
-            ],
             "queries": [
               {
                 "data_source": "metrics",
@@ -67,24 +63,23 @@
                 "query": "sum:reflex.request{$env,$route,!outcome:shed}.as_count()"
               }
             ],
+            "formulas": [
+              {
+                "formula": "num / den"
+              }
+            ],
             "response_format": "timeseries"
           }
-        ],
-        "title": "Delivered Availability",
-        "type": "timeseries"
-      },
-      "id": 4116219986125270
+        ]
+      }
     },
     {
       "definition": {
+        "type": "timeseries",
+        "title": "Request latency p95",
         "requests": [
           {
             "display_type": "line",
-            "formulas": [
-              {
-                "formula": "q0"
-              }
-            ],
             "queries": [
               {
                 "data_source": "metrics",
@@ -92,24 +87,23 @@
                 "query": "p95:reflex.request.latency{$env,$route} by {route}"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Request Latency p95",
-        "type": "timeseries"
-      },
-      "id": 7179447215667332
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Attempt latency p99 theo target",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -117,24 +111,23 @@
                 "query": "p99:reflex.attempt.latency{$env,$target,$route} by {target}"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Attempt Latency p99 by Target",
-        "type": "timeseries"
-      },
-      "id": 8704859273724263
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Retry amplification",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -142,24 +135,23 @@
                 "query": "avg:reflex.retry.amplification{$env,$route} by {route}"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Retry Amplification Factor",
-        "type": "timeseries"
-      },
-      "id": 6525783336586039
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "bars",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Probe result",
+        "requests": [
+          {
+            "display_type": "bars",
             "queries": [
               {
                 "data_source": "metrics",
@@ -167,24 +159,23 @@
                 "query": "sum:reflex.probe.result{$env,$target} by {path,result}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Canary Probes Result (Direct vs Via GW)",
-        "type": "timeseries"
-      },
-      "id": 1624740292923166
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "bars",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Telemetry dropped",
+        "requests": [
+          {
+            "display_type": "bars",
             "queries": [
               {
                 "data_source": "metrics",
@@ -192,24 +183,23 @@
                 "query": "sum:reflex.telemetry.dropped{$env}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Dropped Telemetry",
-        "type": "timeseries"
-      },
-      "id": 3416436226324049
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "bars",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Incident mở theo nguồn",
+        "requests": [
+          {
+            "display_type": "bars",
             "queries": [
               {
                 "data_source": "metrics",
@@ -217,24 +207,23 @@
                 "query": "sum:reflex.incident.open{$env} by {source}.as_count()"
               }
             ],
-            "response_format": "timeseries"
-          }
-        ],
-        "title": "Open Incidents by Source",
-        "type": "timeseries"
-      },
-      "id": 3691851913546224
-    },
-    {
-      "definition": {
-        "requests": [
-          {
-            "display_type": "line",
             "formulas": [
               {
                 "formula": "q0"
               }
             ],
+            "response_format": "timeseries"
+          }
+        ]
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Cost USD/s",
+        "requests": [
+          {
+            "display_type": "line",
             "queries": [
               {
                 "data_source": "metrics",
@@ -242,16 +231,16 @@
                 "query": "sum:reflex.cost.usd{$env,$route} by {route}.as_rate()"
               }
             ],
+            "formulas": [
+              {
+                "formula": "q0"
+              }
+            ],
             "response_format": "timeseries"
           }
-        ],
-        "title": "Reliability Cost USD/s",
-        "type": "timeseries"
-      },
-      "id": 1186142354379118
+        ]
+      }
     }
   ],
-  "notify_list": null,
-  "experience_type": "default",
-  "restricted_roles": []
+  "notify_list": null
 }

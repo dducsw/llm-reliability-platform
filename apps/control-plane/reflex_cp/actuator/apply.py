@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.actions import Action, ActionState, Execution
@@ -119,6 +120,23 @@ class Actuator:
         )
         return new_policy
 
+    async def snapshot_before(self, action: Action) -> dict[str, Any] | None:
+        """Snapshot policy ngay trước khi `action` được áp dụng.
+
+        Không tra riêng theo `version`: `reflex-mongo seed` đặt lại version về 1 nên `policy_history` có nhiều
+        snapshot cùng version, và `find_one` không sort trả về bản tùy ý (2026-10-30: failback lúc có lúc không
+        có baseline). Lấy bản mới nhất có `at` ≤ thời điểm áp dụng.
+        """
+        if self.db is None or action.execution is None:
+            return None
+        ex = action.execution
+        flt: dict[str, Any] = {"policy_id": ex.policy_id, "version": ex.version_before}
+        if ex.applied_at is not None:
+            flt["at"] = {"$lte": ex.applied_at}
+        async for hist in self.db[POLICY_HISTORY].find(flt).sort("at", -1).limit(1):
+            return hist
+        return None
+
     async def rollback(self, action: Action) -> Policy | None:
         """Rollback policy về phiên bản trước của action."""
         if self.db is None or not action.execution:
@@ -127,9 +145,7 @@ class Actuator:
         route = action.execution.policy_id
         target_version = action.execution.version_before
 
-        hist = await self.db[POLICY_HISTORY].find_one(
-            {"policy_id": route, "version": target_version}
-        )
+        hist = await self.snapshot_before(action)
         if not hist or "doc" not in hist:
             logger.error("No history snapshot found for route %s version %d", route, target_version)
             return None

@@ -37,11 +37,11 @@ def apply_action(policy: Policy, action: Action) -> Policy:
                     c.weight = round(c.weight / total, 4)
 
     elif action.type == ActionType.FAILBACK_STEP:
-        # pct = tỷ trọng traffic của target gốc (10 → 50 → 100); phần còn lại chia theo tỷ lệ cũ
+        # target gốc nhận pct% trọng số baseline (10 → 50 → 100); phần còn lại chia theo tỷ lệ cũ
         params = FailbackStepParams.model_validate(action.params)
         dest = next((c for c in new_p.candidates if c.target == params.to), None)
         if dest is not None:
-            dest.weight = round(params.pct / 100, 4)
+            dest.weight = params.share()
             others = [c for c in new_p.candidates if c is not dest]
             total_other = sum(c.weight for c in others)
             remainder = round(1.0 - dest.weight, 4)

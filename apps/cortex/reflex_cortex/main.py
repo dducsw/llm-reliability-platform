@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from datetime import UTC, datetime
 
 import typer
@@ -14,6 +15,7 @@ from reflex_core.incident import IncidentStatus
 from reflex_mongo.collections import INCIDENTS
 from reflex_telemetry import setup as telemetry_setup
 from reflex_telemetry.datadog_api import DatadogApi
+from reflex_telemetry.setup import make_statsd
 from reflex_telemetry.tags import SVC_CORTEX
 
 from reflex_cortex.agent import CortexAgent, GatewayLlm
@@ -30,7 +32,8 @@ def _agent(db: AsyncDatabase | None, settings: Settings) -> CortexAgent:
         if settings.dd_api_key and settings.dd_app_key
         else None
     )
-    return CortexAgent(db=db, settings=settings, datadog=datadog)
+    statsd = make_statsd(SVC_CORTEX, os.getenv("REFLEX_ENV", "local"), os.getenv("DD_VERSION", "0"))
+    return CortexAgent(db=db, settings=settings, datadog=datadog, statsd=statsd)
 
 
 async def claim(db: AsyncDatabase, incident_key: str) -> str | None:
