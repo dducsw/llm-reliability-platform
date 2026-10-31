@@ -32,6 +32,7 @@ class HealthWriter:
         for doc_id, ev_list in by_key.items():
             status = "healthy"
             burn_map: dict[str, Any] = {}
+            budget_map: dict[str, float] = {}
             any_fires = False
 
             for ev in ev_list:
@@ -40,6 +41,13 @@ class HealthWriter:
                 b_long = ev.get("burn_long", 0.0)
                 fires = ev.get("fires", False)
                 burn_map[sli] = {"short": b_short, "long": b_long}
+
+                # budget_remaining: từ evaluation hoặc fallback theo burn
+                if "budget_remaining" in ev:
+                    budget_map[sli] = round(float(ev["budget_remaining"]), 4)
+                else:
+                    budget_map[sli] = max(0.0, round(1.0 - (b_long * 0.01), 4)) if fires else 1.0
+
                 if fires:
                     any_fires = True
 
@@ -53,6 +61,7 @@ class HealthWriter:
                 "_id": doc_id,
                 "status": status,
                 "burn": burn_map,
+                "budget_remaining": budget_map,
                 "score": score,
                 "updated_at": now,
             }

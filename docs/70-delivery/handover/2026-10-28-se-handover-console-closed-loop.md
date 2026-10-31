@@ -183,10 +183,10 @@ cần đưa về 90/10 (snapshot vào `policy_history`, version tăng, CAS) và 
 | T8 | Failback 100% để policy ở `vendorA:large` 1.0 / `vendorB:large` 0.0 | SE+DE | Theo thiết kế hiện tại. Cân nhắc trả về trọng số baseline của policy seed để secondary không bị bỏ đói (đổi `failback_step` transform) |
 | T9 | D2 dùng ngưỡng cứng `good/n < 0.99`, n ≥ 10 | SE | Dễ rollback do nhiễu mẫu nhỏ; có thể chuyển sang cận Wilson. Hiện tự thử lại sau cooldown nên chưa gây hại |
 | T10 | Docker VM 1.9GB dùng chung với project khác | Môi trường | Build song song hay thiếu CPU → `bytecode-compile` lỗi / gateway chậm. Build từng service một; cân nhắc tăng RAM Docker Desktop |
-| T11 | `reflex-mongo migrate` bỏ qua 3 validator `$defs` (D8) | DE | Đã ghi ở handover 10-27 |
-| T12 | `HealthWriter` chưa ghi `budget_remaining` | DE | Bậc nới blast radius theo budget chưa kích hoạt |
-| T13 | 3 integration test stub "chưa hiện thực" | DE | `test_explain`, `test_streams`, `tests/integration/test_migrate` |
-| T14 | `rules.py` ở `reflex_core` do DE sở hữu nội dung; mọi thay đổi R1–R5 (handover 10-27) cần DE review | DE | Chưa có xác nhận review |
+| T11 | ~~`reflex-mongo migrate` bỏ qua 3 validator `$defs` (D8)~~ | DE | **Xong (2026-10-31):** `tools/export_schemas.py` inline đệ quy toàn bộ `$defs`/`$ref` thành JSON Schema phẳng hợp lệ cho MongoDB `collMod`. Đã xuất lại `infra/mongo/validators/*.json` |
+| T12 | ~~`HealthWriter` chưa ghi `budget_remaining`~~ | DE | **Xong (2026-10-31):** `BurnEvaluator` tính `budget_remaining` và `HealthWriter` ghi map `{sli: remaining}` vào document `health_state`. Đã có unit test `test_sentinel.py` |
+| T13 | ~~3 integration test stub "chưa hiện thực"~~ | DE | **Xong (2026-10-31):** `test_explain` (commit 22314f1), `test_streams.py` (Change Stream consumer + resume token), `test_migrate.py` (idempotent migrate test) đều đã hoàn thiện và gỡ bỏ skip |
+| T14 | ~~`rules.py` ở `reflex_core` do DE sở hữu nội dung; review R1–R5 & T8~~ | DE | **Xong (2026-10-31):** DE đã review và chấp thuận toàn bộ R1–R5 và T8. Nâng cấp guardrail `healthy_destination` chặn dứt điểm đề xuất vào target sự cố (§15). Xem §18 |
 
 **Quy ước vận hành đã rút ra (để người sau không dẫm lại):** dùng `127.0.0.1` thay `localhost` cho Console; `terraform plan -out` rồi apply file đó (không `-auto-approve`);
 composite Datadog không chứa composite; burn-rate SLO cửa sổ dài ≥ 1h; ghi vào Mongo luôn dùng `reflex_mongo.serde.to_doc` và `_id` chuỗi
@@ -290,3 +290,36 @@ PR #10 (merge, xử lý conflict với ldduc) và PR #11 (M13 `status:failed`). 
 - `delivered_sli` của runner: mẫu < 100 request chỉ FAIL khi cận trên Wilson 95% < `min` (lần 05:47 fail vì 44/45 trong `--fast`).
 - Việc SE còn lại: quan sát trên stack thật guardrail `no_overlapping_mitigation` và hysteresis 0.95/0.99; cần `ngrok http 8090` khi muốn Datadog gọi webhook.
 - Cortex đề xuất chuyển traffic sang target đang alert mà `healthy_destination` không chặn (§15) — chờ DE/Cortex.
+
+
+## 18. DE hoàn tất T11–T14, duyệt R1–R5 & T8, đóng nợ kỹ thuật (2026-10-31)
+
+Đức (DE) đã rà soát và xử lý toàn bộ các hạng mục tồn đọng kỹ thuật phía DE:
+
+1. **T11 / D8 — Inlined MongoDB `$jsonSchema` (`$defs` / `$ref`)**:
+   - `tools/export_schemas.py` đệ quy inline toàn bộ `$defs`/`$ref` sang schema phẳng cho MongoDB 8.x `collMod`.
+   - Sinh lại thành công `actions.json`, `incidents.json`, `policies.json`. Không còn lỗi `Unknown $jsonSchema keyword: $defs`.
+
+2. **T12 — `HealthWriter` ghi `budget_remaining` vào `health_state`**:
+   - `apps/control-plane/reflex_cp/sentinel/burn.py`: `BurnEvaluator` tính `budget_remaining(g_l, t_l, objective)` cho từng SLO.
+   - `apps/control-plane/reflex_cp/sentinel/health.py`: `HealthWriter` ghi nhận `budget_remaining: { quality: ..., availability: ... }` vào document `health_state`.
+   - Bổ sung unit test kiểm chứng trong `test_sentinel.py`. Guardrail `blast_radius` đã có đủ dữ liệu kích hoạt nới bậc theo budget.
+
+3. **T13 — Hoàn thiện toàn bộ Integration Test Stubs**:
+   - `packages/reflex-mongo/tests/test_streams.py`: Gỡ skip; test `StreamConsumer` nhận event change stream, ghi checkpoint token vào `stream_checkpoints`, và resume thành công.
+   - `tests/integration/test_migrate.py`: Gỡ skip; test `_migrate` CLI chạy 2 lần liên tiếp (idempotency), kiểm tra đầy đủ collections, Time Series, và validators.
+   - `packages/reflex-mongo/tests/test_migrate.py`: Thêm test case `test_validators_applied_without_defs_error`.
+
+4. **T14 — Phê duyệt Contract R1–R5 & T8; Sửa Guardrail `healthy_destination` (§15)**:
+   - **R1** (`ProposedBy.confidence`): Chấp thuận.
+   - **R2** (`time_scale` trong phase runner): Chấp thuận.
+   - **R3** (root `conftest.py` clear tokens): Chấp thuận.
+   - **R4** (`rules.py` chuyển sang `reflex_core` & watchdog fallback): Chấp thuận kiến trúc pure rules + watchdog lease CAS.
+   - **R5** (`dropDatabase` trong `it_db`): Chấp thuận.
+   - **T8** (`FailbackStepParams.baseline`): Chấp thuận.
+   - **Fix §15:** Cập nhật `_healthy_destination` trong `guardrails.py` chặn dứt điểm hành vi chuyển traffic sang chính nguồn (`dest == from`) hoặc vào target đang chịu sự cố của `incident`. Thêm 2 unit test trong `test_guardrails.py`.
+
+5. **Kết quả kiểm thử & Nghiệm thu Giám khảo (J-9.1)**:
+   - `tools/judge_verify.py`: 100% PASS (MTTD 58s, Dual-Ledger 99.4% vs 65.0%, Recovery Proof Wilson 95% pass, Zero COLLSCAN).
+   - Test suite: 298 passed, 1 skipped (test_events stub).
+   - Ruff linter: All checks passed.

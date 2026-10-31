@@ -1,12 +1,17 @@
 """DE-0.1 - DoD: `migrate` chạy lại nhiều lần không lỗi và tạo đúng schema (data model §2-§6)."""
 
+from pathlib import Path
+
 import pytest
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_mongo.collections import ATTEMPTS_TS, BENCH_TS, DAY_S, INCIDENTS, SLI_1M
 from reflex_mongo.migrate.collections import ensure_collections
 from reflex_mongo.migrate.indexes import ensure_indexes
+from reflex_mongo.migrate.validators import apply_validators
 
 pytestmark = pytest.mark.integration
+
+VALIDATOR_DIR = Path("infra/mongo/validators")
 
 
 async def _collections_of(db: AsyncDatabase) -> dict[str, dict]:
@@ -48,3 +53,11 @@ async def test_key_indexes(it_db: AsyncDatabase) -> None:
     assert sli["unique"] is True
     ttl = await _index_of(it_db, SLI_1M, "ts_1")
     assert ttl["expireAfterSeconds"] == 45 * DAY_S
+
+
+async def test_validators_applied_without_defs_error(it_db: AsyncDatabase) -> None:
+    await ensure_collections(it_db)
+    results = await apply_validators(it_db, VALIDATOR_DIR)
+    assert results.get("actions") == "ok"
+    assert results.get("incidents") == "ok"
+    assert results.get("policies") == "ok"

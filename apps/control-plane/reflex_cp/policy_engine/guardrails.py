@@ -232,6 +232,26 @@ async def _healthy_destination(action: Action, db: AsyncDatabase | None) -> Guar
     dest = _destination(action)
     if db is None or not dest:
         return _ok("healthy_destination")
+
+    src = action.params.get("from")
+    if src and str(src) == dest:
+        return _fail("healthy_destination", f"Destination {dest} is same as source")
+
+    if action.incident_id:
+        inc = await db[INCIDENTS].find_one({"key": action.incident_id})
+        if inc is not None:
+            affected = set()
+            if inc.get("target"):
+                affected.add(str(inc["target"]))
+            for sig in inc.get("signals", []):
+                if sig.get("target"):
+                    affected.add(str(sig["target"]))
+            if dest in affected:
+                return _fail(
+                    "healthy_destination",
+                    f"Destination {dest} is the affected target of incident {action.incident_id}",
+                )
+
     hs = await db[HEALTH_STATE].find_one({"_id": f"target:{dest}"})
     if hs is None:
         return _ok("healthy_destination", f"No health data for {dest}")

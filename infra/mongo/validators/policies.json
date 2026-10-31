@@ -1,166 +1,51 @@
 {
   "$jsonSchema": {
-    "$defs": {
-      "BreakerConfig": {
-        "additionalProperties": false,
-        "properties": {
-          "window_s": {
-            "default": 20,
-            "title": "Window S",
-            "type": "integer"
-          },
-          "min_requests": {
-            "default": 20,
-            "title": "Min Requests",
-            "type": "integer"
-          },
-          "open_error_ratio": {
-            "default": 0.5,
-            "title": "Open Error Ratio",
-            "type": "number"
-          },
-          "open_base_s": {
-            "default": 10,
-            "title": "Open Base S",
-            "type": "integer"
-          },
-          "open_max_s": {
-            "default": 120,
-            "title": "Open Max S",
-            "type": "integer"
-          },
-          "half_open_probes": {
-            "default": 3,
-            "title": "Half Open Probes",
-            "type": "integer"
-          }
-        },
-        "title": "BreakerConfig",
-        "type": "object"
-      },
-      "Candidate": {
-        "additionalProperties": false,
-        "properties": {
-          "target": {
-            "title": "Target",
-            "type": "string"
-          },
-          "weight": {
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Weight",
-            "type": "number"
-          },
-          "role": {
-            "$ref": "#/$defs/CandidateRole"
-          }
-        },
-        "required": [
-          "target",
-          "weight",
-          "role"
-        ],
-        "title": "Candidate",
-        "type": "object"
-      },
-      "CandidateRole": {
-        "enum": [
-          "primary",
-          "secondary",
-          "brownout"
-        ],
-        "title": "CandidateRole",
+    "additionalProperties": false,
+    "properties": {
+      "_id": {
+        "title": "Id",
         "type": "string"
       },
-      "HedgeConfig": {
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "default": false,
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "after": {
-            "default": "p95_ttft",
-            "title": "After",
-            "type": "string"
-          },
-          "max_extra_cost_ratio": {
-            "default": 0.05,
-            "title": "Max Extra Cost Ratio",
-            "type": "number"
-          }
-        },
-        "title": "HedgeConfig",
-        "type": "object"
+      "version": {
+        "title": "Version",
+        "type": "integer"
       },
-      "RescueConfig": {
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "default": true,
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "on": {
-            "default": [
-              "quality"
-            ],
-            "items": {
+      "candidates": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "target": {
+              "title": "Target",
               "type": "string"
             },
-            "title": "On",
-            "type": "array"
-          },
-          "cross_target_only": {
-            "default": true,
-            "title": "Cross Target Only",
-            "type": "boolean"
-          },
-          "max_extra_cost_ratio": {
-            "default": 0.6,
-            "title": "Max Extra Cost Ratio",
-            "type": "number"
-          }
-        },
-        "title": "RescueConfig",
-        "type": "object"
-      },
-      "RetryConfig": {
-        "additionalProperties": false,
-        "properties": {
-          "max_attempts": {
-            "default": 3,
-            "title": "Max Attempts",
-            "type": "integer"
-          },
-          "budget_ratio": {
-            "default": 0.1,
-            "title": "Budget Ratio",
-            "type": "number"
-          },
-          "on": {
-            "default": [
-              "5xx",
-              "timeout",
-              "rate_limited"
-            ],
-            "items": {
-              "type": "string"
+            "weight": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Weight",
+              "type": "number"
             },
-            "title": "On",
-            "type": "array"
+            "role": {
+              "enum": [
+                "primary",
+                "secondary",
+                "brownout"
+              ],
+              "title": "CandidateRole",
+              "type": "string"
+            }
           },
-          "respect_retry_after": {
-            "default": true,
-            "title": "Respect Retry After",
-            "type": "boolean"
-          }
+          "required": [
+            "target",
+            "weight",
+            "role"
+          ],
+          "title": "Candidate",
+          "type": "object"
         },
-        "title": "RetryConfig",
-        "type": "object"
+        "title": "Candidates",
+        "type": "array"
       },
-      "Scoring": {
+      "scoring": {
         "additionalProperties": false,
         "properties": {
           "w_health": {
@@ -195,78 +80,7 @@
           }
         },
         "title": "Scoring",
-        "type": "object"
-      },
-      "ShedConfig": {
-        "additionalProperties": false,
-        "properties": {
-          "when_all_degraded_min_priority": {
-            "default": 1,
-            "title": "When All Degraded Min Priority",
-            "type": "integer"
-          }
-        },
-        "title": "ShedConfig",
-        "type": "object"
-      },
-      "UpdatedBy": {
-        "additionalProperties": false,
-        "properties": {
-          "actor": {
-            "title": "Actor",
-            "type": "string"
-          },
-          "action_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Action Id"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Reason"
-          }
-        },
-        "required": [
-          "actor"
-        ],
-        "title": "UpdatedBy",
-        "type": "object"
-      }
-    },
-    "additionalProperties": false,
-    "properties": {
-      "_id": {
-        "title": "Id",
-        "type": "string"
-      },
-      "version": {
-        "title": "Version",
-        "type": "integer"
-      },
-      "candidates": {
-        "items": {
-          "$ref": "#/$defs/Candidate"
-        },
-        "title": "Candidates",
-        "type": "array"
-      },
-      "scoring": {
-        "$ref": "#/$defs/Scoring",
+        "type": "object",
         "default": {
           "w_health": 0.35,
           "w_budget": 0.25,
@@ -277,7 +91,41 @@
         }
       },
       "breaker": {
-        "$ref": "#/$defs/BreakerConfig",
+        "additionalProperties": false,
+        "properties": {
+          "window_s": {
+            "default": 20,
+            "title": "Window S",
+            "type": "integer"
+          },
+          "min_requests": {
+            "default": 20,
+            "title": "Min Requests",
+            "type": "integer"
+          },
+          "open_error_ratio": {
+            "default": 0.5,
+            "title": "Open Error Ratio",
+            "type": "number"
+          },
+          "open_base_s": {
+            "default": 10,
+            "title": "Open Base S",
+            "type": "integer"
+          },
+          "open_max_s": {
+            "default": 120,
+            "title": "Open Max S",
+            "type": "integer"
+          },
+          "half_open_probes": {
+            "default": 3,
+            "title": "Half Open Probes",
+            "type": "integer"
+          }
+        },
+        "title": "BreakerConfig",
+        "type": "object",
         "default": {
           "window_s": 20,
           "min_requests": 20,
@@ -288,7 +136,38 @@
         }
       },
       "retry": {
-        "$ref": "#/$defs/RetryConfig",
+        "additionalProperties": false,
+        "properties": {
+          "max_attempts": {
+            "default": 3,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "budget_ratio": {
+            "default": 0.1,
+            "title": "Budget Ratio",
+            "type": "number"
+          },
+          "on": {
+            "default": [
+              "5xx",
+              "timeout",
+              "rate_limited"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "On",
+            "type": "array"
+          },
+          "respect_retry_after": {
+            "default": true,
+            "title": "Respect Retry After",
+            "type": "boolean"
+          }
+        },
+        "title": "RetryConfig",
+        "type": "object",
         "default": {
           "max_attempts": 3,
           "budget_ratio": 0.1,
@@ -301,7 +180,36 @@
         }
       },
       "rescue": {
-        "$ref": "#/$defs/RescueConfig",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "on": {
+            "default": [
+              "quality"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "On",
+            "type": "array"
+          },
+          "cross_target_only": {
+            "default": true,
+            "title": "Cross Target Only",
+            "type": "boolean"
+          },
+          "max_extra_cost_ratio": {
+            "default": 0.6,
+            "title": "Max Extra Cost Ratio",
+            "type": "number"
+          }
+        },
+        "title": "RescueConfig",
+        "type": "object",
         "default": {
           "enabled": true,
           "on": [
@@ -312,7 +220,26 @@
         }
       },
       "hedge": {
-        "$ref": "#/$defs/HedgeConfig",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "after": {
+            "default": "p95_ttft",
+            "title": "After",
+            "type": "string"
+          },
+          "max_extra_cost_ratio": {
+            "default": 0.05,
+            "title": "Max Extra Cost Ratio",
+            "type": "number"
+          }
+        },
+        "title": "HedgeConfig",
+        "type": "object",
         "default": {
           "enabled": false,
           "after": "p95_ttft",
@@ -333,7 +260,16 @@
         "type": "integer"
       },
       "shed": {
-        "$ref": "#/$defs/ShedConfig",
+        "additionalProperties": false,
+        "properties": {
+          "when_all_degraded_min_priority": {
+            "default": 1,
+            "title": "When All Degraded Min Priority",
+            "type": "integer"
+          }
+        },
+        "title": "ShedConfig",
+        "type": "object",
         "default": {
           "when_all_degraded_min_priority": 1
         }
@@ -341,7 +277,42 @@
       "updated_by": {
         "anyOf": [
           {
-            "$ref": "#/$defs/UpdatedBy"
+            "additionalProperties": false,
+            "properties": {
+              "actor": {
+                "title": "Actor",
+                "type": "string"
+              },
+              "action_id": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Action Id"
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reason"
+              }
+            },
+            "required": [
+              "actor"
+            ],
+            "title": "UpdatedBy",
+            "type": "object"
           },
           {
             "type": "null"
