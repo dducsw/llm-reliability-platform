@@ -282,7 +282,7 @@ resource "datadog_monitor" "m8_cost_anomaly" {
 resource "datadog_monitor" "m13_cortex_errors" {
   name    = "[Reflex] M13_cortex_error_rate"
   type    = "query alert"
-  query   = "sum(last_30m):sum:reflex.cortex.investigation{env:${var.env},status:error}.as_count() / sum:reflex.cortex.investigation{env:${var.env}}.as_count() > 0.2"
+  query   = "sum(last_30m):sum:reflex.cortex.investigation{env:${var.env},status:failed}.as_count() / sum:reflex.cortex.investigation{env:${var.env}}.as_count() > 0.2"
   message = "Cortex điều tra lỗi > 20% trong 30 phút — Reflex sẽ rơi về rules fallback (R4)."
 
   monitor_thresholds {
