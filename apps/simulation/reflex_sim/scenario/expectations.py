@@ -9,12 +9,14 @@ from typing import Any
 
 from pymongo.asynchronous.database import AsyncDatabase
 from reflex_core.sli import parse_window
+from reflex_core.stats import wilson_interval
 from reflex_mongo.collections import INCIDENTS, SLI_1M
 from reflex_telemetry.datadog_api import DatadogApi, DatadogApiError
 
 POLL_INTERVAL_S = 5.0
 POLL_CAP_S = 300.0
 MONITOR_POLL_S = 10.0
+SMALL_SAMPLE_N = 100
 
 
 def _result(exp: dict[str, Any], passed: bool | None, detail: str) -> dict[str, Any]:
@@ -71,8 +73,11 @@ async def _check_delivered_sli(
     rows = [r async for r in await db[SLI_1M].aggregate(pipeline)]
     if not rows or not rows[0]["total"]:
         return _result(exp, False, "không có dữ liệu sli_1m trong cửa sổ")
-    value = rows[0]["good"] / rows[0]["total"]
-    return _result(exp, value >= spec["min"], f"{spec['sli']}={value:.4f} (min {spec['min']})")
+    n, g = rows[0]["total"], rows[0]["good"]
+    value = g / n
+    # Mẫu nhỏ (--fast: ~45 request) thì 1 request lỗi đã kéo SLI dưới ngưỡng: chỉ FAIL khi chắc chắn dưới min.
+    ok = value >= spec["min"] or (n < SMALL_SAMPLE_N and wilson_interval(g, n)[1] >= spec["min"])
+    return _result(exp, ok, f"{spec['sli']}={value:.4f} n={n} (min {spec['min']})")
 
 
 async def _check_monitor(

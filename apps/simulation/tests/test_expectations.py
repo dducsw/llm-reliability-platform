@@ -62,6 +62,20 @@ async def test_delivered_quality_threshold(good: int, ok: bool) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("good", "total", "ok"), [(44, 45, True), (30, 45, False), (970, 1000, False)]
+)
+async def test_delivered_quality_small_sample_tolerance(good: int, total: int, ok: bool) -> None:
+    db = _Db(sli_1m=_Coll(rows=[{"good": good, "total": total}]))
+    exp = {
+        "delivered_sli": {"route": "order.extract", "sli": "quality", "min": 0.99},
+        "window": ["1m", "2m"],
+    }
+    [r] = await expectations.check([exp], time.time(), db=db)
+    assert r["passed"] is ok
+
+
+@pytest.mark.asyncio
 async def test_delivered_sli_without_data_fails() -> None:
     exp = {"delivered_sli": {"route": "r", "sli": "quality", "min": 0.9}, "window": ["1m", "2m"]}
     [r] = await expectations.check([exp], time.time(), db=_Db(sli_1m=_Coll(rows=[])))

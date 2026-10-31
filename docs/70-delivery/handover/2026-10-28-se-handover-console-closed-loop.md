@@ -280,3 +280,13 @@ Chưa quan sát được: guardrail `no_overlapping_mitigation` thực sự ch�
 hysteresis 0.95/0.99 (không nấc nào rơi vào vùng xám/xấu). Cả hai đã có unit test.
 
 **Vận hành:** sau mỗi lần ai đó chạy `task seed` trên Atlas dùng chung phải chạy lại `task infra:datadog:sync -- --yes`.
+
+## 17. Sau merge `loibui` → `main` (2026-10-31)
+
+PR #10 (merge, xử lý conflict với ldduc) và PR #11 (M13 `status:failed`). Terraform đã apply, `plan` = No changes.
+- Dashboard của SE (ops/slo/cortex) đã bị xoá khỏi Datadog từ trước; 4 dashboard D1–D4 của ldduc đang tồn tại nên được **import** vào state
+  `datadog_dashboard_json.reflex[...]` và cập nhật tại chỗ theo JSON trong repo (ops/slo/cortex = bản SE, mongo = bản ldduc). Bản cũ của ldduc nằm trong git history.
+- Metric Cortex: dùng emission của ldduc (`_investigate`) + đường exception của SE với `status:failed`; M13 đếm `status:failed`.
+- `delivered_sli` của runner: mẫu < 100 request chỉ FAIL khi cận trên Wilson 95% < `min` (lần 05:47 fail vì 44/45 trong `--fast`).
+- Việc SE còn lại: quan sát trên stack thật guardrail `no_overlapping_mitigation` và hysteresis 0.95/0.99; cần `ngrok http 8090` khi muốn Datadog gọi webhook.
+- Cortex đề xuất chuyển traffic sang target đang alert mà `healthy_destination` không chặn (§15) — chờ DE/Cortex.
