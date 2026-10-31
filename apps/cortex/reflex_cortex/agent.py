@@ -156,7 +156,9 @@ class CortexAgent:
         llm: LlmClient | None = None,
         settings: Settings | None = None,
         datadog: DatadogApi | None = None,
+        statsd: Any = None,
     ) -> None:
+        self.statsd = statsd
         self.db = db
         self.model = model
         self.settings = settings or Settings()
@@ -170,6 +172,23 @@ class CortexAgent:
         `lease` (từ `claim`): chỉ ghi diagnosis/propose khi incident vẫn do lần claim này giữ —
         watchdog control-plane có thể đã tiếp quản nếu Cortex chậm quá ngưỡng.
         """
+        started = time.monotonic()
+        try:
+            inv = await self._traced_investigate(incident_key, lease)
+        except Exception:
+            self._emit_failure(time.monotonic() - started)
+            raise
+        return inv
+
+    def _emit_failure(self, seconds: float) -> None:
+        """Metric cho M13 khi điều tra ném exception (đường thành công phát ở cuối `_investigate`)."""
+        if self.statsd is None:
+            return
+        tags = [f"status:{InvestigationStatus.FAILED.value}"]
+        self.statsd.distribution(t.M_CORTEX_DURATION, seconds, tags=tags)
+        self.statsd.increment(t.M_CORTEX_INVESTIGATION, tags=tags)
+
+    async def _traced_investigate(self, incident_key: str, lease: str | None) -> Investigation:
         with llmobs.span("agent", "cortex.investigate", session_id=incident_key) as s:
             inv = await self._investigate(incident_key, lease)
             rec = inv.recommendation

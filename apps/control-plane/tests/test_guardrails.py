@@ -261,9 +261,32 @@ async def test_blast_radius_low_budget_widens_one_tier(fake_db: Any) -> None:
     assert (await _result(shed, fake_db, "blast_radius")).pass_ is True
 
 
-async def test_all_ten_guardrails_reported(fake_db: Any) -> None:
+async def test_all_guardrails_reported(fake_db: Any) -> None:
     names = [g.name for g in await evaluate_all(_shift(), fake_db, CFG)]
-    assert len(names) == len(set(names)) == 10
+    assert len(names) == len(set(names)) == 11
+
+
+@pytest.mark.parametrize(
+    ("other_open", "same_incident", "passed"),
+    [(True, False, False), (False, False, True), (True, True, True)],
+)
+@pytest.mark.parametrize("other_state", ["succeeded", "awaiting_approval"])
+async def test_no_overlapping_mitigation(
+    fake_db: Any, other_open: bool, same_incident: bool, passed: bool, other_state: str
+) -> None:
+    other = "INC-NEW" if same_incident else "INC-OLD"
+    await fake_db[INCIDENTS].insert_one({"key": other, "is_open": other_open})
+    await fake_db[ACTIONS].insert_one(
+        {
+            "_id": "old",
+            "incident_id": other,
+            "type": "shift_weight",
+            "state": other_state,
+            "params": {"route": "r", "from": "A", "to": "B", "pct": 0.9},
+        }
+    )
+    act = _shift(incident_id="INC-NEW")
+    assert (await _result(act, fake_db, "no_overlapping_mitigation")).pass_ is passed
 
 
 def _low_conf(actor: str, action_type: ActionType, params: dict[str, Any]) -> Action:

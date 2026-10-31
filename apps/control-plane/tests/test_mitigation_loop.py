@@ -250,3 +250,24 @@ async def test_generated_actions_have_string_ids(
     await loop._escalate({"key": "INC-1"}, "reason", {"_id": "act-shift"})
     page = fake_db[ACTIONS].docs[-1]
     assert isinstance(page["_id"], str) and page["type"] == "page_human"
+
+
+def test_failback_100_with_baseline_restores_pre_incident_split() -> None:
+    """T8: 100% = về đúng trọng số trước sự cố, secondary không bị bỏ đói."""
+    pol = default_policy(
+        route="r",
+        candidates=[
+            Candidate(target="A", weight=0.0, role=CandidateRole.PRIMARY),
+            Candidate(target="B", weight=1.0, role=CandidateRole.SECONDARY),
+        ],
+    )
+    act = Action.model_validate(
+        {
+            "incident_id": "INC-1",
+            "type": "failback_step",
+            "params": {"route": "r", "to": "A", "pct": 100, "baseline": 0.9},
+            "proposed_by": {"actor": "failback_orchestrator"},
+        }
+    )
+    w = {c.target: c.weight for c in apply_action(pol, act).candidates}
+    assert w == {"A": 0.9, "B": 0.1}

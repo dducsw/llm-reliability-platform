@@ -1,6 +1,4 @@
 # M3 (hai nửa), M7 — docs/40-observability/monitors-and-slos.md
-# Chưa làm: M4 (cần `reflex.request.under_threshold`), M5, M8, M13 (LLMObs), M12 (chỉ có nghĩa khi webhook Datadog
-# đã nối vào control-plane, nếu không sẽ báo liên tục vì không có incident nguồn `datadog`).
 # `env` phải trùng REFLEX_ENV của stack (compose local = "local"), vì metric gắn tag env đó.
 
 locals {
@@ -11,6 +9,8 @@ locals {
   fast_burn_factor       = 14.4
   # burn = tỷ lệ lỗi / error budget ≥ 14.4  ⇔  tỷ lệ lỗi ≥ 14.4 × (1 - objective)
   quality_error_threshold = tonumber(format("%.4f", local.fast_burn_factor * (1 - local.provider_slo_objective)))
+
+  quality_min_samples = 20
 
   quality_error_ratio = "(sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count() - sum:reflex.attempt.quality.pass{env:${var.env}} by {target,route}.as_count()) / sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count()"
 
@@ -60,6 +60,26 @@ resource "datadog_monitor" "m3_short" {
   include_tags        = true
   priority            = 1
   tags                = concat(local.common_tags, ["monitor:m3", "ledger:provider"])
+}
+
+# M3v — đủ mẫu: ≥ 20 lần kiểm tra chất lượng trong cửa sổ dài cho {target, route}. Thiếu vế này, target ít traffic
+# (vd secondary 10% sau failback, 1–4 mẫu/phút) chỉ cần 1 lỗi là vượt ngưỡng 7.2% → báo giả (2026-10-30 05:02).
+resource "datadog_monitor" "m3_volume" {
+  name    = "[Reflex] M3v Provider quality — đủ mẫu"
+  type    = "query alert"
+  query   = "sum(${local.burn_windows.long}):sum:reflex.attempt.quality.total{env:${var.env}} by {target,route}.as_count() >= ${local.quality_min_samples}"
+  message = "Thành phần của M3_quality_fast_burn (đủ mẫu để đánh giá)."
+
+  monitor_thresholds {
+    critical = local.quality_min_samples
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  evaluation_delay    = 30
+  include_tags        = true
+  priority            = 5
+  tags                = concat(local.common_tags, ["monitor:m3-part", "ledger:provider"])
 }
 
 # M7 — retry amplification: số attempt trung bình mỗi request vượt 1.5 (retry storm)
@@ -194,47 +214,93 @@ resource "datadog_monitor" "m11_telemetry_dropped" {
   tags                = concat(local.common_tags, ["monitor:m11", "meta:telemetry"])
 }
 
-
-# M5 — TTFT p99 anomaly: phát hiện sớm suy thoái upstream
-resource "datadog_monitor" "m5_ttft_anomaly" {
-  name    = "[Reflex] M5_ttft_p99_anomaly"
-  type    = "query alert"
-  query   = "avg(last_5m):anomalies(p99:reflex.attempt.ttft{env:${var.env}} by {target}, 'agile', 3, direction='above', alert_window='last_5m', interval=60, count_default_zero='true') >= 0.8"
+# M4 — Delivered latency burn (chat.reply). Doc gốc gọi là "TTFT"; gateway chưa đo TTFT cấp request nên dùng latency toàn request.
+resource "datadog_monitor" "m4_latency_burn" {
+  name    = "[Reflex] M4_latency_burn"
+  type    = "slo alert"
+  query   = "burn_rate(\"${datadog_service_level_objective.delivered_latency_chat_reply.id}\").over(\"7d\").long_window(\"1h\").short_window(\"5m\") > ${local.fast_burn_factor}"
   message = local.alert_message
 
   monitor_thresholds {
-    critical = 0.8
+    critical = local.fast_burn_factor
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  renotify_interval   = 60
+  priority            = 2
+  tags                = concat(local.common_tags, ["monitor:m4", "ledger:delivered", "sli:latency"])
+}
+
+# M5 — p99 latency của primary attempt lệch khỏi band lịch sử, theo target (phát hiện sớm, cảnh báo mức thấp)
+resource "datadog_monitor" "m5_latency_anomaly" {
+  name    = "[Reflex] M5_latency_p99_anomaly"
+  type    = "query alert"
+  query   = "avg(last_4h):anomalies(p99:reflex.attempt.latency{env:${var.env},attempt_kind:primary} by {target}, 'agile', 3, direction='above', interval=60, alert_window='last_15m', count_default_zero='true', seasonality='hourly') >= 1"
+  message = "Latency p99 của {{target.name}} bất thường so với band lịch sử. Cảnh báo sớm, chưa chắc vi phạm SLO."
+
+  monitor_thresholds {
+    critical          = 1
+    critical_recovery = 0
+  }
+
+  monitor_threshold_windows {
+    trigger_window  = "last_15m"
+    recovery_window = "last_15m"
   }
 
   notify_no_data      = false
   require_full_window = false
   priority            = 3
-  tags                = concat(local.common_tags, ["monitor:m5", "ledger:provider"])
+  tags                = concat(local.common_tags, ["monitor:m5", "sli:latency"])
 }
 
-# M8 — Cost burn spike: chi phí retry/hedge tăng vọt bất thường
-resource "datadog_monitor" "m8_cost_burn" {
-  name    = "[Reflex] M8_cost_burn_spike"
+# M8 — chi phí tăng bất thường (tiền): chỉ thông báo, không kích hoạt mitigation
+resource "datadog_monitor" "m8_cost_anomaly" {
+  name    = "[Reflex] M8_cost_anomaly"
   type    = "query alert"
-  query   = "sum(last_5m):sum:reflex.cost.usd{env:${var.env}}.as_count() > 5.0"
-  message = local.alert_message
+  query   = "avg(last_4h):anomalies(sum:reflex.cost.usd{env:${var.env}}.as_rate(), 'basic', 3, direction='above', interval=60, alert_window='last_15m', count_default_zero='true') >= 1"
+  message = "Chi phí LLM ($/s) vượt band thường lệ. Kiểm tra retry/hedge storm hoặc route đổi sang model đắt."
 
   monitor_thresholds {
-    critical = 5.0
+    critical          = 1
+    critical_recovery = 0
+  }
+
+  monitor_threshold_windows {
+    trigger_window  = "last_15m"
+    recovery_window = "last_15m"
   }
 
   notify_no_data      = false
   require_full_window = false
   priority            = 3
-  tags                = concat(local.common_tags, ["monitor:m8"])
+  tags                = concat(local.common_tags, ["monitor:m8", "meta:cost"])
 }
 
-# M13 — Cortex health: thời gian điều tra vượt ngưỡng p95
-resource "datadog_monitor" "m13_cortex_duration" {
-  name    = "[Reflex] M13_cortex_investigation_slow"
+# M13 — Cortex health: tỉ lệ điều tra lỗi > 20% (metric phát từ CortexAgent.investigate)
+resource "datadog_monitor" "m13_cortex_errors" {
+  name    = "[Reflex] M13_cortex_error_rate"
   type    = "query alert"
-  query   = "avg(last_5m):avg:reflex.cortex.investigation.duration{env:${var.env}} > 180"
-  message = local.alert_message
+  query   = "sum(last_30m):sum:reflex.cortex.investigation{env:${var.env},status:error}.as_count() / sum:reflex.cortex.investigation{env:${var.env}}.as_count() > 0.2"
+  message = "Cortex điều tra lỗi > 20% trong 30 phút — Reflex sẽ rơi về rules fallback (R4)."
+
+  monitor_thresholds {
+    critical = 0.2
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 3
+  tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
+}
+
+# M13b — Cortex chậm: p95 thời lượng điều tra > 180s
+resource "datadog_monitor" "m13_cortex_slow" {
+  name    = "[Reflex] M13_cortex_slow"
+  type    = "query alert"
+  query   = "percentile(last_30m):p95:reflex.cortex.investigation.duration{env:${var.env}} > 180"
+  message = "Cortex p95 thời lượng điều tra > 180s."
 
   monitor_thresholds {
     critical = 180
@@ -244,4 +310,29 @@ resource "datadog_monitor" "m13_cortex_duration" {
   require_full_window = false
   priority            = 3
   tags                = concat(local.common_tags, ["monitor:m13", "meta:cortex"])
+}
+
+# M12 — Detector disagreement: trong 10 phút một detector có signal còn detector kia im lặng (một bên đang mù hoặc báo giả).
+# Đếm signal (gồm cả signal gộp vào incident sẵn có) chứ không đếm incident mở: sau dedup chỉ nguồn đến trước mới mở incident.
+locals {
+  incident_signal = { for src in ["sentinel", "datadog"] :
+    src => "default_zero(sum:reflex.incident.signal{env:${var.env},source:${src}}.as_count())"
+  }
+}
+
+resource "datadog_monitor" "m12_signal_present" {
+  for_each = local.incident_signal
+  name     = "[Reflex] M12 thành phần — có signal từ ${each.key}"
+  type     = "query alert"
+  query    = "sum(last_10m):${each.value} > 0"
+  message  = "Thành phần của M12_detector_disagreement."
+
+  monitor_thresholds {
+    critical = 0
+  }
+
+  notify_no_data      = false
+  require_full_window = false
+  priority            = 5
+  tags                = concat(local.common_tags, ["monitor:m12-part", "source:${each.key}"])
 }

@@ -30,6 +30,7 @@ SVC_PROBER: Final = "reflex-prober"
 # Metrics
 M_REQUEST: Final = "reflex.request"
 M_REQUEST_LATENCY: Final = "reflex.request.latency"
+M_REQUEST_UNDER_THRESHOLD: Final = "reflex.request.under_threshold"
 M_ATTEMPT: Final = "reflex.attempt"
 M_ATTEMPT_LATENCY: Final = "reflex.attempt.latency"
 M_ATTEMPT_TTFT: Final = "reflex.attempt.ttft"
@@ -43,7 +44,10 @@ M_COST_USD: Final = "reflex.cost.usd"
 M_PROBE_RESULT: Final = "reflex.probe.result"
 M_TELEMETRY_DROPPED: Final = "reflex.telemetry.dropped"
 M_INCIDENT_OPEN: Final = "reflex.incident.open"
+# Mỗi signal (mở mới hoặc gộp) theo nguồn: M12 so sánh nguồn nào thấy sự cố, không phụ thuộc ai mở trước
+M_INCIDENT_SIGNAL: Final = "reflex.incident.signal"
 M_CORTEX_DURATION: Final = "reflex.cortex.investigation.duration"
+M_CORTEX_INVESTIGATION: Final = "reflex.cortex.investigation"
 M_CORTEX_TOOL_CALLS: Final = "reflex.cortex.tool.calls"
 M_CORTEX_EVIDENCE_INVALID: Final = "reflex.cortex.evidence_invalid"
 

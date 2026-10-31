@@ -16,6 +16,8 @@ from reflex_core.actions import (
 )
 from reflex_mongo.collections import ACTIONS
 
+from reflex_cp.actuator.apply import Actuator
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,7 @@ class FailbackOrchestrator:
         route: str,
         to_target: str,
         pct: int,
+        baseline: float | None = None,
     ) -> Action:
         """Sinh ra action con failback_step cho từng nấc tỷ lệ."""
         now = datetime.now(tz=UTC)
@@ -42,6 +45,7 @@ class FailbackOrchestrator:
                 route=route,
                 to=to_target,
                 pct=pct,
+                baseline=baseline,
             ).model_dump(mode="json"),
             state=ActionState.PROPOSED,
             proposed_by=ProposedBy(actor="failback_orchestrator"),
@@ -56,12 +60,23 @@ class FailbackOrchestrator:
             next_pct = self.steps[idx + 1]
             route = parent_action.params.get("route", "")
             target = parent_action.params.get("from", "")
-            next_act = self.create_step_action(parent_action, route, target, next_pct)
+            baseline = await self.baseline_weight(parent_action, target)
+            next_act = self.create_step_action(parent_action, route, target, next_pct, baseline)
             if self.db is not None:
                 doc = next_act.model_dump(by_alias=True, mode="json")
                 doc["created_at"], doc["updated_at"] = next_act.created_at, next_act.updated_at
                 await self.db[ACTIONS].insert_one(doc)
             return next_act
+        return None
+
+    async def baseline_weight(self, parent_action: Action, target: str) -> float | None:
+        """Trọng số của target gốc trong policy ngay trước mitigation (snapshot `version_before`)."""
+        if self.db is None:
+            return None
+        hist = await Actuator(self.db).snapshot_before(parent_action)
+        for c in ((hist or {}).get("doc") or {}).get("candidates", []):
+            if c.get("target") == target:
+                return float(c.get("weight", 0.0))
         return None
 
     async def run(self) -> None:

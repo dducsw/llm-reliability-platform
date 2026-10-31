@@ -21,6 +21,7 @@ from reflex_core.actions import (
     new_action_id,
 )
 from reflex_core.incident import IncidentStatus
+from reflex_core.stats import wilson_interval
 from reflex_mongo.collections import ACTIONS, INCIDENTS, PROBES_TS, SLI_1M
 
 from reflex_cp.actuator.apply import Actuator
@@ -45,6 +46,19 @@ _PENDING = (
 )
 BASELINE_LOOKBACK = timedelta(minutes=15)
 HEALTHY_QUALITY = 0.99
+# Ngưỡng xấu thấp hơn ngưỡng khỏe (hysteresis): giữa hai ngưỡng thì chờ thêm mẫu, không rollback cũng không tiến nấc.
+# Lần chạy 2026-10-30: 1 lỗi trên vài mẫu ở nấc 10% đã đủ rollback khi chỉ so với 0.99.
+DEGRADED_QUALITY = 0.95
+
+
+def confidently_degraded(good: int, n: int) -> bool:
+    """Cận trên Wilson 95% dưới ngưỡng xấu → chắc chắn xấu, không phải nhiễu mẫu nhỏ."""
+    return wilson_interval(good, n)[1] < DEGRADED_QUALITY
+
+
+def plausibly_healthy(good: int, n: int) -> bool:
+    """Cận trên Wilson 95% chạm ngưỡng khỏe → dữ liệu còn phù hợp với target khỏe."""
+    return wilson_interval(good, n)[1] >= HEALTHY_QUALITY
 
 
 def _parse(ts: Any) -> datetime | None:
@@ -260,9 +274,11 @@ class MitigationLoop:
             good, n = await self._quality("target", origin, last)
             if n < min(self.min_n, 10):
                 return None
-            if good / n < HEALTHY_QUALITY:
+            if confidently_degraded(good, n):
                 await self._rollback_step(inc, max(done, key=lambda d: int(d["params"]["pct"])))
                 return "failback_rolled_back"
+            if not plausibly_healthy(good, n):
+                return None  # vùng xám: chờ thêm mẫu
         nxt = await self.failback.advance(Action.model_validate(parent), current_pct)
         if nxt is None:
             return None
