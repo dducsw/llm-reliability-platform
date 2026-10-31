@@ -2,7 +2,6 @@
 
 import os
 
-import os
 import pytest
 from reflex_mongo.client import get_db, make_client
 from reflex_mongo.collections import ACTIONS, BENCH_TS, INCIDENTS, POLICIES, SLI_1M
