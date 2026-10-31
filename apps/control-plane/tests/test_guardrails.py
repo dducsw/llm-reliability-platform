@@ -336,7 +336,6 @@ async def test_rules_exception_is_narrow(fake_db: Any) -> None:
     assert not res.pass_
 
 
-
 @pytest.mark.asyncio
 async def test_healthy_destination_blocks_same_source(fake_db: Any) -> None:
     action = _shift(to="A")  # from="A", to="A"
@@ -348,12 +347,14 @@ async def test_healthy_destination_blocks_same_source(fake_db: Any) -> None:
 @pytest.mark.asyncio
 async def test_healthy_destination_blocks_incident_affected_target(fake_db: Any) -> None:
     inc_key = "INC-TEST-001"
-    await fake_db[INCIDENTS].insert_one({
-        "key": inc_key,
-        "is_open": True,
-        "target": "vendorB:large",
-        "signals": [{"source": "sentinel", "target": "vendorB:large"}],
-    })
+    await fake_db[INCIDENTS].insert_one(
+        {
+            "key": inc_key,
+            "is_open": True,
+            "target": "vendorB:large",
+            "signals": [{"source": "sentinel", "target": "vendorB:large"}],
+        }
+    )
     action = Action(
         _id="act-test",
         type=ActionType.SHIFT_WEIGHT,
