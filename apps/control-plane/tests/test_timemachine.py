@@ -63,3 +63,57 @@ async def test_jobs_run_replay() -> None:
     assert "reflex_recorded" in result["variants"]
     assert result["calibration_error"] >= 0.0
     assert result["variants"]["reflex_recorded"]["delivered_quality"] >= 0.95
+
+
+def test_world_empirical_slices_nearest_and_pooled() -> None:
+    import random
+    from datetime import UTC, datetime, timedelta
+
+    from reflex_cp.timemachine.world import TargetEmpiricalSlice, _bucket
+
+    t0 = datetime(2026, 10, 30, 4, 40, tzinfo=UTC)
+    bad = TargetEmpiricalSlice({"quality_fail": 1.0}, [900.0], [200.0])
+    good = TargetEmpiricalSlice({"ok": 1.0}, [100.0], [20.0])
+    world = World(
+        "INC-EMP",
+        demand=[],
+        target_slices={("A", _bucket(t0)): bad},
+        pooled={"A": good},
+        primary_target="A",
+        secondary_target="B",
+        source="mongo",
+    )
+    rng = random.Random(1)
+    assert world.sample_target("A", t0, rng)[0] == "quality_fail"  # bucket đúng
+    assert world.sample_target("A", t0 + timedelta(seconds=30), rng)[0] == "quality_fail"  # ±60s
+    assert world.sample_target("A", t0 + timedelta(minutes=5), rng)[0] == "ok"  # gộp cả cửa sổ
+    assert world.stats.hits_exact == 1 and world.stats.hits_nearest == 1
+    assert world.stats.hits_pooled == 1 and world.stats.coverage() == round(1 / 3, 4)
+
+
+def test_reflex_recorded_follows_mitigation_shift() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from reflex_cp.timemachine.world import DemandRequest, TargetEmpiricalSlice
+
+    t0 = datetime(2026, 10, 30, 4, 40, tzinfo=UTC)
+    demand = [
+        DemandRequest(request_id=f"r{i}", ts=t0 + timedelta(seconds=i), route="r")
+        for i in range(100)
+    ]
+    world = World(
+        "INC-MIT",
+        demand=demand,
+        pooled={
+            "A": TargetEmpiricalSlice({"quality_fail": 1.0}, [1.0], [1.0]),
+            "B": TargetEmpiricalSlice({"ok": 1.0}, [1.0], [1.0]),
+        },
+        primary_target="A",
+        secondary_target="B",
+        mitigated_at=t0 + timedelta(seconds=50),
+    )
+    res = simulate(world, "reflex_recorded", seed=1)
+    assert res["delivered_quality"] == 1.0
+    # 50 request trước mitigation tốn 2 attempt (A hỏng → rescue B), 50 sau đi thẳng B.
+    assert res["attempts_per_request"] == 1.5
+    assert simulate(world, "static_failover", seed=1)["delivered_quality"] == 0.0

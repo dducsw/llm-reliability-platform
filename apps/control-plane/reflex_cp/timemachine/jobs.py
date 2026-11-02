@@ -91,6 +91,7 @@ async def run_replay(
         "_id": replay_id,
         "incident_id": incident_key,
         "status": "completed",
+        "world": {**world.describe(), "coverage": world.stats.coverage()},
         "calibration_error": calibration_error,
         "seeds": k,
         "variants": variant_results,

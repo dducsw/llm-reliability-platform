@@ -32,7 +32,7 @@ flowchart LR
 ## 3. Hiệu chuẩn — vì sao tin được con số
 
 - Replay `reflex_recorded` rồi so với delivered SLI **thực tế** trong cùng cửa sổ. Sai số được hiển thị ngay cạnh mọi kết quả ("calibration error: 0.3 pp").
-- Monte Carlo với K seed (mặc định 30), báo cáo mean và khoảng 90%.
+- Monte Carlo với K seed (API mặc định 20, bảng §5 dùng 30), báo cáo mean và khoảng 90%.
 
 ## 4. Giới hạn (nói thẳng khi pitch)
 
@@ -42,16 +42,23 @@ flowchart LR
 | Không mô hình hóa đầy đủ phản ứng của vendor theo tải | Ước lượng thấp tác hại của retry storm | Thêm **capacity model** đơn giản cho target (`capacity_hint`, overflow → 429/latency), được fit từ S5 |
 | Demand là cố định | Không mô phỏng người dùng bấm lại khi lỗi | Tùy chọn `user_retry_prob` |
 
-## 5. Output (ví dụ cho S1)
+## 5. Output — số thật trên Atlas (K = 30, seed 42)
 
-| Policy | Delivered quality | Budget consumed | Extra cost | Attempts/request | Requests hỏng |
+Incident `INC-202610300552-4a9b57` (silent-brownout, 05:43–05:57 UTC 30/10): 2 234 request thật của `order.extract`,
+onset 05:43:01 (attempt hỏng đầu tiên của `vendorA:large`), mitigation 05:54:34, delivered thực tế **99.37%**.
+
+| Policy | Delivered quality (± 90%) | Request hỏng | Budget (1%) | Extra cost | Attempts/request |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| naive | 65.1% ± 0.6 | 100% (breach) | $0.00 | 1.00 | 1 247 |
-| static_failover | 65.3% ± 0.6 | 100% (breach) | $0.04 | 1.01 | 1 239 |
-| **reflex_recorded** | **99.4% ± 0.2** | **4.1%** | $3.12 | 1.21 | **21** |
-| reflex (no quality retry) | 96.8% ± 0.4 | 52% | $2.70 | 1.03 | 117 |
+| naive | 92.44% ± 0.12 | 169 | 100% (breach) | $0.00 | 1.000 |
+| naive_retry | 92.44% ± 0.12 | 169 | 100% (breach) | $0.78 | 1.151 |
+| static_failover | 93.08% ± 0.14 | 155 | 100% (breach) | $0.04 | 1.008 |
+| **reflex_recorded** | **99.95% ± 0.01** | **1.2** | **5.5%** | $0.39 | 1.076 |
+| reflex_variant (tắt quality retry) | 93.08% ± 0.14 | 155 | 100% (breach) | $0.04 | 1.008 |
 
-*(Đây là số minh họa định dạng. Số thật sẽ được tính khi chạy.)* Dòng cuối là **ablation**, chứng minh tính năng nào tạo ra giá trị.
+- **Calibration error 0.58 pp** (99.95% mô phỏng vs 99.37% thực tế). Coverage bucket thật của `reflex_recorded`: 91%.
+- Ablation: tắt quality retry thì Reflex rơi về đúng mức static failover → giá trị đến từ quality SLI + rescue, không phải từ failover.
+- Ba lần chạy khác (`bd0f78`, `30eef5`, `1cb7d5`) cho cùng kết luận: static failover 84.7–92.6%, Reflex 100%, 155–198 request được cứu mỗi sự cố.
+- Tái lập: `POST /api/replays {"incident_id": "<key>", "k": 30}`; kết quả kèm `world` (cửa sổ, target, coverage) trong `replays`.
 
 ## 6. Hiện thực
 

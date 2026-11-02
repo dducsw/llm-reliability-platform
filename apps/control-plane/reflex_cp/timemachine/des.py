@@ -49,15 +49,16 @@ def simulate(
     """Chạy mô phỏng Discrete-Event Simulation trên tập Demand của World với chính sách variant.
 
     5 Variants (DE-8.2):
-    - naive: Gọi thẳng vendorA 1 lần, không retry, không failover.
-    - naive_retry: Retry 3 lần mù quáng trên vendorA, không budget (thundering herd / retry storm).
+    - naive: Gọi thẳng primary 1 lần, không retry, không failover.
+    - naive_retry: Retry 3 lần mù quáng trên primary, không budget (thundering herd / retry storm).
     - static_failover: Gateway thường, chỉ retry/failover khi gặp 5xx/timeout/429; bỏ qua lỗi quality.
-    - reflex_recorded: Cơ chế đầy đủ của Reflex (bắt trượt schema/quality, cứu bằng vendorB). Dùng để hiệu chuẩn.
+    - reflex_recorded: Cơ chế đầy đủ của Reflex (bắt trượt schema/quality, cứu bằng secondary;
+      sau `mitigated_at` đi secondary trước như policy đã áp). Dùng để hiệu chuẩn.
     - reflex_variant: Reflex nhưng tắt cơ chế Quality Retry để đo ablation.
     """
     rng = random.Random(seed)
-    primary_target = "vendorA:large"
-    secondary_target = "vendorB:fallback"
+    primary_target = world.primary_target
+    secondary_target = world.secondary_target
 
     total_requests = len(world.demand)
     delivered_good = 0
@@ -117,14 +118,18 @@ def simulate(
 
         # 4. Reflex Recorded: Bắt cả lỗi mạng lẫn quality_fail qua JSON schema/not_empty validators
         elif variant in ("reflex", "reflex_recorded"):
+            # Sau mitigation (shift_weight đã ghi nhận) traffic đi secondary trước, rescue ngược lại.
+            first, rescue = primary_target, secondary_target
+            if world.mitigated_at is not None and req.ts >= world.mitigated_at:
+                first, rescue = secondary_target, primary_target
             total_attempts += 1
             outcome, _lat, _ttft = _sample_with_capacity(
-                world, primary_target, req.ts, rng, load_tracker, capacity_limit
+                world, first, req.ts, rng, load_tracker, capacity_limit
             )
             if outcome != "ok":
                 total_attempts += 1
                 outcome2, _lat2, _ttft2 = _sample_with_capacity(
-                    world, secondary_target, req.ts, rng, load_tracker, capacity_limit
+                    world, rescue, req.ts, rng, load_tracker, capacity_limit
                 )
                 if outcome2 == "ok":
                     delivered_good += 1
