@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 from pymongo.asynchronous.database import AsyncDatabase
-from reflex_core.sli import burn_rate, multiwindow_fires
+from reflex_core.sli import budget_remaining, burn_rate, multiwindow_fires
 from reflex_mongo.collections import SLI_1M, SLOS
 from reflex_mongo.pipelines import a04_burn_rate
 
@@ -98,6 +98,7 @@ class BurnEvaluator:
 
                     b_short = burn_rate(g_s, t_s, objective) if t_s > 0 else 0.0
                     b_long = burn_rate(g_l, t_l, objective) if t_l > 0 else 0.0
+                    b_rem = budget_remaining(g_l, t_l, objective) if t_l > 0 else 1.0
                     fires = (
                         t_s >= self.min_short
                         and t_l >= self.min_long
@@ -113,6 +114,7 @@ class BurnEvaluator:
                             "objective": objective,
                             "burn_short": b_short,
                             "burn_long": b_long,
+                            "budget_remaining": max(0.0, b_rem),
                             "factor": self.factor,
                             "fires": fires,
                             "target": slo.get("target"),

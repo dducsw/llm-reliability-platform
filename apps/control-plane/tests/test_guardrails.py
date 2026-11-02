@@ -334,3 +334,34 @@ async def test_rules_exception_is_narrow(fake_db: Any) -> None:
     )
     res = next(g for g in await evaluate_all(shift, fake_db, off) if g.name == "confidence")
     assert not res.pass_
+
+
+@pytest.mark.asyncio
+async def test_healthy_destination_blocks_same_source(fake_db: Any) -> None:
+    action = _shift(to="A")  # from="A", to="A"
+    res = await _result(action, fake_db, "healthy_destination")
+    assert not res.pass_
+    assert "same as source" in str(res.detail)
+
+
+@pytest.mark.asyncio
+async def test_healthy_destination_blocks_incident_affected_target(fake_db: Any) -> None:
+    inc_key = "INC-TEST-001"
+    await fake_db[INCIDENTS].insert_one(
+        {
+            "key": inc_key,
+            "is_open": True,
+            "target": "vendorB:large",
+            "signals": [{"source": "sentinel", "target": "vendorB:large"}],
+        }
+    )
+    action = Action(
+        _id="act-test",
+        type=ActionType.SHIFT_WEIGHT,
+        params={"route": "r", "from": "vendorA:large", "to": "vendorB:large", "pct": 0.5},
+        incident_id=inc_key,
+        proposed_by=ProposedBy(actor="cortex", confidence=0.9),
+    )
+    res = await _result(action, fake_db, "healthy_destination")
+    assert not res.pass_
+    assert "affected target" in str(res.detail)
