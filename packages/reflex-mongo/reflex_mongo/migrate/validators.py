@@ -1,8 +1,11 @@
-"""Áp $jsonSchema validator cho collection thường (validationLevel: "moderate").
+"""Áp $jsonSchema validator cho collection thường (validationLevel "moderate", action "warn").
 
 Schema nằm ở `infra/mongo/validators/<collection>.json`, sinh từ Pydantic trong
 `reflex-core` bằng `task schemas` (tools/export_schemas.py) - không sửa tay.
 Xem docs/30-data/mongodb-data-model.md §6.
+
+`validationAction: "warn"`: dữ liệu seed lịch sử (incident/action cũ) còn lệch model
+hiện tại, nên vi phạm chỉ ghi log chứ không chặn ghi; Pydantic ở tầng app là cổng chính.
 
 Idempotent: `collMod` với cùng validator là no-op.
 """
@@ -38,6 +41,7 @@ async def apply_validators(db: AsyncDatabase, directory: Path) -> dict[str, str]
                     "collMod": collection,
                     "validator": schema,
                     "validationLevel": "moderate",
+                    "validationAction": "warn",
                 }
             )
             applied[collection] = "ok"

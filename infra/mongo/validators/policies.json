@@ -1,28 +1,29 @@
 {
   "$jsonSchema": {
-    "additionalProperties": false,
     "properties": {
       "_id": {
         "title": "Id",
-        "type": "string"
+        "bsonType": "string"
       },
       "version": {
         "title": "Version",
-        "type": "integer"
+        "bsonType": [
+          "int",
+          "long"
+        ]
       },
       "candidates": {
         "items": {
-          "additionalProperties": false,
           "properties": {
             "target": {
               "title": "Target",
-              "type": "string"
+              "bsonType": "string"
             },
             "weight": {
               "maximum": 1.0,
               "minimum": 0.0,
               "title": "Weight",
-              "type": "number"
+              "bsonType": "number"
             },
             "role": {
               "enum": [
@@ -31,7 +32,7 @@
                 "brownout"
               ],
               "title": "CandidateRole",
-              "type": "string"
+              "bsonType": "string"
             }
           },
           "required": [
@@ -40,271 +41,212 @@
             "role"
           ],
           "title": "Candidate",
-          "type": "object"
+          "bsonType": "object"
         },
         "title": "Candidates",
-        "type": "array"
+        "bsonType": "array"
       },
       "scoring": {
-        "additionalProperties": false,
         "properties": {
           "w_health": {
-            "default": 0.35,
             "title": "W Health",
-            "type": "number"
+            "bsonType": "number"
           },
           "w_budget": {
-            "default": 0.25,
             "title": "W Budget",
-            "type": "number"
+            "bsonType": "number"
           },
           "w_cost": {
-            "default": 0.15,
             "title": "W Cost",
-            "type": "number"
+            "bsonType": "number"
           },
           "w_quality": {
-            "default": 0.2,
             "title": "W Quality",
-            "type": "number"
+            "bsonType": "number"
           },
           "w_capacity": {
-            "default": 0.05,
             "title": "W Capacity",
-            "type": "number"
+            "bsonType": "number"
           },
           "temperature": {
-            "default": 0.15,
             "title": "Temperature",
-            "type": "number"
+            "bsonType": "number"
           }
         },
         "title": "Scoring",
-        "type": "object",
-        "default": {
-          "w_health": 0.35,
-          "w_budget": 0.25,
-          "w_cost": 0.15,
-          "w_quality": 0.2,
-          "w_capacity": 0.05,
-          "temperature": 0.15
-        }
+        "bsonType": "object"
       },
       "breaker": {
-        "additionalProperties": false,
         "properties": {
           "window_s": {
-            "default": 20,
             "title": "Window S",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           },
           "min_requests": {
-            "default": 20,
             "title": "Min Requests",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           },
           "open_error_ratio": {
-            "default": 0.5,
             "title": "Open Error Ratio",
-            "type": "number"
+            "bsonType": "number"
           },
           "open_base_s": {
-            "default": 10,
             "title": "Open Base S",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           },
           "open_max_s": {
-            "default": 120,
             "title": "Open Max S",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           },
           "half_open_probes": {
-            "default": 3,
             "title": "Half Open Probes",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           }
         },
         "title": "BreakerConfig",
-        "type": "object",
-        "default": {
-          "window_s": 20,
-          "min_requests": 20,
-          "open_error_ratio": 0.5,
-          "open_base_s": 10,
-          "open_max_s": 120,
-          "half_open_probes": 3
-        }
+        "bsonType": "object"
       },
       "retry": {
-        "additionalProperties": false,
         "properties": {
           "max_attempts": {
-            "default": 3,
             "title": "Max Attempts",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           },
           "budget_ratio": {
-            "default": 0.1,
             "title": "Budget Ratio",
-            "type": "number"
+            "bsonType": "number"
           },
           "on": {
-            "default": [
-              "5xx",
-              "timeout",
-              "rate_limited"
-            ],
             "items": {
-              "type": "string"
+              "bsonType": "string"
             },
             "title": "On",
-            "type": "array"
+            "bsonType": "array"
           },
           "respect_retry_after": {
-            "default": true,
             "title": "Respect Retry After",
-            "type": "boolean"
+            "bsonType": "bool"
           }
         },
         "title": "RetryConfig",
-        "type": "object",
-        "default": {
-          "max_attempts": 3,
-          "budget_ratio": 0.1,
-          "on": [
-            "5xx",
-            "timeout",
-            "rate_limited"
-          ],
-          "respect_retry_after": true
-        }
+        "bsonType": "object"
       },
       "rescue": {
-        "additionalProperties": false,
         "properties": {
           "enabled": {
-            "default": true,
             "title": "Enabled",
-            "type": "boolean"
+            "bsonType": "bool"
           },
           "on": {
-            "default": [
-              "quality"
-            ],
             "items": {
-              "type": "string"
+              "bsonType": "string"
             },
             "title": "On",
-            "type": "array"
+            "bsonType": "array"
           },
           "cross_target_only": {
-            "default": true,
             "title": "Cross Target Only",
-            "type": "boolean"
+            "bsonType": "bool"
           },
           "max_extra_cost_ratio": {
-            "default": 0.6,
             "title": "Max Extra Cost Ratio",
-            "type": "number"
+            "bsonType": "number"
           }
         },
         "title": "RescueConfig",
-        "type": "object",
-        "default": {
-          "enabled": true,
-          "on": [
-            "quality"
-          ],
-          "cross_target_only": true,
-          "max_extra_cost_ratio": 0.6
-        }
+        "bsonType": "object"
       },
       "hedge": {
-        "additionalProperties": false,
         "properties": {
           "enabled": {
-            "default": false,
             "title": "Enabled",
-            "type": "boolean"
+            "bsonType": "bool"
           },
           "after": {
-            "default": "p95_ttft",
             "title": "After",
-            "type": "string"
+            "bsonType": "string"
           },
           "max_extra_cost_ratio": {
-            "default": 0.05,
             "title": "Max Extra Cost Ratio",
-            "type": "number"
+            "bsonType": "number"
           }
         },
         "title": "HedgeConfig",
-        "type": "object",
-        "default": {
-          "enabled": false,
-          "after": "p95_ttft",
-          "max_extra_cost_ratio": 0.05
-        }
+        "bsonType": "object"
       },
       "validators": {
-        "default": [],
         "items": {
-          "type": "string"
+          "bsonType": "string"
         },
         "title": "Validators",
-        "type": "array"
+        "bsonType": "array"
       },
       "deadline_ms": {
-        "default": 8000,
         "title": "Deadline Ms",
-        "type": "integer"
+        "bsonType": [
+          "int",
+          "long"
+        ]
       },
       "shed": {
-        "additionalProperties": false,
         "properties": {
           "when_all_degraded_min_priority": {
-            "default": 1,
             "title": "When All Degraded Min Priority",
-            "type": "integer"
+            "bsonType": [
+              "int",
+              "long"
+            ]
           }
         },
         "title": "ShedConfig",
-        "type": "object",
-        "default": {
-          "when_all_degraded_min_priority": 1
-        }
+        "bsonType": "object"
       },
       "updated_by": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "actor": {
                 "title": "Actor",
-                "type": "string"
+                "bsonType": "string"
               },
               "action_id": {
                 "anyOf": [
                   {
-                    "type": "string"
+                    "bsonType": "string"
                   },
                   {
-                    "type": "null"
+                    "bsonType": "null"
                   }
                 ],
-                "default": null,
                 "title": "Action Id"
               },
               "reason": {
                 "anyOf": [
                   {
-                    "type": "string"
+                    "bsonType": "string"
                   },
                   {
-                    "type": "null"
+                    "bsonType": "null"
                   }
                 ],
-                "default": null,
                 "title": "Reason"
               }
             },
@@ -312,25 +254,22 @@
               "actor"
             ],
             "title": "UpdatedBy",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "updated_at": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Updated At"
       }
     },
@@ -340,6 +279,6 @@
       "candidates"
     ],
     "title": "Policy",
-    "type": "object"
+    "bsonType": "object"
   }
 }

@@ -380,7 +380,7 @@ db.actions.createIndex({ type: 1, "verification.verdict": 1 })
 
 ## 6. Validation & versioning
 
-- Collection thường có `$jsonSchema` validator (`validationLevel: "moderate"`). Schema được sinh từ Pydantic model trong `reflex-core`.
+- Collection thường có `$jsonSchema` validator (`validationLevel: "moderate"`, `validationAction: "warn"` vì seed lịch sử còn lệch model). Schema được sinh từ Pydantic model trong `reflex-core` rồi chuẩn hoá sang dialect Mongo (`bsonType`, bỏ `default`/`format`, inline `$ref`) bởi `tools/export_schemas.py`.
 - Mọi event Time Series có trường `v`. Reader xử lý được mọi version ≤ hiện tại.
 - Migration idempotent: `reflex-mongo migrate` tạo collection, index, validator, search index; chạy lại nhiều lần không lỗi.
 

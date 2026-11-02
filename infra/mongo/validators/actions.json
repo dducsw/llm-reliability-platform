@@ -1,41 +1,37 @@
 {
   "$jsonSchema": {
-    "additionalProperties": false,
     "properties": {
       "_id": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Id"
       },
       "incident_id": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Incident Id"
       },
       "parent_action_id": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Parent Action Id"
       },
       "type": {
@@ -51,12 +47,11 @@
           "page_human"
         ],
         "title": "ActionType",
-        "type": "string"
+        "bsonType": "string"
       },
       "params": {
-        "additionalProperties": true,
         "title": "Params",
-        "type": "object"
+        "bsonType": "object"
       },
       "state": {
         "enum": [
@@ -71,38 +66,34 @@
           "rolled_back"
         ],
         "title": "ActionState",
-        "type": "string",
-        "default": "proposed"
+        "bsonType": "string"
       },
       "proposed_by": {
-        "additionalProperties": false,
         "properties": {
           "actor": {
             "title": "Actor",
-            "type": "string"
+            "bsonType": "string"
           },
           "investigation_id": {
             "anyOf": [
               {
-                "type": "string"
+                "bsonType": "string"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Investigation Id"
           },
           "confidence": {
             "anyOf": [
               {
-                "type": "number"
+                "bsonType": "number"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Confidence"
           }
         },
@@ -110,49 +101,44 @@
           "actor"
         ],
         "title": "ProposedBy",
-        "type": "object"
+        "bsonType": "object"
       },
       "decision": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "mode": {
                 "title": "Mode",
-                "type": "string"
+                "bsonType": "string"
               },
               "by": {
                 "title": "By",
-                "type": "string"
+                "bsonType": "string"
               },
               "at": {
-                "format": "date-time",
                 "title": "At",
-                "type": "string"
+                "bsonType": "date"
               },
               "guardrails": {
-                "default": [],
                 "items": {
-                  "additionalProperties": false,
                   "properties": {
                     "name": {
                       "title": "Name",
-                      "type": "string"
+                      "bsonType": "string"
                     },
                     "pass": {
                       "title": "Pass",
-                      "type": "boolean"
+                      "bsonType": "bool"
                     },
                     "detail": {
                       "anyOf": [
                         {
-                          "type": "string"
+                          "bsonType": "string"
                         },
                         {
-                          "type": "null"
+                          "bsonType": "null"
                         }
                       ],
-                      "default": null,
                       "title": "Detail"
                     }
                   },
@@ -161,10 +147,10 @@
                     "pass"
                   ],
                   "title": "GuardrailResult",
-                  "type": "object"
+                  "bsonType": "object"
                 },
                 "title": "Guardrails",
-                "type": "array"
+                "bsonType": "array"
               }
             },
             "required": [
@@ -173,35 +159,38 @@
               "at"
             ],
             "title": "Decision",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "execution": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "policy_id": {
                 "title": "Policy Id",
-                "type": "string"
+                "bsonType": "string"
               },
               "version_before": {
                 "title": "Version Before",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "version_after": {
                 "title": "Version After",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "applied_at": {
-                "format": "date-time",
                 "title": "Applied At",
-                "type": "string"
+                "bsonType": "date"
               }
             },
             "required": [
@@ -211,52 +200,45 @@
               "applied_at"
             ],
             "title": "Execution",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "verification": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "window": {
                 "additionalProperties": {
                   "maxItems": 2,
                   "minItems": 2,
-                  "prefixItems": [
-                    {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    {
-                      "format": "date-time",
-                      "type": "string"
-                    }
-                  ],
-                  "type": "array"
+                  "bsonType": "array"
                 },
                 "title": "Window",
-                "type": "object"
+                "bsonType": "object"
               },
               "metric": {
                 "title": "Metric",
-                "type": "string"
+                "bsonType": "string"
               },
               "baseline": {
-                "additionalProperties": false,
                 "properties": {
                   "good": {
                     "title": "Good",
-                    "type": "integer"
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ]
                   },
                   "n": {
                     "title": "N",
-                    "type": "integer"
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ]
                   }
                 },
                 "required": [
@@ -264,18 +246,23 @@
                   "n"
                 ],
                 "title": "Proportion",
-                "type": "object"
+                "bsonType": "object"
               },
               "after": {
-                "additionalProperties": false,
                 "properties": {
                   "good": {
                     "title": "Good",
-                    "type": "integer"
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ]
                   },
                   "n": {
                     "title": "N",
-                    "type": "integer"
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ]
                   }
                 },
                 "required": [
@@ -283,30 +270,21 @@
                   "n"
                 ],
                 "title": "Proportion",
-                "type": "object"
+                "bsonType": "object"
               },
               "method": {
-                "default": "wilson+two_proportion",
                 "title": "Method",
-                "type": "string"
+                "bsonType": "string"
               },
               "after_ci": {
                 "maxItems": 2,
                 "minItems": 2,
-                "prefixItems": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "number"
-                  }
-                ],
                 "title": "After Ci",
-                "type": "array"
+                "bsonType": "array"
               },
               "p_value": {
                 "title": "P Value",
-                "type": "number"
+                "bsonType": "number"
               },
               "verdict": {
                 "enum": [
@@ -315,12 +293,11 @@
                   "INCONCLUSIVE"
                 ],
                 "title": "Verdict",
-                "type": "string"
+                "bsonType": "string"
               },
               "decided_at": {
-                "format": "date-time",
                 "title": "Decided At",
-                "type": "string"
+                "bsonType": "date"
               }
             },
             "required": [
@@ -334,50 +311,44 @@
               "decided_at"
             ],
             "title": "VerificationResult",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "ttr_s": {
         "anyOf": [
           {
-            "type": "number"
+            "bsonType": "number"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Ttr S"
       },
       "created_at": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Created At"
       },
       "updated_at": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Updated At"
       }
     },
@@ -387,6 +358,6 @@
       "proposed_by"
     ],
     "title": "Action",
-    "type": "object"
+    "bsonType": "object"
   }
 }

@@ -1,70 +1,65 @@
 {
   "$jsonSchema": {
-    "additionalProperties": false,
     "properties": {
       "_id": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Id"
       },
       "key": {
         "title": "Key",
-        "type": "string"
+        "bsonType": "string"
       },
       "dedup_key": {
         "title": "Dedup Key",
-        "type": "string"
+        "bsonType": "string"
       },
       "is_open": {
         "anyOf": [
           {
-            "type": "boolean"
+            "bsonType": "bool"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": true,
         "title": "Is Open"
       },
       "slo_id": {
         "title": "Slo Id",
-        "type": "string"
+        "bsonType": "string"
       },
       "scope": {
         "title": "Scope",
-        "type": "string"
+        "bsonType": "string"
       },
       "target": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Target"
       },
       "routes": {
-        "default": [],
         "items": {
-          "type": "string"
+          "bsonType": "string"
         },
         "title": "Routes",
-        "type": "array"
+        "bsonType": "array"
       },
       "sli": {
         "title": "Sli",
-        "type": "string"
+        "bsonType": "string"
       },
       "severity": {
         "enum": [
@@ -73,7 +68,7 @@
           "warning"
         ],
         "title": "Severity",
-        "type": "string"
+        "bsonType": "string"
       },
       "status": {
         "enum": [
@@ -85,72 +80,67 @@
           "false_positive"
         ],
         "title": "IncidentStatus",
-        "type": "string",
-        "default": "detected"
+        "bsonType": "string"
       },
       "signals": {
-        "default": [],
         "items": {
-          "additionalProperties": false,
           "properties": {
             "source": {
               "title": "Source",
-              "type": "string"
+              "bsonType": "string"
             },
             "at": {
-              "format": "date-time",
               "title": "At",
-              "type": "string"
+              "bsonType": "date"
             },
             "burn": {
               "anyOf": [
                 {
                   "additionalProperties": {
-                    "type": "number"
+                    "bsonType": "number"
                   },
-                  "type": "object"
+                  "bsonType": "object"
                 },
                 {
-                  "type": "null"
+                  "bsonType": "null"
                 }
               ],
-              "default": null,
               "title": "Burn"
             },
             "monitor_id": {
               "anyOf": [
                 {
-                  "type": "integer"
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ]
                 },
                 {
-                  "type": "null"
+                  "bsonType": "null"
                 }
               ],
-              "default": null,
               "title": "Monitor Id"
             },
             "alert_id": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "bsonType": "string"
                 },
                 {
-                  "type": "null"
+                  "bsonType": "null"
                 }
               ],
-              "default": null,
               "title": "Alert Id"
             },
             "diagnosis": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "bsonType": "string"
                 },
                 {
-                  "type": "null"
+                  "bsonType": "null"
                 }
               ],
-              "default": null,
               "title": "Diagnosis"
             }
           },
@@ -159,134 +149,117 @@
             "at"
           ],
           "title": "Signal",
-          "type": "object"
+          "bsonType": "object"
         },
         "title": "Signals",
-        "type": "array"
+        "bsonType": "array"
       },
       "t": {
-        "additionalProperties": false,
         "properties": {
           "first_bad_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "bsonType": "date"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "First Bad At"
           },
           "detected_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "bsonType": "date"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Detected At"
           },
           "acknowledged_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "bsonType": "date"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Acknowledged At"
           },
           "mitigated_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "bsonType": "date"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Mitigated At"
           },
           "resolved_at": {
             "anyOf": [
               {
-                "format": "date-time",
-                "type": "string"
+                "bsonType": "date"
               },
               {
-                "type": "null"
+                "bsonType": "null"
               }
             ],
-            "default": null,
             "title": "Resolved At"
           }
         },
         "title": "IncidentTimes",
-        "type": "object",
-        "default": {
-          "first_bad_at": null,
-          "detected_at": null,
-          "acknowledged_at": null,
-          "mitigated_at": null,
-          "resolved_at": null
-        }
+        "bsonType": "object"
       },
       "impact": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "requests": {
-                "default": 0,
                 "title": "Requests",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "sessions": {
-                "default": 0,
                 "title": "Sessions",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "delivered_bad": {
-                "default": 0,
                 "title": "Delivered Bad",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "budget_consumed": {
-                "default": 0.0,
                 "title": "Budget Consumed",
-                "type": "number"
+                "bsonType": "number"
               },
               "extra_cost_usd": {
-                "default": 0.0,
                 "title": "Extra Cost Usd",
-                "type": "number"
+                "bsonType": "number"
               }
             },
             "title": "Impact",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "diagnosis": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "side": {
                 "enum": [
@@ -295,30 +268,29 @@
                   "unknown"
                 ],
                 "title": "Side",
-                "type": "string"
+                "bsonType": "string"
               },
               "hypothesis": {
                 "title": "Hypothesis",
-                "type": "string"
+                "bsonType": "string"
               },
               "confidence": {
                 "title": "Confidence",
-                "type": "number"
+                "bsonType": "number"
               },
               "by": {
                 "title": "By",
-                "type": "string"
+                "bsonType": "string"
               },
               "investigation_id": {
                 "anyOf": [
                   {
-                    "type": "string"
+                    "bsonType": "string"
                   },
                   {
-                    "type": "null"
+                    "bsonType": "null"
                   }
                 ],
-                "default": null,
                 "title": "Investigation Id"
               }
             },
@@ -329,38 +301,37 @@
               "by"
             ],
             "title": "Diagnosis",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "signature": {
         "anyOf": [
           {
-            "additionalProperties": false,
             "properties": {
               "v": {
-                "default": 2,
                 "title": "V",
-                "type": "integer"
+                "bsonType": [
+                  "int",
+                  "long"
+                ]
               },
               "vec": {
                 "items": {
-                  "type": "number"
+                  "bsonType": "number"
                 },
                 "title": "Vec",
-                "type": "array"
+                "bsonType": "array"
               },
               "window": {
                 "additionalProperties": {
-                  "format": "date-time",
-                  "type": "string"
+                  "bsonType": "date"
                 },
                 "title": "Window",
-                "type": "object"
+                "bsonType": "object"
               }
             },
             "required": [
@@ -368,50 +339,44 @@
               "window"
             ],
             "title": "Signature",
-            "type": "object"
+            "bsonType": "object"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
-        ],
-        "default": null
+        ]
       },
       "links": {
         "additionalProperties": {
-          "type": "string"
+          "bsonType": "string"
         },
-        "default": {},
         "title": "Links",
-        "type": "object"
+        "bsonType": "object"
       },
       "timeline": {
-        "default": [],
         "items": {
-          "additionalProperties": false,
           "properties": {
             "at": {
-              "format": "date-time",
               "title": "At",
-              "type": "string"
+              "bsonType": "date"
             },
             "kind": {
               "title": "Kind",
-              "type": "string"
+              "bsonType": "string"
             },
             "actor": {
               "title": "Actor",
-              "type": "string"
+              "bsonType": "string"
             },
             "ref": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "bsonType": "string"
                 },
                 {
-                  "type": "null"
+                  "bsonType": "null"
                 }
               ],
-              "default": null,
               "title": "Ref"
             }
           },
@@ -421,72 +386,64 @@
             "actor"
           ],
           "title": "TimelineEntry",
-          "type": "object"
+          "bsonType": "object"
         },
         "title": "Timeline",
-        "type": "array"
+        "bsonType": "array"
       },
       "postmortem_id": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Postmortem Id"
       },
       "investigator": {
         "anyOf": [
           {
-            "type": "string"
+            "bsonType": "string"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Investigator"
       },
       "investigating_since": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Investigating Since"
       },
       "created_at": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Created At"
       },
       "updated_at": {
         "anyOf": [
           {
-            "format": "date-time",
-            "type": "string"
+            "bsonType": "date"
           },
           {
-            "type": "null"
+            "bsonType": "null"
           }
         ],
-        "default": null,
         "title": "Updated At"
       }
     },
@@ -499,6 +456,6 @@
       "severity"
     ],
     "title": "Incident",
-    "type": "object"
+    "bsonType": "object"
   }
 }
