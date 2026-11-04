@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" width="100%" height="100%">
+  <defs>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 6 3.5, 0 7" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #000000; }
+    .title { font-size: 14px; font-weight: bold; letter-spacing: 0.5px; }
+    .stereo { font-size: 10px; font-style: italic; fill: #333333; }
+    .name { font-size: 12px; font-weight: bold; }
+    .sub { font-size: 10px; fill: #444444; }
+    .group-hdr { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    .flow { font-size: 10px; fill: #000000; font-weight: 500; }
+  </style>
+
+  <!-- Background White -->
+  <rect width="920" height="480" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Title Block -->
+  <text x="25" y="26" class="title">REFLEX DUAL-LOOP SYSTEM ARCHITECTURE</text>
+  <line x1="25" y1="34" x2="895" y2="34" stroke="#000000" stroke-width="1"/>
+
+  <!-- 1. CLIENT (TOP-LEFT) -->
+  <g transform="translate(25, 55)">
+    <rect width="115" height="110" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="57" y="28" text-anchor="middle" class="stereo">&lt;&lt;client&gt;&gt;</text>
+    <text x="57" y="48" text-anchor="middle" class="name">Client App</text>
+    <text x="57" y="66" text-anchor="middle" class="sub">(ShopMate)</text>
+    <line x1="15" y1="78" x2="100" y2="78" stroke="#000000" stroke-width="0.5"/>
+    <text x="57" y="96" text-anchor="middle" class="sub">Chat &amp; Orders</text>
+  </g>
+
+  <!-- 2. DATA PLANE (TOP-CENTER) -->
+  <g transform="translate(165, 55)">
+    <rect width="520" height="110" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="15" y="20" class="group-hdr">Reflex Data Plane &lt;&lt;fast-loop / latency &lt; 2ms&gt;&gt;</text>
+    <line x1="15" y1="26" x2="505" y2="26" stroke="#000000" stroke-width="0.8"/>
+
+    <!-- Adaptive Router -->
+    <g transform="translate(15, 36)">
+      <rect width="150" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="75" y="22" text-anchor="middle" class="stereo">&lt;&lt;component&gt;&gt;</text>
+      <text x="75" y="38" text-anchor="middle" class="name">Adaptive Router</text>
+      <text x="75" y="52" text-anchor="middle" class="sub">In-Memory Weights</text>
+    </g>
+
+    <!-- Quality Validator -->
+    <g transform="translate(185, 36)">
+      <rect width="150" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="75" y="22" text-anchor="middle" class="stereo">&lt;&lt;component&gt;&gt;</text>
+      <text x="75" y="38" text-anchor="middle" class="name">Quality Validator</text>
+      <text x="75" y="52" text-anchor="middle" class="sub">In-Flight Schema Check</text>
+    </g>
+
+    <!-- Circuit Breaker -->
+    <g transform="translate(355, 36)">
+      <rect width="150" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="75" y="22" text-anchor="middle" class="stereo">&lt;&lt;component&gt;&gt;</text>
+      <text x="75" y="38" text-anchor="middle" class="name">Circuit Breaker</text>
+      <text x="75" y="52" text-anchor="middle" class="sub">Quality-Aware Retry</text>
+    </g>
+  </g>
+
+  <!-- 3. LLM UPSTREAM (TOP-RIGHT) -->
+  <g transform="translate(710, 55)">
+    <rect width="185" height="110" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="92" y="26" text-anchor="middle" class="stereo">&lt;&lt;external&gt;&gt;</text>
+    <text x="92" y="44" text-anchor="middle" class="name">LLM Providers</text>
+    <line x1="15" y1="52" x2="170" y2="52" stroke="#000000" stroke-width="0.5"/>
+    <text x="92" y="68" text-anchor="middle" class="sub">• OpenAI (Primary)</text>
+    <text x="92" y="82" text-anchor="middle" class="sub">• Anthropic (Fallback)</text>
+    <text x="92" y="96" text-anchor="middle" class="sub">• Mock LLM / Chaos Proxy</text>
+  </g>
+
+  <!-- 4. MIDDLE ROW: OBSERVABILITY (LEFT) & DATABASE (RIGHT) -->
+  <!-- Datadog SaaS on Left (Directly aligns with Sentinel) -->
+  <g transform="translate(165, 205)">
+    <rect width="240" height="85" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="120" y="24" text-anchor="middle" class="stereo">&lt;&lt;observability&gt;&gt;</text>
+    <text x="120" y="42" text-anchor="middle" class="name">Datadog SaaS</text>
+    <line x1="15" y1="50" x2="225" y2="50" stroke="#000000" stroke-width="0.5"/>
+    <text x="120" y="64" text-anchor="middle" class="sub">APM Traces &amp; DogStatsD</text>
+    <text x="120" y="78" text-anchor="middle" class="sub">Multi-Burn-Rate Monitors (14.4x/6x)</text>
+  </g>
+
+  <!-- MongoDB Atlas on Right (Directly aligns with Actuator) -->
+  <g transform="translate(445, 205)">
+    <rect width="240" height="85" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="120" y="24" text-anchor="middle" class="stereo">&lt;&lt;database / state&gt;&gt;</text>
+    <text x="120" y="42" text-anchor="middle" class="name">MongoDB Atlas</text>
+    <line x1="15" y1="50" x2="225" y2="50" stroke="#000000" stroke-width="0.5"/>
+    <text x="120" y="64" text-anchor="middle" class="sub">4x Time Series &amp; Policies</text>
+    <text x="120" y="78" text-anchor="middle" class="sub">Incident Memory ($vectorSearch 64D)</text>
+  </g>
+
+  <!-- 5. CONTROL PLANE (BOTTOM) -->
+  <g transform="translate(25, 335)">
+    <rect width="870" height="120" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="15" y="20" class="group-hdr">Reflex Control Plane &lt;&lt;slow-loop / autonomous sre&gt;&gt;</text>
+    <line x1="15" y1="26" x2="855" y2="26" stroke="#000000" stroke-width="0.8"/>
+
+    <!-- Sentinel -->
+    <g transform="translate(15, 38)">
+      <rect width="195" height="68" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="97" y="22" text-anchor="middle" class="stereo">&lt;&lt;detector&gt;&gt;</text>
+      <text x="97" y="40" text-anchor="middle" class="name">Sentinel</text>
+      <text x="97" y="56" text-anchor="middle" class="sub">Multi-Burn Rate Tracking</text>
+    </g>
+
+    <!-- Cortex Agent -->
+    <g transform="translate(230, 38)">
+      <rect width="200" height="68" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="100" y="22" text-anchor="middle" class="stereo">&lt;&lt;agent&gt;&gt;</text>
+      <text x="100" y="40" text-anchor="middle" class="name">Cortex AI SRE</text>
+      <text x="100" y="56" text-anchor="middle" class="sub">RCA &amp; 64D Vector Memory</text>
+    </g>
+
+    <!-- Policy Actuator -->
+    <g transform="translate(450, 38)">
+      <rect width="195" height="68" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="97" y="22" text-anchor="middle" class="stereo">&lt;&lt;actuator&gt;&gt;</text>
+      <text x="97" y="40" text-anchor="middle" class="name">Policy Actuator</text>
+      <text x="97" y="56" text-anchor="middle" class="sub">Guardrails &amp; Mongo Update</text>
+    </g>
+
+    <!-- Statistical Verifier -->
+    <g transform="translate(665, 38)">
+      <rect width="190" height="68" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="95" y="22" text-anchor="middle" class="stereo">&lt;&lt;verifier&gt;&gt;</text>
+      <text x="95" y="40" text-anchor="middle" class="name">Statistical Verifier</text>
+      <text x="95" y="56" text-anchor="middle" class="sub">Z-Test &amp; Staged Failback</text>
+    </g>
+  </g>
+
+  <!-- 6. CLEAN RECTILINEAR FLOWS (NO CROSSINGS / NO COLLISIONS) -->
+
+  <!-- Flow 1: Client -> Data Plane -->
+  <line x1="140" y1="110" x2="165" y2="110" stroke="#000000" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <!-- Flow 2: Data Plane -> LLM Upstream -->
+  <line x1="685" y1="110" x2="710" y2="110" stroke="#000000" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <!-- Flow 3: Data Plane -> Datadog (Telemetry Down) -->
+  <line x1="285" y1="165" x2="285" y2="205" stroke="#000000" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+  <rect x="235" y="177" width="100" height="15" fill="#ffffff"/>
+  <text x="285" y="188" text-anchor="middle" class="flow">DogStatsD / Spans</text>
+
+  <!-- Flow 4: Datadog -> Sentinel (Alert Webhook Down) -->
+  <line x1="285" y1="290" x2="285" y2="315" stroke="#000000" stroke-width="1.2"/>
+  <line x1="285" y1="315" x2="135" y2="315" stroke="#000000" stroke-width="1.2"/>
+  <line x1="135" y1="315" x2="135" y2="373" stroke="#000000" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="180" y="307" width="90" height="15" fill="#ffffff"/>
+  <text x="225" y="318" text-anchor="middle" class="flow">Alert Webhook</text>
+
+  <!-- Flow 5: Sentinel -> Cortex -> Actuator (Internal Pipeline) -->
+  <line x1="235" y1="407" x2="255" y2="407" stroke="#000000" stroke-width="1" marker-end="url(#arr)"/>
+  <line x1="455" y1="407" x2="475" y2="407" stroke="#000000" stroke-width="1" marker-end="url(#arr)"/>
+  <line x1="670" y1="407" x2="690" y2="407" stroke="#000000" stroke-width="1" marker-end="url(#arr)"/>
+
+  <!-- Flow 6: Actuator -> MongoDB Atlas (Policy Update Up) -->
+  <line x1="570" y1="373" x2="570" y2="290" stroke="#000000" stroke-width="1.2" marker-end="url(#arr)"/>
+  <rect x="525" y="325" width="90" height="15" fill="#ffffff"/>
+  <text x="570" y="336" text-anchor="middle" class="flow">Update Policy</text>
+
+  <!-- Flow 7: MongoDB Atlas -> Data Plane (Change Streams Hot-Reload Up) -->
+  <line x1="520" y1="205" x2="520" y2="165" stroke="#000000" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="455" y="177" width="130" height="15" fill="#ffffff"/>
+  <text x="520" y="188" text-anchor="middle" class="flow">Change Streams &lt;1s</text>
+
+  <!-- Flow 8: Data Plane -> MongoDB Atlas (Async Telemetry Batch) -->
+  <line x1="620" y1="165" x2="620" y2="205" stroke="#000000" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+  <rect x="575" y="177" width="90" height="15" fill="#ffffff"/>
+  <text x="620" y="188" text-anchor="middle" class="flow">Async Telemetry</text>
+
+</svg>

@@ -3,133 +3,1018 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Realtime Monitoring — Hackathon</title>
+<title>Reflex — Presentation Deck (MUGVN Hackathon 2026)</title>
 <style>
-:root{--bg:#090c12;--panel:#101722;--line:#263244;--text:#edf3fc;--muted:#8d9bb0;--green:#b8ff70;--cyan:#68e5ff;--mono:Consolas,"SFMono-Regular",monospace;--sans:Inter,system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:#05070b;color:var(--text);font-family:var(--sans)}
-.slide{width:min(1120px,calc(100vw - 32px));aspect-ratio:16/9;margin:24px auto;padding:clamp(26px,5vw,58px);display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;background:radial-gradient(ellipse at 90% 5%,#14202b 0,transparent 35%),var(--bg);border:1px solid #202b3b;border-radius:12px}
-.top,.foot{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:10px var(--mono);letter-spacing:.1em;text-transform:uppercase}
-.brand{color:var(--green)}.eyebrow{color:var(--cyan);font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px}
-h1{font-size:clamp(42px,6vw,76px);line-height:.98;letter-spacing:-.06em;margin:0 0 20px}
-h2{font-size:clamp(29px,4vw,45px);line-height:1.05;letter-spacing:-.045em;margin:0 0 16px}
-h3{font-size:16px;margin:0 0 8px}p{color:var(--muted);line-height:1.6;font-size:14px;max-width:620px;margin:0}
-.green{color:var(--green)}.cyan{color:var(--cyan)}.content{max-width:850px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}.chip{border:1px solid var(--line);border-radius:5px;padding:7px 10px;color:#c9d5e5;font:11px var(--mono)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:20px}.label{font:10px var(--mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
-.num{font:30px var(--mono);color:var(--green);margin-bottom:10px}
-.flow{display:flex;align-items:center;gap:10px;margin-top:24px}.node{flex:1;padding:17px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}.node b{display:block;font:12px var(--mono);margin:7px 0}.node small{color:var(--muted);font-size:11px}.arrow{color:var(--cyan);font:18px var(--mono)}
-.code{background:#080d14;border:1px solid #29374b;border-radius:9px;overflow:hidden}.bar{padding:11px 14px;background:#111a27;border-bottom:1px solid #29374b;color:var(--muted);font:11px var(--mono)}pre{padding:18px;margin:0;overflow:auto;color:#dce7f5;font:clamp(10px,1.1vw,13px)/1.7 var(--mono)}.pink{color:#ff83c8}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}.metric{border-left:2px solid var(--green);padding:5px 0 5px 14px}.value{font:clamp(23px,3vw,36px) var(--mono)}.caption{font:10px var(--mono);color:var(--muted);margin-top:7px;text-transform:uppercase}
-.chart{width:100%;height:105px;display:block;margin-top:12px}.gridline{stroke:#263244;stroke-dasharray:3 5}.line{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-linejoin:round}
-ul{list-style:none;margin:0;padding:0}li{padding:10px 0;border-bottom:1px solid #202b3b;color:#cbd6e5;font-size:13px}li::before{content:"→";color:var(--green);margin-right:9px;font-family:var(--mono)}
-.foot{margin-top:22px}.page{color:#5e6d81}
-@media(max-width:700px){.slide{aspect-ratio:auto;min-height:620px;padding:24px}.grid2,.grid{grid-template-columns:1fr}.flow{flex-direction:column;align-items:stretch}.arrow{transform:rotate(90deg);align-self:center}.metrics{gap:7px}.card{padding:15px}}
-@media print{body{background:#fff}.slide{width:100vw;height:56.25vw;margin:0;border-radius:0;break-after:page;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+:root{
+  --bg: #070a0f;
+  --panel: #0d141f;
+  --panel-inner: #090e17;
+  --line: #1d2a3d;
+  --line-bright: #2a3d58;
+  --text: #eaf1fb;
+  --muted: #8e9fb5;
+  --green: #b8ff70;
+  --green-glow: rgba(184, 255, 112, 0.18);
+  --cyan: #68e5ff;
+  --cyan-glow: rgba(104, 229, 255, 0.18);
+  --pink: #ff83c8;
+  --yellow: #fcd34d;
+  --mono: 'JetBrains Mono', Consolas, monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+#presentation{
+  width:100vw;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+  background:radial-gradient(circle at 80% 20%, #122234 0, transparent 45%), var(--bg);
+}
+
+/* Individual Slide Stage (16:9 ratio, fills window with letterbox) */
+.slide{
+  width:min(1280px, 95vw);
+  aspect-ratio:16/9;
+  max-height:92vh;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:32px 48px;
+  display:none;
+  flex-direction:column;
+  justify-content:space-between;
+  position:relative;
+  box-shadow:0 24px 70px rgba(0,0,0,0.8), 0 0 1px rgba(184,255,112,0.2);
+  animation:slideFade .2s cubic-bezier(.16,1,.3,1) forwards;
+}
+.slide.active{display:flex}
+
+@keyframes slideFade{
+  from{opacity:0;transform:scale(0.985)}
+  to{opacity:1;transform:scale(1)}
+}
+
+/* Header & Footer */
+.top, .foot{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:var(--muted);
+  font:12px var(--mono);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.brand{color:var(--green);font-weight:600}
+.eyebrow{color:var(--cyan);font:12px var(--mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+
+h1{font-size:clamp(32px,4vw,56px);line-height:1.06;letter-spacing:-.04em;margin-bottom:12px;color:#fff}
+h2{font-size:clamp(22px,2.6vw,34px);line-height:1.15;letter-spacing:-.03em;margin-bottom:10px;color:#fff}
+h3{font-size:15px;margin-bottom:4px;color:var(--green)}
+p{color:var(--muted);line-height:1.5;font-size:14px}
+.green{color:var(--green)}.cyan{color:var(--cyan)}.pink{color:var(--pink)}.yellow{color:var(--yellow)}
+
+/* Common Grids */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.grid-img{display:grid;grid-template-columns:1fr 1.35fr;gap:24px;align-items:center}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+.card{
+  background:var(--panel-inner);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:18px 20px;
+}
+.card-highlight{
+  background:#091420;
+  border:1px solid var(--green);
+  border-radius:10px;
+  padding:18px 20px;
+  box-shadow:0 0 20px var(--green-glow);
+}
+.card-alert{
+  background:#170b16;
+  border:1px solid var(--pink);
+  border-radius:10px;
+  padding:18px 20px;
+}
+.label{font:11px var(--mono);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.chip{border:1px solid var(--line);border-radius:5px;padding:6px 14px;color:#cbd6e5;font:12px var(--mono);background:var(--panel-inner)}
+
+ul{list-style:none;margin:6px 0 0;padding:0}
+li{padding:5px 0;border-bottom:1px solid #141f2d;color:#cbd6e5;font-size:13.5px;line-height:1.45}
+li::before{content:"→ ";color:var(--green);font-family:var(--mono)}
+
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th{background:#0e1724;color:var(--green);border:1px solid var(--line);padding:9px 12px;text-align:left;font-family:var(--mono);font-size:12.5px}
+td{border:1px solid var(--line);padding:8px 12px;color:#cbd6e5}
+
+code{background:#111b28;color:var(--green);border:1px solid var(--line);border-radius:4px;padding:2px 6px;font-family:var(--mono);font-size:12px}
+
+/* =====================================================================
+   BIG, CLEAR, HIGH-CONTRAST THEMATIC COMPONENT DIAGRAMS
+   ===================================================================== */
+.diag-board{
+  background:#05080e;
+  border:1px solid var(--line-bright);
+  border-radius:12px;
+  padding:18px 22px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  height:360px;
+  justify-content:center;
+  position:relative;
+  box-shadow:inset 0 0 30px rgba(0,0,0,0.6);
+}
+.diag-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+  padding-bottom:8px;
+  font-family:var(--mono);
+  font-size:11px;
+}
+.diag-badge{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:4px;
+  font:10.5px var(--mono);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+}
+.badge-green{background:rgba(184,255,112,0.12);color:var(--green);border:1px solid var(--green)}
+.badge-cyan{background:rgba(104,229,255,0.12);color:var(--cyan);border:1px solid var(--cyan)}
+.badge-yellow{background:rgba(252,211,77,0.12);color:var(--yellow);border:1px solid var(--yellow)}
+.badge-pink{background:rgba(255,131,200,0.12);color:var(--pink);border:1px solid var(--pink)}
+
+.diag-node{
+  background:#0a1019;
+  border:1px solid var(--line-bright);
+  border-radius:8px;
+  padding:10px 14px;
+  transition:border-color .15s;
+}
+.diag-node:hover{border-color:var(--green)}
+.diag-node b{display:block;color:#fff;font-size:13px;margin-bottom:3px;font-family:var(--mono)}
+.diag-node span{display:block;color:var(--muted);font-size:11.5px}
+
+.diag-node-green{
+  background:#091622;
+  border:1px solid var(--green);
+  box-shadow:0 0 14px var(--green-glow);
+}
+.diag-node-cyan{
+  background:#071520;
+  border:1px solid var(--cyan);
+  box-shadow:0 0 14px var(--cyan-glow);
+}
+
+.diag-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.diag-arr{
+  color:var(--green);
+  font:bold 16px var(--mono);
+  flex-shrink:0;
+}
+.diag-arr.cyan{color:var(--cyan)}
+
+/* Floating Nav Dock */
+.controls-dock{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:rgba(13,20,31,0.92);
+  backdrop-filter:blur(12px);
+  border:1px solid var(--line-bright);
+  border-radius:30px;
+  padding:7px 16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.65);
+  z-index:100;
+}
+.btn-nav{
+  background:transparent;
+  border:1px solid transparent;
+  color:#cbd6e5;
+  border-radius:20px;
+  padding:5px 12px;
+  font:12px var(--mono);
+  cursor:pointer;
+  transition:all .15s;
+}
+.btn-nav:hover{background:#1b283b;color:var(--green);border-color:var(--line-bright)}
+.btn-nav:active{transform:scale(0.96)}
+.counter-box{color:var(--green);font:12.5px var(--mono);padding:0 8px;min-width:70px;text-align:center;font-weight:600}
+
+.progress-bar-wrap{position:fixed;top:0;left:0;width:100%;height:3px;background:rgba(255,255,255,0.08);z-index:200}
+.progress-bar{height:100%;background:linear-gradient(90deg, var(--green), var(--cyan));width:8.33%;transition:width .2s ease}
+
+/* Overview Modal */
+#overview-modal{
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,13,0.95);
+  backdrop-filter:blur(14px);
+  z-index:300;
+  display:none;
+  padding:40px;
+  overflow-y:auto;
+}
+#overview-modal.open{display:block}
+.overview-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+  gap:18px;
+  max-width:1200px;
+  margin:0 auto;
+}
+.thumb-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.thumb-card:hover, .thumb-card.active{
+  border-color:var(--green);
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(184,255,112,0.15);
+}
+.thumb-num{font:11px var(--mono);color:var(--cyan);margin-bottom:6px}
+.thumb-title{font-size:13px;font-weight:600;color:#fff}
+
+@media print{
+  body, #presentation{overflow:visible;height:auto;background:#fff}
+  .slide{display:flex!important;width:100vw;height:56.25vw;aspect-ratio:16/9;page-break-after:always;break-after:page;border-radius:0;border:none;margin:0;padding:28px;background:#090c12}
+  .controls-dock, .progress-bar-wrap, #overview-modal{display:none!important}
+}
 </style>
 </head>
 <body>
 
-<section class="slide">
-  <div class="top"><span class="brand">● HACKATHON / OBSERVABILITY</span><span>01 / 05</span></div>
-  <div class="content">
-    <div class="eyebrow">REAL-TIME SYSTEMS</div>
-    <h1>Realtime<br><span class="green">Monitoring</span></h1>
-    <p>Quan sát hệ thống theo thời gian thực, phát hiện bất thường và phản hồi nhanh hơn.</p>
-    <div class="chips"><span class="chip">MongoDB</span><span class="chip">Datadog</span><span class="chip">Real-time events</span></div>
-  </div>
-  <div class="foot"><span>TEAM NAME</span><span class="page">01 / 05</span></div>
-</section>
+<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
 
-<section class="slide">
-  <div class="top"><span class="brand">● THE PROBLEM</span><span>02 / 05</span></div>
-  <div>
-    <div class="eyebrow">WHY MONITORING?</div>
-    <h2>Phát hiện sự cố<br><span class="green">trước khi quá muộn.</span></h2>
-    <p>Log rời rạc và thiếu cảnh báo khiến việc tìm nguyên nhân mất thời gian.</p>
-  </div>
-  <div class="grid">
-    <article class="card"><div class="label">01 / DETECTION</div><h3>Phát hiện chậm</h3><p>Chỉ nhận ra vấn đề khi dịch vụ đã ảnh hưởng người dùng.</p></article>
-    <article class="card"><div class="label">02 / VISIBILITY</div><h3>Thiếu ngữ cảnh</h3><p>Metrics, logs và dữ liệu nghiệp vụ phân tán.</p></article>
-    <article class="card"><div class="label">03 / RESPONSE</div><h3>Khó phản hồi</h3><p>Không có cảnh báo rõ ràng theo ngưỡng.</p></article>
-  </div>
-  <div class="foot"><span>PROBLEM STATEMENT</span><span class="page">02 / 05</span></div>
-</section>
+<main id="presentation">
 
-<section class="slide">
-  <div class="top"><span class="brand">● ARCHITECTURE</span><span>03 / 05</span></div>
-  <div>
-    <div class="eyebrow">DATA FLOW</div>
-    <h2>Từ sự kiện đến <span class="green">hành động.</span></h2>
-    <p>Thu thập sự kiện, chuyển thành telemetry và hiển thị trên một dashboard tập trung.</p>
-    <div class="flow">
-      <div class="node"><span class="cyan">01</span><b>Application</b><small>Requests / errors</small></div><div class="arrow">→</div>
-      <div class="node"><span class="cyan">02</span><b>MongoDB</b><small>Events / state</small></div><div class="arrow">→</div>
-      <div class="node"><span class="cyan">03</span><b>Collector</b><small>Stream / metrics</small></div><div class="arrow">→</div>
-      <div class="node"><span class="cyan">04</span><b>Datadog</b><small>Dashboard / alerts</small></div>
+  <!-- SLIDE 1: COVER -->
+  <section class="slide active" data-index="1">
+    <div class="top"><span class="brand">● MUGVN HACKATHON 2026</span><span>01 / 12</span></div>
+    <div class="content">
+      <div class="eyebrow">REAL-TIME OPERATIONS · MONGODB ATLAS × DATADOG</div>
+      <h1>REFLEX<br><span class="green">LLM Monitor & Reliability Platform</span></h1>
+      <p style="font-size:16px;max-width:720px">Nền tảng Giám sát Thời gian thực & Tự Hồi phục Khép kín (Closed-Loop SRE) cho Ứng dụng Mô hình Ngôn ngữ Lớn.</p>
+      <div class="chips">
+        <span class="chip">In-Flight Quality SLI</span>
+        <span class="chip">Dual-Ledger SLO</span>
+        <span class="chip">Two-Speed Closed Loop</span>
+        <span class="chip">MongoDB Time Series</span>
+        <span class="chip">Atlas Vector Search</span>
+        <span class="chip">Datadog Multi-Burn-Rate</span>
+        <span class="chip">Sub-Second Hot-Reload</span>
+      </div>
     </div>
-  </div>
-  <div class="foot"><span>SYSTEM OVERVIEW</span><span class="page">03 / 05</span></div>
-</section>
+    <div class="foot"><span>ĐỘI THI: WE BARE BEARS</span><span class="page">01 / 12</span></div>
+  </section>
 
-<section class="slide">
-  <div class="top"><span class="brand">● IMPLEMENTATION</span><span>04 / 05</span></div>
-  <div class="grid2">
+  <!-- SLIDE 2: THE PROBLEM -->
+  <section class="slide" data-index="2">
+    <div class="top"><span class="brand">● PROBLEM STATEMENT</span><span>02 / 12</span></div>
     <div>
-      <div class="eyebrow">CODE SNAPSHOT</div>
-      <h2>Theo dõi thay đổi<br><span class="green">theo thời gian thực.</span></h2>
-      <p>Ví dụ minh họa MongoDB Change Streams. Bổ sung xử lý lỗi, retry và cấu hình telemetry trước khi triển khai production.</p>
-    </div>
-    <div class="code">
-      <div class="bar">monitor.js</div>
-<pre><span class="pink">const</span> stream = db
-  .collection(<span class="green">"events"</span>)
-  .watch();
-
-stream.on(<span class="green">"change"</span>, change => {
-  publishMetric(
-    <span class="green">"app.db.change"</span>,
-    1,
-    {
-      service: <span class="green">"orders-api"</span>,
-      operation: change.operationType
-    }
-  );
-});</pre>
-    </div>
-  </div>
-  <div class="foot"><span>CODE EXAMPLE</span><span class="page">04 / 05</span></div>
-</section>
-
-<section class="slide">
-  <div class="top"><span class="brand">● DEMO & IMPACT</span><span>05 / 05</span></div>
-  <div>
-    <div class="eyebrow">DASHBOARD PREVIEW</div>
-    <h2>Một góc nhìn.<br><span class="green">Các tín hiệu quan trọng.</span></h2>
-    <div class="metrics">
-      <div class="metric"><div class="value">124<span class="cyan">ms</span></div><div class="caption">API latency p95</div></div>
-      <div class="metric"><div class="value">0.18<span class="cyan">%</span></div><div class="caption">Error rate</div></div>
-      <div class="metric"><div class="value">1.2<span class="cyan">k</span></div><div class="caption">Events / min</div></div>
+      <div class="eyebrow">THE SILENT BROWNOUT</div>
+      <h2>Khi HTTP 200 OK Đang Gây Suy Giảm Dịch Vụ Ngấm Ngầm</h2>
+      <p>Trong các luồng trích xuất đơn hàng, tài chính và CSKH thời gian thực, hơn 90% sự cố LLM không làm sập máy chủ.</p>
     </div>
     <div class="grid2">
-      <div class="card"><div class="label">LATENCY / MOCK DATA</div>
-        <svg class="chart" viewBox="0 0 420 105" preserveAspectRatio="none" aria-label="Biểu đồ latency minh họa">
-          <path class="gridline" d="M0 20H420 M0 50H420 M0 80H420"/>
-          <path class="line" d="M0 75 L30 68 L60 73 L90 45 L120 55 L150 35 L180 44 L210 63 L240 51 L270 55 L300 29 L330 40 L360 22 L390 34 L420 18"/>
-        </svg>
+      <div class="card">
+        <div class="label">HẠ TẦNG TRUYỀN THỐNG BÁO XANH</div>
+        <ul>
+          <li>Mã trạng thái HTTP: <code>200 OK</code></li>
+          <li>Độ trễ mạng: <code>&lt; 1500ms</code> an toàn</li>
+          <li>APM Uptime: <strong>100% Healthy</strong></li>
+          <li>Không kích hoạt bất kỳ cảnh báo PagerDuty nào</li>
+        </ul>
       </div>
-      <div class="card"><div class="label">MVP CHECKLIST</div><ul><li>MongoDB event stream</li><li>Datadog dashboard</li><li>Alert theo ngưỡng</li><li>Demo lỗi end-to-end</li></ul></div>
+      <div class="card-alert">
+        <div class="label pink">NỘI DUNG THỰC TẾ BỊ HỎNG</div>
+        <ul>
+          <li><strong>Đứt cụt (Early Truncation):</strong> Buffer vendor lỗi, response dở dang</li>
+          <li><strong>Vỡ schema:</strong> Thiếu dấu <code>}</code>, parser downstream crash</li>
+          <li><strong>Từ chối ngầm:</strong> Trả về chuỗi rỗng <code>""</code> hoặc từ chối không kèm mã lỗi</li>
+        </ul>
+      </div>
     </div>
-  </div>
-  <div class="foot"><span>THANK YOU / Q&A · SỐ LIỆU MINH HỌA</span><span class="page">05 / 05</span></div>
-</section>
+    <div class="foot"><span>BỐI CẢNH & NỖI ĐAU THỰC TẾ</span><span class="page">02 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 3: PRINCIPLES -->
+  <section class="slide" data-index="3">
+    <div class="top"><span class="brand">● CORE ARCHITECTURE</span><span>03 / 12</span></div>
+    <div>
+      <div class="eyebrow">BIOLOGICAL INSPIRATION</div>
+      <h2>Cung Phản Xạ Hai Tốc Độ (Two-Speed Loop)</h2>
+      <p>Phân tách rạch ròi: Tủy sống phản xạ tức thời (&lt;2.8ms) và Não bộ suy luận phân tích (giây đến phút).</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="label">DATA PLANE: PHẢN XẠ NHANH (&lt;2.8ms)</div>
+        <ul>
+          <li>In-flight Semantic Validators siêu nhẹ (JSON Schema + length checks)</li>
+          <li>Bảng điểm và định tuyến lưu lượng hoàn toàn trên RAM</li>
+          <li>Circuit Breaker ngắt mạch và thử lại sang mô hình dự phòng tức thì</li>
+          <li>Telemetry gửi bất đồng bộ qua In-Memory Queue: <strong>0ms overhead</strong></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="label">CONTROL PLANE: SUY LUẬN CHẬM (OUT-OF-BAND)</div>
+        <ul>
+          <li>AI SRE Agent Cortex chạy nền độc lập, thức giấc khi có cảnh báo</li>
+          <li>Tra cứu Incident Memory (Vector 64D) trên MongoDB Atlas (&lt;20ms)</li>
+          <li>Rào chắn an toàn Bounded Actions + Safety Guardrails</li>
+          <li>Nạp chính sách mới qua MongoDB Change Streams <strong>&lt; 1 giây</strong></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span>DATA PLANE VS CONTROL PLANE</span><span class="page">03 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 4: SƠ ĐỒ TO RÕ - TWO-SPEED ARCHITECTURE -->
+  <section class="slide" data-index="4">
+    <div class="top"><span class="brand">● ARCHITECTURE TOPOLOGY</span><span>04 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">SYSTEM TOPOLOGY</div>
+        <h2>Cung Phản Xạ Hai Tốc Độ</h2>
+        <ul>
+          <li><strong>Data Plane:</strong> Tiếp nhận request, thẩm định in-flight &lt; 2.8ms, fallback tức thì trong RAM.</li>
+          <li><strong>Datadog Feed:</strong> DogStatsD + APM Traces ➔ Multi-Burn-Rate ➔ Webhook.</li>
+          <li><strong>MongoDB Control:</strong> Ghi policy v17 ➔ Oplog Change Streams ➔ Hot-reload &lt; 1s.</li>
+          <li><strong>Fail-safe:</strong> Control Plane sập, Gateway vẫn chạy độc lập tin cậy trên RAM.</li>
+        </ul>
+      </div>
+      
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">FAST-LOOP · DATA PLANE (&lt; 2.8ms)</span>
+          <span class="diag-badge badge-cyan">SLOW-LOOP · CONTROL PLANE</span>
+        </div>
+        
+        <!-- Fast Loop Row -->
+        <div class="diag-row">
+          <div class="diag-node" style="flex:1">
+            <b>Client App</b>
+            <span>ShopMate Chat</span>
+          </div>
+          <span class="diag-arr">➔</span>
+          <div class="diag-node diag-node-green" style="flex:1.4">
+            <b>Reflex Gateway</b>
+            <span class="green">In-flight Validator &lt;1.5ms</span>
+          </div>
+          <span class="diag-arr">➔</span>
+          <div class="diag-node" style="flex:1">
+            <b>Upstream LLM</b>
+            <span>Vendor A / Vendor B</span>
+          </div>
+        </div>
+
+        <!-- Middle Infrastructure Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:2px 0">
+          <div class="diag-node diag-node-cyan" style="text-align:center">
+            <b>Datadog Cloud</b>
+            <span class="cyan">Metrics · APM Traces · Multi-Burn-Rate</span>
+          </div>
+          <div class="diag-node diag-node-green" style="text-align:center">
+            <b>MongoDB Atlas</b>
+            <span class="green">Time Series · Vector Memory · Change Streams</span>
+          </div>
+        </div>
+
+        <!-- Slow Loop Row -->
+        <div class="diag-row">
+          <div class="diag-node" style="flex:1">
+            <b>Sentinel</b>
+            <span>Webhook Handler</span>
+          </div>
+          <span class="diag-arr cyan">➔</span>
+          <div class="diag-node diag-node-cyan" style="flex:1.4">
+            <b>Cortex AI SRE</b>
+            <span class="cyan">Vector Search 64D &lt;20ms</span>
+          </div>
+          <span class="diag-arr cyan">➔</span>
+          <div class="diag-node" style="flex:1">
+            <b>Actuator</b>
+            <span>Guardrails Checked</span>
+          </div>
+        </div>
+        
+        <div style="text-align:center;padding-top:4px;border-top:1px dashed var(--line);font:11.5px var(--mono)">
+          <span class="green">▲ MongoDB Change Streams Hot-Reload &lt; 1000ms (Zero Socket Drop) ▲</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>TWO-SPEED ARCHITECTURE BOARD</span><span class="page">04 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 5: SRE METRICS -->
+  <section class="slide" data-index="5">
+    <div class="top"><span class="brand">● SRE METRICS</span><span>05 / 12</span></div>
+    <div>
+      <div class="eyebrow">QUALITY-FIRST OBSERVABILITY</div>
+      <h2>Quality SLI & Cơ Chế Sổ Cái Kép (Dual-Ledger SLO)</h2>
+      <p>Định nghĩa lại một request thành công theo cả 2 chiều: Mạng hạ tầng và Ngữ nghĩa nội dung.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="label">ĐIỀU KIỆN GOOD EVENT KHẮT KHE</div>
+        <ul>
+          <li>Tầng mạng: <code>http_status == 200</code> và <code>latency &lt; 3000ms</code></li>
+          <li>Tầng cấu trúc: JSON Schema hợp lệ 100%</li>
+          <li>Tầng trọn vẹn: <code>finish_reason != 'length'</code></li>
+          <li>Tầng nội dung: Không rỗng, không chứa mẫu câu từ chối ngầm</li>
+        </ul>
+      </div>
+      <div class="card-highlight">
+        <div class="label green">SỔ CÁI KÉP MINH BẠCH GIÁ TRỊ</div>
+        <ul>
+          <li><strong>Provider SLO:</strong> Chất lượng thô do vendor cung cấp (rớt xuống 61%)</li>
+          <li><strong>Delivered SLO:</strong> Chất lượng thực tế người dùng nhận (giữ vững 99.6%)</li>
+          <li>Khoảng cách <strong>38.6%</strong> chứng minh rõ nét năng lực tự chữa lành của Reflex</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span>QUALITY SLI & DUAL-LEDGER SLO</span><span class="page">05 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 6: SƠ ĐỒ TO RÕ - MONGODB DATA TIERING -->
+  <section class="slide" data-index="6">
+    <div class="top"><span class="brand">● MONGODB ATLAS</span><span>06 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">DATABASE DESIGN & TIERING</div>
+        <h2>Phân Tầng Dữ Liệu 3 Mức</h2>
+        <ul>
+          <li><strong>Hot Tier (14 ngày):</strong> 4 Time Series Collections chuyên biệt (<code>requests_ts</code>, <code>attempts_ts</code>, <code>probes_ts</code>, <code>bench_ts</code>). Nén dạng cột giảm 70% đĩa.</li>
+          <li><strong>Warm Tier (45/400 ngày):</strong> Aggregation Pipelines gom rollup 1h / 1d bằng toán tử <code>$merge</code>.</li>
+          <li><strong>Operational State:</strong> Bảng cấu hình giao dịch ACID (<code>policies</code>, <code>incidents</code>).</li>
+        </ul>
+      </div>
+      
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">MONGODB ATLAS STORAGE TIERS</span>
+          <span class="muted">DATA LIFECYCLE</span>
+        </div>
+
+        <!-- Tier 1 -->
+        <div class="diag-node diag-node-green">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b>1. HOT TIER · TIME SERIES (14 Ngày)</b>
+            <span class="diag-badge badge-green">Columnar Bucketing · -70% Đĩa</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            <code style="text-align:center;font-size:11.5px">requests_ts</code>
+            <code style="text-align:center;font-size:11.5px">attempts_ts</code>
+            <code style="text-align:center;font-size:11.5px">probes_ts</code>
+            <code style="text-align:center;font-size:11.5px">bench_ts</code>
+          </div>
+        </div>
+
+        <div style="text-align:center;color:var(--cyan);font:bold 12px var(--mono)">
+          ▼ Scheduled Aggregation Pipeline ($merge) ▼
+        </div>
+
+        <!-- Tier 2 -->
+        <div class="diag-node diag-node-cyan">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b>2. WARM TIER · ROLLUP COLLECTIONS (45–400 Ngày)</b>
+            <span class="diag-badge badge-cyan">Long-term SRE Analytics</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <code style="text-align:center;font-size:11.5px">requests_hourly (45d)</code>
+            <code style="text-align:center;font-size:11.5px">vendor_daily (400d)</code>
+          </div>
+        </div>
+
+        <!-- Tier 3 -->
+        <div class="diag-node">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b>3. OPERATIONAL STATE (Document Collections)</b>
+            <span class="diag-badge badge-yellow">ACID Transactions</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <code style="text-align:center;font-size:11.5px">policies (Oplog)</code>
+            <code style="text-align:center;font-size:11.5px">incidents (Unique)</code>
+            <code style="text-align:center;font-size:11.5px">signatures (Vector 64D)</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>MONGODB DATA ARCHITECTURE BOARD</span><span class="page">06 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 7: SƠ ĐỒ TO RÕ - CHANGE STREAMS HOT RELOAD -->
+  <section class="slide" data-index="7">
+    <div class="top"><span class="brand">● MONGODB ATLAS</span><span>07 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">SUB-SECOND HOT-RELOAD</div>
+        <h2>Hot-Reload & Change Streams</h2>
+        <ul>
+          <li><strong>Incident Memory (Vector 64D):</strong> Vector hóa biến thiên biểu đồ lỗi qua 16 cửa sổ thời gian. Tra cứu Atlas Vector Search <strong>&lt; 20ms</strong>.</li>
+          <li><strong>Change Streams Hot-reload:</strong> Lắng nghe Oplog trên <code>policies</code>. Gateway hoán đổi con trỏ RAM nguyên tử trong <strong>&lt; 1 giây</strong>.</li>
+          <li><strong>Zero-Downtime:</strong> Không restart máy chủ, không rớt socket HTTP/SSE stream.</li>
+        </ul>
+      </div>
+
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">CHANGE STREAMS REPLICATION FLOW</span>
+          <span class="diag-badge badge-green">&lt; 1000ms SLA</span>
+        </div>
+
+        <!-- Step 1 & 2 -->
+        <div class="diag-row">
+          <div class="diag-node diag-node-green" style="flex:1">
+            <b>1. Actuator Write</b>
+            <span class="green">Ghi Policy v17 (ACID Transaction)</span>
+          </div>
+          <span class="diag-arr">➔</span>
+          <div class="diag-node diag-node-cyan" style="flex:1.2">
+            <b>2. MongoDB Oplog</b>
+            <span class="cyan">Capped Collection Primary Node</span>
+          </div>
+        </div>
+
+        <div style="text-align:center;color:var(--green);font:bold 12px var(--mono)">
+          ▼ Tailable Cursor Push qua Network (&lt; 300ms) ▼
+        </div>
+
+        <!-- Step 3 & 4 -->
+        <div class="diag-row">
+          <div class="diag-node diag-node-cyan" style="flex:1.2">
+            <b>3. Background Worker</b>
+            <span class="cyan">Gateway Coroutine nhận sự kiện</span>
+          </div>
+          <span class="diag-arr">➔</span>
+          <div class="diag-node" style="flex:1">
+            <b>4. Pydantic v2</b>
+            <span>Thẩm định tính hợp lệ</span>
+          </div>
+        </div>
+
+        <!-- Step 5 Result -->
+        <div class="diag-node diag-node-green" style="text-align:center">
+          <b>5. In-Memory Atomic Pointer Swap</b>
+          <span class="green" style="font-weight:600">Active Routing Table Được Cập Nhật Tức Thì · Zero Socket Drop · Không Khởi Động Lại</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>SUB-SECOND HOT-RELOAD WORKFLOW</span><span class="page">07 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 8: SƠ ĐỒ TO RÕ - MULTI-BURN-RATE -->
+  <section class="slide" data-index="8">
+    <div class="top"><span class="brand">● DATADOG OBSERVABILITY</span><span>08 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">GOOGLE SRE STANDARD</div>
+        <h2>Multi-Burn-Rate Alerts</h2>
+        <ul>
+          <li>Triệt tiêu 95% cảnh báo giả của ngưỡng tĩnh.</li>
+          <li>Đánh giá song song: <strong>Short window</strong> (3m/30s bắt đột biến) và <strong>Long window</strong> (30m/5m kiểm tra tính bền vững).</li>
+          <li>Phép logic <strong>AND</strong>: Chỉ kích hoạt cảnh báo khi cả hai cửa sổ cùng vi phạm burn-rate (&ge;14.4x / &ge;6x).</li>
+          <li>Thời gian phát hiện sự cố (MTTD): <strong>30–90 giây</strong>.</li>
+        </ul>
+      </div>
+
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">DUAL-WINDOW BOOLEAN CIRCUIT</span>
+          <span class="diag-badge badge-cyan">SRE BURN ALGORITHM</span>
+        </div>
+
+        <!-- Dual Inputs + AND Gate + Output -->
+        <div style="display:grid;grid-template-columns:1.2fr auto 1.2fr;gap:12px;align-items:center">
+          
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="diag-node diag-node-green">
+              <b>Short Window (3m / 30s)</b>
+              <span class="green">Burn-Rate &ge; 14.4x ? ➔ <strong>TRUE</strong></span>
+            </div>
+            <div class="diag-node diag-node-green">
+              <b>Long Window (30m / 5m)</b>
+              <span class="green">Burn-Rate &ge; 14.4x ? ➔ <strong>TRUE</strong></span>
+            </div>
+          </div>
+
+          <!-- Glowing AND Gate -->
+          <div style="background:#091622;border:2px solid var(--green);border-radius:50%;width:54px;height:54px;display:flex;align-items:center;justify-content:center;font:bold 15px var(--mono);color:var(--green);box-shadow:0 0 16px var(--green-glow)">
+            AND
+          </div>
+
+          <!-- Result -->
+          <div class="diag-node" style="border-color:var(--pink);background:#170a14;text-align:center;padding:16px 12px">
+            <b style="color:var(--pink);font-size:14px">P1 Pager Alert</b>
+            <span class="pink" style="margin:4px 0">Burn-Rate Verified</span>
+            <code class="pink" style="font-size:12px">Alert Webhook Fired</code>
+          </div>
+        </div>
+
+        <!-- Explanatory Footnotes -->
+        <div class="diag-node" style="font-size:12px">
+          <div style="display:flex;justify-content:space-between">
+            <span class="green">✓ Nhiễu ngắn 1 phút:</span>
+            <span class="muted">Long Window Bác Bỏ ➔ Triệt Tiêu Cảnh Báo Giả</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span class="pink">✗ Sự cố thực tế kéo dài:</span>
+            <span class="green">Cả Hai Cửa Sổ Đồng Thuận ➔ Báo Động Trong 60s</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>MULTI-BURN-RATE CIRCUIT BOARD</span><span class="page">08 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 9: SƠ ĐỒ TO RÕ - TRACE HIERARCHY -->
+  <section class="slide" data-index="9">
+    <div class="top"><span class="brand">● DATADOG OBSERVABILITY</span><span>09 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">APM & GENAI TRACING</div>
+        <h2>Phân Lập Lỗi & LLM Observability</h2>
+        <ul>
+          <li><strong>Composite Monitor M9:</strong> Kết hợp <code>Client Quality Error AND Canary Probe Error</code> ➔ Kết luận chính xác lỗi phía nhà cung cấp, tránh điều tra nhầm.</li>
+          <li><strong>Datadog LLM Observability:</strong> Phân tầng vết <code>Workflow</code> ➔ <code>Agent</code> ➔ <code>Tool Call</code> ➔ <code>LLM Call</code>. Minh bạch hóa chi phí và token.</li>
+          <li>Toàn bộ 4 Dashboards, 11 Monitors quản lý bằng Terraform IaC.</li>
+        </ul>
+      </div>
+
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">DISTRIBUTED TRACE HIERARCHY</span>
+          <span class="diag-badge badge-cyan">TRACE_ID: dd-9812</span>
+        </div>
+
+        <!-- Root Span -->
+        <div class="diag-node diag-node-green" style="border-left:4px solid var(--green)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <b>[Workflow] reflex.gateway.chat_completion</b>
+            <span class="diag-badge badge-green">200 OK · 1240ms</span>
+          </div>
+          <span>Root HTTP Streaming Request · Route: order.extract</span>
+        </div>
+
+        <!-- Children Spans -->
+        <div style="margin-left:18px;border-left:2px solid var(--line-bright);padding-left:12px;display:flex;flex-direction:column;gap:8px">
+          
+          <div class="diag-node" style="border-left:4px solid var(--cyan)">
+            <div style="display:flex;justify-content:space-between">
+              <b>[In-Flight Span] semantic.validator</b>
+              <span class="cyan">1.4ms</span>
+            </div>
+            <span>fastjsonschema validate · finish_reason: stop · PASS</span>
+          </div>
+
+          <div class="diag-node" style="border-left:4px solid var(--yellow)">
+            <div style="display:flex;justify-content:space-between">
+              <b>[LLM Call] upstream.openai.gpt-4o</b>
+              <span class="yellow">1180ms · $0.0032</span>
+            </div>
+            <span>Prompt: 142 tokens · Completion: 338 tokens</span>
+          </div>
+
+          <div class="diag-node" style="border-left:4px solid var(--pink);background:#170914">
+            <div style="display:flex;justify-content:space-between">
+              <b style="color:var(--pink)">[AI Agent] cortex.investigate_root_cause</b>
+              <span class="pink">5.2s</span>
+            </div>
+            <span>MongoDB Atlas Vector Search (18ms) + Datadog Logs (35ms)</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>DATADOG LLMOBS TRACE TREE</span><span class="page">09 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 10: SƠ ĐỒ TO RÕ - CLOSED-LOOP SRE -->
+  <section class="slide" data-index="10">
+    <div class="top"><span class="brand">● CLOSED-LOOP SRE</span><span>10 / 12</span></div>
+    <div class="grid-img">
+      <div>
+        <div class="eyebrow">AUTONOMOUS RECOVERY</div>
+        <h2>Chu Trình Tự Chữa Lành Khép Kín 5 Pha</h2>
+        <ul>
+          <li><strong>1. Detect:</strong> Datadog Multi-Burn-Rate bắn Alert Webhook.</li>
+          <li><strong>2. Isolate:</strong> Mở Incident, khoanh vùng vendor nghi vấn.</li>
+          <li><strong>3. Diagnose:</strong> Cortex tìm Incident Memory (Vector 64D) + APM trace.</li>
+          <li><strong>4. Mitigate:</strong> Vượt Guardrails, ghi chính sách mới vào MongoDB.</li>
+          <li><strong>5. Verify:</strong> Kiểm định toán học (Z-test, Wilson CI) trước khi đóng sự cố.</li>
+        </ul>
+      </div>
+
+      <!-- BIG THEMED DIAGRAM -->
+      <div class="diag-board">
+        <div class="diag-header">
+          <span class="diag-badge badge-green">5-PHASE CLOSED-LOOP PIPELINE</span>
+          <span class="diag-badge badge-cyan">ZERO HUMAN DELAY</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          
+          <div class="diag-node diag-node-green" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>1. DETECT (Phát Hiện)</b>
+              <span>Datadog Multi-Burn-Rate kích hoạt Alert Webhook</span>
+            </div>
+            <code class="green" style="font-size:13px">&lt; 60s</code>
+          </div>
+
+          <div class="diag-node" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>2. ISOLATE (Khoanh Vùng)</b>
+              <span>Mở Incident, khóa mạch Circuit Breaker cô lập vendor nghi vấn</span>
+            </div>
+            <code class="cyan" style="font-size:13px">&lt; 1s</code>
+          </div>
+
+          <div class="diag-node diag-node-cyan" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>3. DIAGNOSE (Điều Tra)</b>
+              <span>Cortex Agent tìm Incident Memory (Vector 64D) + APM Spans</span>
+            </div>
+            <code class="cyan" style="font-size:13px">&lt; 5s</code>
+          </div>
+
+          <div class="diag-node diag-node-green" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>4. MITIGATE (Can Thiệp)</b>
+              <span>Vượt Safety Guardrails, ghi MongoDB Oplog Change Streams</span>
+            </div>
+            <code class="green" style="font-size:13px">&lt; 1s</code>
+          </div>
+
+          <div class="diag-node" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>5. VERIFY (Thẩm Định)</b>
+              <span>Kiểm định thống kê Z-Test &amp; Wilson Score CI ➔ Failback từng nấc</span>
+            </div>
+            <code class="yellow" style="font-size:13px">3m Window</code>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <div class="foot"><span>5-PHASE CLOSED-LOOP PIPELINE</span><span class="page">10 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 11: BENCHMARK -->
+  <section class="slide" data-index="11">
+    <div class="top"><span class="brand">● BENCHMARK & IMPACT</span><span>11 / 12</span></div>
+    <div>
+      <div class="eyebrow">TIME MACHINE COUNTERFACTUAL REPLAY</div>
+      <h2>Bằng Chứng Thực Nghiệm & Đối Chứng Kinh Tế</h2>
+      <p>Chạy lại dữ liệu truy cập thực tế qua 3 kịch bản bằng thuật toán mô phỏng sự kiện rời rạc.</p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Tiêu chí đo lường</th>
+          <th>1. Direct Call (Không can thiệp)</th>
+          <th>2. Static Gateway (Failover mã 5xx)</th>
+          <th>3. Reflex Platform (Tự chữa lành)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tỷ lệ đơn hàng thành công</td>
+          <td>64.8%</td>
+          <td>68.2%</td>
+          <td><strong class="green" style="font-size:14px">99.6%</strong></td>
+        </tr>
+        <tr>
+          <td>Đơn hàng lỗi được cứu</td>
+          <td>0 đơn</td>
+          <td>120 đơn</td>
+          <td><strong class="green" style="font-size:14px">3,480 đơn (98.3%)</strong></td>
+        </tr>
+        <tr>
+          <td>Tiêu hao ngân sách lỗi</td>
+          <td>100% (Cháy toàn bộ)</td>
+          <td>88.5%</td>
+          <td><strong class="green" style="font-size:14px">8.2% (Bảo toàn 91.8%)</strong></td>
+        </tr>
+        <tr>
+          <td>Độ trễ bổ sung (Overhead)</td>
+          <td>0ms</td>
+          <td>1.2ms</td>
+          <td><strong>2.1ms</strong></td>
+        </tr>
+        <tr>
+          <td>Thời gian tự hồi phục</td>
+          <td>Vô tận (Chờ vendor)</td>
+          <td>Vô tận (Do không bắt lỗi 200)</td>
+          <td><strong class="green" style="font-size:14px">&lt; 60 giây</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="foot"><span>TIME MACHINE COUNTERFACTUAL IMPACT</span><span class="page">11 / 12</span></div>
+  </section>
+
+  <!-- SLIDE 12: CONCLUSION -->
+  <section class="slide" data-index="12">
+    <div class="top"><span class="brand">● ROADMAP & CONCLUSION</span><span>12 / 12</span></div>
+    <div>
+      <div class="eyebrow">SUMMARY & FUTURE VISION</div>
+      <h2>Tổng Kết Giải Pháp & Sẵn Sàng Nghiệm Thu</h2>
+    </div>
+    <div class="grid2">
+      <div class="card-highlight">
+        <div class="label green">GIÁ TRỊ CỐT LÕI</div>
+        <ul>
+          <li><strong>MongoDB Atlas:</strong> Time Series nén dạng cột, Vector Search 64D dưới 20ms và kênh truyền sự kiện Change Streams dưới 1 giây.</li>
+          <li><strong>Datadog:</strong> Quan sát đa chiều Metrics-Traces-Logs, cảnh báo Multi-Burn-Rate chuẩn SRE và theo dõi AI chuyên sâu với LLMObs.</li>
+          <li>Khắc phục triệt để khoảng mù <em>The Silent Brownout</em> cho GenAI.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="label">LỘ TRÌNH PHÁT TRIỂN & DEMO</div>
+        <ul>
+          <li><strong>Lộ trình:</strong> Kubernetes Operator (1-3 tháng) ➔ AI Agent tự host bằng Llama 3 (3-6 tháng) ➔ Multi-region qua Atlas Global Clusters (6-12 tháng).</li>
+          <li><strong>Thẩm định tự động 3 phút:</strong> <code>task judge:verify</code></li>
+          <li><strong>Reflex Live Console:</strong> <code>http://localhost:3000/?present=1</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot"><span>THANK YOU / Q&A · WE BARE BEARS</span><span class="page">12 / 12</span></div>
+  </section>
+
+</main>
+
+<!-- Floating Nav Dock -->
+<nav class="controls-dock" aria-label="Slide Navigation">
+  <button class="btn-nav" id="btnPrev" title="Previous Slide (Left Arrow)">◀ Prev</button>
+  <span class="counter-box" id="slideCounter">01 / 12</span>
+  <button class="btn-nav" id="btnNext" title="Next Slide (Right Arrow, Space)">Next ▶</button>
+  <button class="btn-nav" id="btnOverview" title="Grid Overview (O / Esc)">⊞ Grid</button>
+  <button class="btn-nav" id="btnFullscreen" title="Toggle Fullscreen (F)">⛶ Full</button>
+</nav>
+
+<!-- Overview Grid Modal -->
+<div id="overview-modal">
+  <div class="overview-grid" id="overviewGrid"></div>
+</div>
 
 <script>
-const slides=[...document.querySelectorAll('.slide')];let current=0;
-function goTo(i){current=Math.max(0,Math.min(slides.length-1,i));slides[current].scrollIntoView({behavior:'smooth',block:'start'});}
-document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown'].includes(e.key))goTo(current+1);if(['ArrowLeft','PageUp'].includes(e.key))goTo(current-1);if(e.key==='Home')goTo(0);if(e.key==='End')goTo(slides.length-1);});
-const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)current=slides.indexOf(e.target)}),{threshold:.55});
-slides.forEach(s=>observer.observe(s));
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let current = 0;
+
+const progressBar = document.getElementById('progressBar');
+const slideCounter = document.getElementById('slideCounter');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
+const btnFullscreen = document.getElementById('btnFullscreen');
+const btnOverview = document.getElementById('btnOverview');
+const overviewModal = document.getElementById('overview-modal');
+const overviewGrid = document.getElementById('overviewGrid');
+
+// Build overview thumbnail items
+slides.forEach((s, idx) => {
+  const card = document.createElement('div');
+  card.className = 'thumb-card' + (idx === 0 ? ' active' : '');
+  const title = s.querySelector('h2') ? s.querySelector('h2').innerText : (s.querySelector('h1') ? s.querySelector('h1').innerText.replace('\n', ' ') : 'Slide ' + (idx + 1));
+  card.innerHTML = `<div class="thumb-num">SLIDE ${String(idx + 1).padStart(2, '0')}</div><div class="thumb-title">${title}</div>`;
+  card.onclick = () => {
+    goTo(idx);
+    toggleOverview(false);
+  };
+  overviewGrid.appendChild(card);
+});
+
+function updateView() {
+  slides.forEach((s, idx) => {
+    s.classList.toggle('active', idx === current);
+  });
+  const padCurrent = String(current + 1).padStart(2, '0');
+  const padTotal = String(total).padStart(2, '0');
+  slideCounter.innerText = `${padCurrent} / ${padTotal}`;
+  progressBar.style.width = `${((current + 1) / total) * 100}%`;
+  
+  const thumbCards = overviewGrid.querySelectorAll('.thumb-card');
+  thumbCards.forEach((c, idx) => c.classList.toggle('active', idx === current));
+
+  history.replaceState(null, null, `#${current + 1}`);
+}
+
+function goTo(idx) {
+  current = Math.max(0, Math.min(total - 1, idx));
+  updateView();
+}
+
+function next() {
+  if (current < total - 1) goTo(current + 1);
+}
+
+function prev() {
+  if (current > 0) goTo(current - 1);
+}
+
+function toggleOverview(force) {
+  const isOpen = overviewModal.classList.contains('open');
+  const target = force !== undefined ? force : !isOpen;
+  overviewModal.classList.toggle('open', target);
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+btnNext.addEventListener('click', next);
+btnPrev.addEventListener('click', prev);
+btnFullscreen.addEventListener('click', toggleFullscreen);
+btnOverview.addEventListener('click', () => toggleOverview());
+
+overviewModal.addEventListener('click', (e) => {
+  if (e.target === overviewModal) toggleOverview(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (overviewModal.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'o' || e.key === 'O') {
+      toggleOverview(false);
+      e.preventDefault();
+    }
+    return;
+  }
+  if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) {
+    next();
+    e.preventDefault();
+  } else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) {
+    prev();
+    e.preventDefault();
+  } else if (e.key === 'Home') {
+    goTo(0);
+    e.preventDefault();
+  } else if (e.key === 'End') {
+    goTo(total - 1);
+    e.preventDefault();
+  } else if (e.key === 'f' || e.key === 'F') {
+    toggleFullscreen();
+    e.preventDefault();
+  } else if (e.key === 'o' || e.key === 'O') {
+    toggleOverview(true);
+    e.preventDefault();
+  } else if (e.key === 'Escape') {
+    toggleOverview(false);
+  }
+});
+
+document.getElementById('presentation').addEventListener('click', (e) => {
+  if (e.target.closest('.controls-dock') || e.target.closest('#overview-modal') || e.target.closest('a') || e.target.closest('button')) {
+    return;
+  }
+  const x = e.clientX;
+  const w = window.innerWidth;
+  if (x > w * 0.75) next();
+  else if (x < w * 0.25) prev();
+});
+
+const hash = parseInt(window.location.hash.replace('#', ''), 10);
+if (!isNaN(hash) && hash >= 1 && hash <= total) {
+  current = hash - 1;
+}
+updateView();
 </script>
 </body>
 </html>

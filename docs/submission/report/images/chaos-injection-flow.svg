@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 250" width="100%" height="100%">
+  <defs>
+    <marker id="arr4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 6 3.5, 0 7" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #000000; }
+    .title { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .stereo { font-size: 10px; font-style: italic; fill: #444444; }
+    .name { font-size: 12px; font-weight: bold; }
+    .sub { font-size: 10px; fill: #333333; }
+    .fault { font-size: 10px; font-weight: bold; fill: #000000; }
+    .flow { font-size: 10px; fill: #000000; font-weight: 500; }
+  </style>
+
+  <!-- Background White -->
+  <rect width="880" height="250" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Title -->
+  <text x="25" y="24" class="title">CHAOS PROXY FAULT INJECTION ARCHITECTURE</text>
+  <line x1="25" y1="32" x2="855" y2="32" stroke="#000000" stroke-width="1"/>
+
+  <!-- Left: Gateway -->
+  <g transform="translate(25, 55)">
+    <rect width="180" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="90" y="26" text-anchor="middle" class="stereo">&lt;&lt;data-plane&gt;&gt;</text>
+    <text x="90" y="46" text-anchor="middle" class="name">Reflex Gateway</text>
+    <line x1="15" y1="56" x2="165" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="90" y="80" text-anchor="middle" class="sub">• In-Flight Quality Checks</text>
+    <text x="90" y="98" text-anchor="middle" class="sub">• Schema Validations</text>
+    <text x="90" y="116" text-anchor="middle" class="sub">• Circuit Breaker Fallback</text>
+    <rect x="20" y="132" width="140" height="20" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+    <text x="90" y="146" text-anchor="middle" class="flow">Zero Cheat Header Read</text>
+  </g>
+
+  <!-- Center: Chaos Proxy & Fault Catalog -->
+  <g transform="translate(265, 55)">
+    <rect width="350" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="175" y="22" text-anchor="middle" class="stereo">&lt;&lt;middleware / chaos-engine&gt;&gt;</text>
+    <text x="175" y="38" text-anchor="middle" class="name">Chaos Proxy (Fault Injection)</text>
+    <line x1="15" y1="46" x2="335" y2="46" stroke="#000000" stroke-width="0.5"/>
+
+    <!-- 5 Fault Catalog Items -->
+    <rect x="15" y="55" width="320" height="20" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+    <text x="25" y="69" class="fault">1. truncate</text>
+    <text x="150" y="69" class="sub">Early cutoff at 60% tokens (Silent Brownout)</text>
+
+    <rect x="15" y="79" width="320" height="20" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+    <text x="25" y="93" class="fault">2. corrupt_json</text>
+    <text x="150" y="93" class="sub">Strip trailing '}' bracket (Syntax Crash)</text>
+
+    <rect x="15" y="103" width="320" height="20" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+    <text x="25" y="117" class="fault">3. rate_limit_429</text>
+    <text x="150" y="117" class="sub">HTTP 429 + Retry-After: 2 header</text>
+
+    <rect x="15" y="127" width="320" height="20" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+    <text x="25" y="141" class="fault">4. latency_spike</text>
+    <text x="150" y="141" class="sub">Inject +3000ms tail latency delay</text>
+
+    <rect x="15" y="151" width="320" height="20" fill="#ffffff" stroke="#000000" stroke-width="0.8"/>
+    <text x="25" y="165" class="fault">5. stream_stall</text>
+    <text x="150" y="165" class="sub">Freeze active streaming SSE chunks</text>
+
+    <text x="175" y="196" text-anchor="middle" class="flow">Controlled &amp; Deterministic (--seed 42)</text>
+  </g>
+
+  <!-- Right: Upstream LLMs -->
+  <g transform="translate(675, 55)">
+    <rect width="180" height="170" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="90" y="26" text-anchor="middle" class="stereo">&lt;&lt;external / upstream&gt;&gt;</text>
+    <text x="90" y="46" text-anchor="middle" class="name">LLM Targets</text>
+    <line x1="15" y1="56" x2="165" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="90" y="80" text-anchor="middle" class="sub">• OpenAI API</text>
+    <text x="90" y="98" text-anchor="middle" class="sub">• Anthropic API</text>
+    <text x="90" y="116" text-anchor="middle" class="sub">• Mock LLM Engine</text>
+    <rect x="20" y="132" width="140" height="20" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+    <text x="90" y="146" text-anchor="middle" class="flow">Real &amp; Synthetic</text>
+  </g>
+
+  <!-- Connecting Arrows -->
+  <line x1="205" y1="140" x2="265" y2="140" stroke="#000000" stroke-width="1.2" marker-end="url(#arr4)"/>
+  <line x1="615" y1="140" x2="675" y2="140" stroke="#000000" stroke-width="1.2" marker-end="url(#arr4)"/>
+
+</svg>
+

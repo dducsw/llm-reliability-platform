@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 280" width="100%" height="100%">
+  <defs>
+    <marker id="arrC" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 6 3.5, 0 7" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #000000; }
+    .title { font-size: 15px; font-weight: bold; letter-spacing: 0.5px; }
+    .phase-hdr { font-size: 10px; font-style: italic; fill: #333333; }
+    .name { font-size: 12px; font-weight: bold; }
+    .sub { font-size: 10px; fill: #333333; }
+    .timing { font-size: 10px; font-weight: bold; fill: #000000; }
+    .flow { font-size: 10px; fill: #000000; }
+  </style>
+
+  <!-- Background White -->
+  <rect width="920" height="280" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Title -->
+  <text x="25" y="28" class="title">CLOSED-LOOP SRE RECOVERY WORKFLOW</text>
+  <line x1="25" y1="36" x2="895" y2="36" stroke="#000000" stroke-width="1"/>
+
+  <!-- STEP 1: DETECT -->
+  <g transform="translate(25, 55)">
+    <rect width="160" height="150" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="80" y="26" text-anchor="middle" class="phase-hdr">&lt;&lt;phase 1&gt;&gt;</text>
+    <text x="80" y="46" text-anchor="middle" class="name">1. DETECT</text>
+    <line x1="15" y1="56" x2="145" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="76" text-anchor="middle" class="sub">Datadog Multi-Burn</text>
+    <text x="80" y="94" text-anchor="middle" class="sub">Composite Monitor M9</text>
+    <text x="80" y="112" text-anchor="middle" class="sub">Sentinel Dedup Key</text>
+    <line x1="15" y1="122" x2="145" y2="122" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="138" text-anchor="middle" class="timing">[Time: 30s – 90s]</text>
+  </g>
+
+  <!-- ARROW 1 -> 2 -->
+  <line x1="185" y1="130" x2="205" y2="130" stroke="#000000" stroke-width="1.2" marker-end="url(#arrC)"/>
+
+  <!-- STEP 2: ISOLATE -->
+  <g transform="translate(205, 55)">
+    <rect width="160" height="150" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="80" y="26" text-anchor="middle" class="phase-hdr">&lt;&lt;phase 2&gt;&gt;</text>
+    <text x="80" y="46" text-anchor="middle" class="name">2. ISOLATE</text>
+    <line x1="15" y1="56" x2="145" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="76" text-anchor="middle" class="sub">In-Flight Quality Check</text>
+    <text x="80" y="94" text-anchor="middle" class="sub">Circuit Breaker Trip</text>
+    <text x="80" y="112" text-anchor="middle" class="sub">Quality-Aware Retry</text>
+    <line x1="15" y1="122" x2="145" y2="122" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="138" text-anchor="middle" class="timing">[Fast-Loop &lt; 2ms]</text>
+  </g>
+
+  <!-- ARROW 2 -> 3 -->
+  <line x1="365" y1="130" x2="385" y2="130" stroke="#000000" stroke-width="1.2" marker-end="url(#arrC)"/>
+
+  <!-- STEP 3: DIAGNOSE -->
+  <g transform="translate(385, 55)">
+    <rect width="160" height="150" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="80" y="26" text-anchor="middle" class="phase-hdr">&lt;&lt;phase 3&gt;&gt;</text>
+    <text x="80" y="46" text-anchor="middle" class="name">3. DIAGNOSE</text>
+    <line x1="15" y1="56" x2="145" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="76" text-anchor="middle" class="sub">Cortex AI SRE</text>
+    <text x="80" y="94" text-anchor="middle" class="sub">64D Vector Search</text>
+    <text x="80" y="112" text-anchor="middle" class="sub">Datadog LLMObs Audit</text>
+    <line x1="15" y1="122" x2="145" y2="122" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="138" text-anchor="middle" class="timing">[Time: 15s – 25s]</text>
+  </g>
+
+  <!-- ARROW 3 -> 4 -->
+  <line x1="545" y1="130" x2="565" y2="130" stroke="#000000" stroke-width="1.2" marker-end="url(#arrC)"/>
+
+  <!-- STEP 4: MITIGATE -->
+  <g transform="translate(565, 55)">
+    <rect width="160" height="150" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="80" y="26" text-anchor="middle" class="phase-hdr">&lt;&lt;phase 4&gt;&gt;</text>
+    <text x="80" y="46" text-anchor="middle" class="name">4. MITIGATE</text>
+    <line x1="15" y1="56" x2="145" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="76" text-anchor="middle" class="sub">Policy Guardrails Check</text>
+    <text x="80" y="94" text-anchor="middle" class="sub">ACID Write on MongoDB</text>
+    <text x="80" y="112" text-anchor="middle" class="sub">Change Streams Push</text>
+    <line x1="15" y1="122" x2="145" y2="122" stroke="#000000" stroke-width="0.5"/>
+    <text x="80" y="138" text-anchor="middle" class="timing">[Hot-Reload &lt; 1s]</text>
+  </g>
+
+  <!-- ARROW 4 -> 5 -->
+  <line x1="725" y1="130" x2="745" y2="130" stroke="#000000" stroke-width="1.2" marker-end="url(#arrC)"/>
+
+  <!-- STEP 5: VERIFY -->
+  <g transform="translate(745, 55)">
+    <rect width="150" height="150" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="75" y="26" text-anchor="middle" class="phase-hdr">&lt;&lt;phase 5&gt;&gt;</text>
+    <text x="75" y="46" text-anchor="middle" class="name">5. VERIFY</text>
+    <line x1="15" y1="56" x2="135" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="75" y="76" text-anchor="middle" class="sub">Two-Proportion Z-Test</text>
+    <text x="75" y="94" text-anchor="middle" class="sub">Wilson Score Interval</text>
+    <text x="75" y="112" text-anchor="middle" class="sub">Staged Failback (10-100%)</text>
+    <line x1="15" y1="122" x2="135" y2="122" stroke="#000000" stroke-width="0.5"/>
+    <text x="75" y="138" text-anchor="middle" class="timing">[Proof Window: 3-5m]</text>
+  </g>
+
+  <!-- FEEDBACK LOOP -->
+  <path d="M 820 205 L 820 240 L 105 240 L 105 205" fill="none" stroke="#000000" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arrC)"/>
+  <rect x="360" y="232" width="200" height="16" fill="#ffffff"/>
+  <text x="460" y="244" text-anchor="middle" class="flow">Closed-Loop Complete · Incident Memory Saved</text>
+
+</svg>

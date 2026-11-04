@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 240" width="100%" height="100%">
+  <defs>
+    <marker id="arr2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 6 3.5, 0 7" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #000000; }
+    .title { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+    .stereo { font-size: 10px; font-style: italic; fill: #444444; }
+    .name { font-size: 12px; font-weight: bold; }
+    .sub { font-size: 10px; fill: #333333; }
+    .flow { font-size: 10px; fill: #000000; font-weight: 500; }
+  </style>
+
+  <!-- Background White -->
+  <rect width="880" height="240" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Title -->
+  <text x="25" y="24" class="title">DATADOG MULTI-WINDOW MULTI-BURN-RATE SLO EVALUATION LOGIC</text>
+  <line x1="25" y1="32" x2="855" y2="32" stroke="#000000" stroke-width="1"/>
+
+  <!-- Condition 1: Short Window -->
+  <g transform="translate(25, 55)">
+    <rect width="260" height="65" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="130" y="22" text-anchor="middle" class="stereo">&lt;&lt;condition 1&gt;&gt;</text>
+    <text x="130" y="38" text-anchor="middle" class="name">Short Window (3m / 30s)</text>
+    <text x="130" y="52" text-anchor="middle" class="sub">Burn Rate &gt;= 14.4x (2% budget in 1h)</text>
+  </g>
+
+  <!-- Condition 2: Long Window -->
+  <g transform="translate(25, 140)">
+    <rect width="260" height="65" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="130" y="22" text-anchor="middle" class="stereo">&lt;&lt;condition 2&gt;&gt;</text>
+    <text x="130" y="38" text-anchor="middle" class="name">Long Window (30m / 5m)</text>
+    <text x="130" y="52" text-anchor="middle" class="sub">Burn Rate &gt;= 14.4x (Statistically Persistent)</text>
+  </g>
+
+  <!-- AND Gate Component -->
+  <g transform="translate(365, 85)">
+    <rect width="130" height="90" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="65" y="30" text-anchor="middle" class="stereo">&lt;&lt;logic&gt;&gt;</text>
+    <text x="65" y="52" text-anchor="middle" class="name">BOOLEAN</text>
+    <text x="65" y="70" text-anchor="middle" class="name">AND</text>
+  </g>
+
+  <!-- Outcome: Trigger Alert -->
+  <g transform="translate(570, 70)">
+    <rect width="285" height="120" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+    <text x="142" y="26" text-anchor="middle" class="stereo">&lt;&lt;monitor output&gt;&gt;</text>
+    <text x="142" y="46" text-anchor="middle" class="name">SLO Multi-Burn Alert Triggered</text>
+    <line x1="15" y1="56" x2="270" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="142" y="74" text-anchor="middle" class="sub">• Zero False Positives from low-traffic spikes</text>
+    <text x="142" y="90" text-anchor="middle" class="sub">• Fast Detection Time: 30s – 90s</text>
+    <text x="142" y="106" text-anchor="middle" class="sub">• Webhook fired to Sentinel &amp; Cortex Agent</text>
+  </g>
+
+  <!-- Connecting Lines -->
+  <!-- Short Window to AND Gate -->
+  <path d="M 285 88 L 325 88 L 325 115 L 365 115" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arr2)"/>
+
+  <!-- Long Window to AND Gate -->
+  <path d="M 285 172 L 325 172 L 325 145 L 365 145" fill="none" stroke="#000000" stroke-width="1.2" marker-end="url(#arr2)"/>
+
+  <!-- AND Gate to Outcome -->
+  <line x1="495" y1="130" x2="570" y2="130" stroke="#000000" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <rect x="505" y="118" width="55" height="12" fill="#ffffff"/>
+  <text x="532" y="127" text-anchor="middle" class="flow">Both True</text>
+
+</svg>
+

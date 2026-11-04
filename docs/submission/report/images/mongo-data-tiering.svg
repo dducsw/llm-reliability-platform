@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" width="100%" height="100%">
+  <defs>
+    <marker id="arrB" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 6 3.5, 0 7" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; fill: #000000; }
+    .title { font-size: 15px; font-weight: bold; letter-spacing: 0.5px; }
+    .stereo { font-size: 10px; font-style: italic; fill: #333333; }
+    .name { font-size: 12px; font-weight: bold; }
+    .sub { font-size: 10px; fill: #333333; }
+    .tier-hdr { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    .flow { font-size: 10px; fill: #000000; }
+  </style>
+
+  <!-- Background White -->
+  <rect width="920" height="440" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Title -->
+  <text x="25" y="28" class="title">MONGODB ATLAS DATA ARCHITECTURE &amp; TIERING</text>
+  <line x1="25" y1="36" x2="895" y2="36" stroke="#000000" stroke-width="1"/>
+
+  <!-- INGESTION SOURCE (LEFT) -->
+  <g transform="translate(25, 55)">
+    <rect width="120" height="110" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="60" y="28" text-anchor="middle" class="stereo">&lt;&lt;source&gt;&gt;</text>
+    <text x="60" y="46" text-anchor="middle" class="name">Reflex Gateway</text>
+    <line x1="15" y1="56" x2="105" y2="56" stroke="#000000" stroke-width="0.5"/>
+    <text x="60" y="74" text-anchor="middle" class="sub">• Requests Stream</text>
+    <text x="60" y="88" text-anchor="middle" class="sub">• Vendor Attempts</text>
+    <text x="60" y="102" text-anchor="middle" class="sub">• Canary Probes</text>
+  </g>
+
+  <!-- TIER 1: HOT TIER (TIME SERIES) -->
+  <g transform="translate(170, 55)">
+    <rect width="725" height="110" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="15" y="20" class="tier-hdr">Hot Tier — Time Series Collections &lt;&lt;TTL: 14 Days&gt;&gt;</text>
+    <line x1="15" y1="26" x2="710" y2="26" stroke="#000000" stroke-width="0.8"/>
+
+    <!-- requests_ts -->
+    <g transform="translate(15, 36)">
+      <rect width="165" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="82" y="24" text-anchor="middle" class="name">requests_ts</text>
+      <text x="82" y="40" text-anchor="middle" class="sub">User Delivered SLO</text>
+      <text x="82" y="52" text-anchor="middle" class="stereo">granularity: seconds</text>
+    </g>
+
+    <!-- attempts_ts -->
+    <g transform="translate(190, 36)">
+      <rect width="165" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="82" y="24" text-anchor="middle" class="name">attempts_ts</text>
+      <text x="82" y="40" text-anchor="middle" class="sub">Vendor Attempt Raw</text>
+      <text x="82" y="52" text-anchor="middle" class="stereo">granularity: seconds</text>
+    </g>
+
+    <!-- probes_ts -->
+    <g transform="translate(365, 36)">
+      <rect width="165" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="82" y="24" text-anchor="middle" class="name">probes_ts</text>
+      <text x="82" y="40" text-anchor="middle" class="sub">Canary Synthetic</text>
+      <text x="82" y="52" text-anchor="middle" class="stereo">granularity: seconds</text>
+    </g>
+
+    <!-- bench_ts -->
+    <g transform="translate(540, 36)">
+      <rect width="170" height="60" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="85" y="24" text-anchor="middle" class="name">bench_ts</text>
+      <text x="85" y="40" text-anchor="middle" class="sub">Open Benchmarks</text>
+      <text x="85" y="52" text-anchor="middle" class="stereo">granularity: hours</text>
+    </g>
+  </g>
+
+  <!-- TIER 2: WARM TIER (ROLLUPS VIA $MERGE) -->
+  <g transform="translate(170, 185)">
+    <rect width="725" height="95" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="15" y="20" class="tier-hdr">Warm Tier — Aggregations &lt;&lt;$merge Scheduled Rollup&gt;&gt;</text>
+    <line x1="15" y1="26" x2="710" y2="26" stroke="#000000" stroke-width="0.8"/>
+
+    <!-- sli_1m -->
+    <g transform="translate(15, 36)">
+      <rect width="340" height="46" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="170" y="20" text-anchor="middle" class="name">sli_1m</text>
+      <text x="170" y="34" text-anchor="middle" class="sub">Minute Rollup: P50/P90/P99 latency &amp; quality (TTL: 45d)</text>
+    </g>
+
+    <!-- sli_1h -->
+    <g transform="translate(370, 36)">
+      <rect width="340" height="46" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="170" y="20" text-anchor="middle" class="name">sli_1h</text>
+      <text x="170" y="34" text-anchor="middle" class="sub">Hourly Rollup: Long-term SLO trend &amp; cost drift (TTL: 400d)</text>
+    </g>
+  </g>
+
+  <!-- TIER 3: OPERATIONAL & KNOWLEDGE -->
+  <g transform="translate(170, 300)">
+    <rect width="725" height="115" fill="#ffffff" stroke="#000000" stroke-width="1.2"/>
+    <text x="15" y="20" class="tier-hdr">Operational &amp; Knowledge Tier &lt;&lt;Standard / Persistent&gt;&gt;</text>
+    <line x1="15" y1="26" x2="710" y2="26" stroke="#000000" stroke-width="0.8"/>
+
+    <!-- policies -->
+    <g transform="translate(15, 36)">
+      <rect width="220" height="65" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="110" y="24" text-anchor="middle" class="name">policies &amp; targets</text>
+      <text x="110" y="42" text-anchor="middle" class="sub">Dynamic routing weights</text>
+      <text x="110" y="54" text-anchor="middle" class="stereo">&lt;&lt;Change Streams Active&gt;&gt;</text>
+    </g>
+
+    <!-- incidents -->
+    <g transform="translate(250, 36)">
+      <rect width="225" height="65" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="112" y="24" text-anchor="middle" class="name">incidents &amp; actions</text>
+      <text x="112" y="42" text-anchor="middle" class="sub">Incident state &amp; audit trail</text>
+      <text x="112" y="54" text-anchor="middle" class="stereo">&lt;&lt;Partial Unique Index&gt;&gt;</text>
+    </g>
+
+    <!-- incident_memory -->
+    <g transform="translate(490, 36)">
+      <rect width="220" height="65" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+      <text x="110" y="24" text-anchor="middle" class="name">incident_memory</text>
+      <text x="110" y="42" text-anchor="middle" class="sub">64D signature vectors</text>
+      <text x="110" y="54" text-anchor="middle" class="stereo">&lt;&lt;Atlas $vectorSearch&gt;&gt;</text>
+    </g>
+  </g>
+
+  <!-- Connectors -->
+  <!-- Ingestion to Hot -->
+  <line x1="145" y1="110" x2="170" y2="110" stroke="#000000" stroke-width="1.2" marker-end="url(#arrB)"/>
+
+  <!-- Hot to Warm (Rollup) -->
+  <line x1="530" y1="165" x2="530" y2="185" stroke="#000000" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arrB)"/>
+  <rect x="500" y="168" width="60" height="12" fill="#ffffff"/>
+  <text x="530" y="177" text-anchor="middle" class="flow">$merge</text>
+
+</svg>
