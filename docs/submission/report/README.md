@@ -40,7 +40,7 @@ Sự đồng hành của các chuyên gia kỹ thuật cùng hạ tầng tài ng
 Bộ hồ sơ báo cáo gồm 7 chuyên đề chuyên sâu:
 
 1. [01 — Bối Cảnh, Mục Tiêu & Giải Pháp](./01-IDEA.md)  
-Khoảng mù The Silent Brownout, 4 mục tiêu kỹ thuật, kiến trúc Cung phản xạ hai tốc độ và 4 điểm nhấn kỹ thuật.
+Khoảng mù The Silent Brownout, 4 mục tiêu kỹ thuật, kiến trúc Cung phản xạ hai tốc độ và 6 điểm nhấn kỹ thuật (nổi bật với Trục Dữ Liệu Thời Gian Thực MongoDB Atlas & Nền Tảng Quan Sát Datadog).
 
 2. [02 — Kiến Trúc Hệ Thống & Trụ Cột Công Nghệ](./02-ARCHITECTURE.md)  
 Phân tách Data Plane vs Control Plane, cơ sở lý thuyết vì sao chọn MongoDB Atlas và Datadog, cơ chế Zero-Downtime Hot-Reload.
