@@ -3,12 +3,21 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Request
 from reflex_mongo.collections import CHAOS_RUNS
 
 router = APIRouter()
+
+
+def _to_utc_iso(dt: Any) -> str | None:
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt.isoformat()
+    return dt
 
 
 @router.get("/api/demo")
@@ -26,8 +35,8 @@ async def demo_state(request: Request) -> dict[str, Any]:
         "run_id": phase.get("run_id"),
         "scenario": phase.get("scenario"),
         "phase_index": phase.get("phase_index"),
-        "phase_starts_at": phase.get("starts_at"),
+        "phase_starts_at": _to_utc_iso(phase.get("starts_at")),
     }
     first = await db[CHAOS_RUNS].find_one({"run_id": phase.get("run_id"), "phase_index": 0})
-    out["run"]["started_at"] = (first or phase).get("starts_at")
+    out["run"]["started_at"] = _to_utc_iso((first or phase).get("starts_at"))
     return out
