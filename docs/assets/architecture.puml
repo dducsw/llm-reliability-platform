@@ -1,0 +1,78 @@
+@startuml architecture
+' Reflex — Sơ đồ kiến trúc giải pháp & luồng dữ liệu
+' Compile: java -jar plantuml.jar -tpng -charset UTF-8 docs/assets/architecture.puml
+title Reflex — Kiến trúc giải pháp & luồng dữ liệu\nDual-Loop: Data Plane (phản xạ nhanh) + Control Plane (điều tra & tự hồi phục)
+
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam dpi 140
+skinparam shadowing false
+skinparam roundCorner 14
+skinparam ArrowColor #475569
+skinparam ArrowFontSize 12
+skinparam ArrowFontColor #0f172a
+skinparam ArrowThickness 1.4
+skinparam rectangle {
+  FontColor #0f172a
+  BorderColor #475569
+  BorderThickness 1.5
+}
+skinparam nodesep 60
+skinparam ranksep 90
+
+left to right direction
+
+rectangle "**WORKLOAD / SIMULATOR**\n──────────────\nShopMate traffic-gen\nProber (canary 15s,\nqua gateway + gọi thẳng)\nScenario runner" as WL #f1f5f9
+
+rectangle "**DATA PLANE — FAST LOOP**\n(overhead <5 ms)\n──────────────\n**LLM Gateway ×2** (FastAPI)\nOpenAI-compatible\nRouter · Circuit Breaker\nRetry · Hedge · Failover\nIn-flight Quality Validator\nPolicy cache (RAM)" as DP #dbeafe
+
+rectangle "**UPSTREAM LLM**\n──────────────\nchaos-proxy\n(truncate · 429 · TTFT shift)\nVendor A / Vendor B\nmock-llm" as UP #f1f5f9
+
+rectangle "**MONGODB ATLAS**\n──────────────\n**HOT** Time Series, TTL 14d:\nrequests_ts · attempts_ts\nprobes_ts · bench_ts\n**WARM** $merge rollup:\nsli_1m (45d) · sli_1h (400d)\n**OPERATIONAL** (Change Streams):\npolicies · incidents · actions\nhealth_state · targets · slos\n**Atlas Vector Search**\nincident_signature (64D cosine)" as MDB #d1fae5
+
+rectangle "**DATADOG**\n──────────────\nAgent: APM · DogStatsD · Logs\nMonitors M1–M13\n(multi-burn-rate, composite,\nanomaly) · SLOs\nDashboards D1–D4\nLLM Observability\nEvents (policy applied,\nRecovery Proof)" as DD #ede9fe
+
+rectangle "**CONTROL PLANE — SLOW LOOP**\n──────────────\nSentinel (rollup · burn-rate)\nIncident Manager (dedup)\nWebhook ingest\nPolicy Engine (guardrails)\nActuator · Verifier\n(Wilson CI · z-test)\nTime Machine (replay)\nBFF API (REST + SSE)" as CP #ffedd5
+
+rectangle "**CORTEX — AI SRE AGENT**\n──────────────\nContext pack\nReasoning loop (tool read-only)\nEvidence validator\npropose_action\n(catalog có giới hạn)" as CX #fef3c7
+
+rectangle "**REFLEX CONSOLE**\n──────────────\nReact SPA\nLive topology · War Room\nApprovals · Time Machine" as UI #f3e8ff
+
+' ── Request path
+WL --> DP : "① OpenAI request"
+DP --> UP : "② attempt\n(retry/hedge/failover)"
+
+' ── Telemetry
+DP --> MDB : "③ batched insertMany\n(Time Series, async)"
+DP --> DD : "④ traces · metrics · logs"
+
+' ── Detect
+MDB --> CP : "⑤ Sentinel rollup +\nburn-rate (A1–A5)"
+DD --> CP : "⑥ Monitor webhook\n(diagnosis tag)"
+
+' ── Investigate
+MDB -[#d97706,dashed]-> CX : "⑦ Change Stream:\nincident mới"
+CX --> MDB : "⑧ $vectorSearch +\nAggregation A1–A18"
+CX --> DD : "⑨ Datadog API (logs/spans)\n+ LLMObs span"
+
+' ── Respond
+CX --> CP : "⑩ propose_action"
+CP --> MDB : "⑪ policy version mới\n+ incident/action state"
+MDB -[#2563eb,dashed]-> DP : "⑫ Change Stream: policies\nhot-reload <1s"
+CP --> DD : "⑬ Event: policy applied,\nRecovery Proof"
+
+' ── UI
+CP --> UI : "SSE ← Change Streams"
+UI --> CP : "REST"
+
+legend bottom
+  |= Ký hiệu |= Ý nghĩa |
+  | ①–④ | Request path + telemetry (Fast loop, không chờ Mongo/Datadog) |
+  | ⑤–⑥ | Detect: Sentinel (Mongo) và Datadog Monitor, hội tụ về 1 incident nhờ partial unique index |
+  | ⑦–⑨ | Investigate: Cortex nhận incident, tra incident tương tự, truy vấn Datadog |
+  | ⑩–⑬ | Respond & Verify: guardrail → apply policy → hot-reload → Recovery Proof |
+  | Nét đứt | MongoDB Change Stream (push). Time Series không hỗ trợ → chỉ watch collection thường |
+endlegend
+
+@enduml
