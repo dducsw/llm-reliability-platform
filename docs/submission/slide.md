@@ -419,7 +419,7 @@ Công cụ mô phỏng sự kiện rời rạc chạy lại dòng request thực
     <h3>Bộ Đôi Nền Tảng Thực Chiến</h3>
     <ul>
       <li><strong>MongoDB Atlas:</strong> Trung tâm dữ liệu chuỗi thời gian nén, lưu trữ trạng thái có ACID, tìm kiếm vector HNSW và kênh truyền sự kiện Change Streams dưới 1 giây.</li>
-      <li><strong>Datadog:</strong> Hệ thần kinh quan sát hợp nhất Metrics-Traces-Logs, cảnh báo Multi-Burn-Rate chuẩn SRE và giám sát AI chuyên sâu với LLM Observability.</li>
+      <li><strong>Datadog:</strong> Nền tảng quan sát hợp nhất Metrics-Traces-Logs, cảnh báo Multi-Burn-Rate chuẩn SRE và giám sát AI chuyên sâu với LLM Observability.</li>
     </ul>
   </div>
   <div class="card">
