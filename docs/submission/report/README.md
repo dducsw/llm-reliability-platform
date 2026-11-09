@@ -51,7 +51,7 @@ Chiến lược phân tầng Hot/Warm/Operational, thiết kế 4 Time Series Co
 4. [04 — Kiến Trúc Quan Sát Thời Gian Thực Trên Datadog](./04-DATADOG.md)  
 Toán học cảnh báo Multi-Window Multi-Burn-Rate theo chuẩn Google SRE, Composite Monitor M9 phân lập lỗi, và cấu hình Datadog LLMObs.
 
-5. [05 — Vòng Lặp Tự Chữa Lành Khép Kín (Closed-Loop SRE)](./05-GUIDE.md)  
+5. [05 — Vòng Lặp Tự Chữa Lành Khép Kín (Closed-Loop SRE)](./05-SRE.md)  
 Quy trình 5 pha (Detect ➔ Isolate ➔ Diagnose ➔ Mitigate ➔ Verify), cơ chế rào chắn Bounded Actions và kiểm định thống kê toán học.
 
 6. [06 — Kịch Bản Vận Hành & Giả Lập Sự Cố (Chaos Engineering)](./06-CHAOS.md)  
@@ -68,7 +68,7 @@ Bảng đối chiếu phục vụ Ban Giám Khảo tra cứu theo yêu cầu t�
 | :---: | :--- | :--- | :---: |
 | 1 | Tên dự án và mô tả bài toán | [01-IDEA.md](./01-IDEA.md) | Đầy đủ |
 | 2 | Thông tin đội thi và đầu mối liên hệ | [README.md](./README.md) (Trang bìa) | Đầy đủ |
-| 3 | Kiến trúc giải pháp và ứng dụng | [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) & [05-GUIDE.md](./05-GUIDE.md) | Đầy đủ |
+| 3 | Kiến trúc giải pháp và ứng dụng | [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) & [05-SRE.md](./05-SRE.md) | Đầy đủ |
 | 4 | Kiến trúc dữ liệu trên MongoDB | [03-MONGO.md](./03-MONGO.md) | Đầy đủ |
 | 5 | Kiến trúc observability trên Datadog | [04-DATADOG.md](./04-DATADOG.md) | Đầy đủ |
 | 6 | Repository mã nguồn và cài đặt | [07-SUMMARY.md](./07-SUMMARY.md) (Mục 2) | Đầy đủ |

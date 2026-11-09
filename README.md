@@ -61,6 +61,23 @@ flowchart LR
 
 ---
 
+## Báo cáo kỹ thuật nộp bài (`docs/submission/report/`)
+
+Bộ hồ sơ báo cáo kỹ thuật chính thức của dự án Reflex tham gia **MUGVN Hackathon 2026**:
+
+| Báo cáo | Tên chuyên đề | Nội dung cốt lõi |
+| :--- | :--- | :--- |
+| [**README.md**](docs/submission/report/README.md) | **Tổng quan & Bảng đối chiếu 12 hạng mục** | Trang bìa, lời cảm ơn, tóm tắt điều hành, bảng đối chiếu 12 hạng mục nộp bài theo barem chấm thi và danh mục biểu đồ SVG. |
+| [**01-IDEA.md**](docs/submission/report/01-IDEA.md) | **01 — Bối Cảnh, Mục Tiêu & Giải Pháp** | Khoảng mù vận hành *The Silent Brownout*, 4 mục tiêu kỹ thuật, kiến trúc Cung phản xạ hai tốc độ (Two-Speed Architecture) và 6 điểm nhấn kỹ thuật. |
+| [**02-ARCHITECTURE.md**](docs/submission/report/02-ARCHITECTURE.md) | **02 — Kiến Trúc Hệ Thống & Trụ Cột Công Nghệ** | Phân tách rạch ròi Data Plane (< 2.8ms overhead) vs Control Plane, cơ chế Zero-Downtime Hot-Reload (< 1s qua Change Streams), và các quyết định kỹ thuật (ADRs). |
+| [**03-MONGO.md**](docs/submission/report/03-MONGO.md) | **03 — Thiết Kế Cơ Sở Dữ Liệu MongoDB Atlas** | Động cơ dữ liệu chủ động: phân tầng Hot/Warm/Operational, 4 Time Series Collections, Incident Memory (Vector Search 64D), Change Streams và thư viện Aggregation (A1–A18). |
+| [**04-DATADOG.md**](docs/submission/report/04-DATADOG.md) | **04 — Kiến Trúc Quan Sát Thời Gian Thực Datadog** | Chuẩn Unified Service Tagging, cảnh báo Multi-Window Multi-Burn-Rate (chuẩn Google SRE), Composite Monitors (M9 phân lập lỗi) và Datadog LLM Observability. |
+| [**05-SRE.md**](docs/submission/report/05-SRE.md) | **05 — Vòng Lặp Tự Chữa Lành Khép Kín (Closed-Loop SRE)** | Vòng lặp 5 pha (*Detect ➔ Isolate ➔ Diagnose ➔ Mitigate ➔ Verify*), rào chắn an toàn Bounded Actions và kiểm định toán học thống kê (Wilson Score Interval, Z-test). |
+| [**06-CHAOS.md**](docs/submission/report/06-CHAOS.md) | **06 — Kịch Bản Vận Hành & Giả Lập Sự Cố (Chaos)** | Kiến trúc Chaos Proxy với 5 dạng lỗi thực tế, kịch bản trọng tâm S1 (Silent Brownout), baseline 60 ngày OpenRouter, tính tất định và chống gian lận với Seed 42. |
+| [**07-SUMMARY.md**](docs/submission/report/07-SUMMARY.md) | **07 — Tổng Kết Dự Án & Định Hướng Phát Triển** | Tổng kết thành tựu kỹ thuật, hạn chế và lộ trình tương lai, hướng dẫn triển khai nhanh, kịch bản demo và bảng khai báo tài nguyên/công cụ AI. |
+
+---
+
 ## Cấu trúc tài liệu (`docs/`)
 
 Toàn bộ tài liệu chi tiết được tổ chức theo các tầng chức năng:
@@ -75,7 +92,8 @@ Toàn bộ tài liệu chi tiết được tổ chức theo các tầng chức n
 | [`docs/50-reliability/`](docs/50-reliability/) | Động cơ tin cậy: thuật toán SLO, Recovery Engine, Cortex AI SRE và Incident Memory |
 | [`docs/60-interface/`](docs/60-interface/) | Thiết kế giao diện Reflex Console (SPA React) và đặc tả Backend-For-Frontend (BFF) |
 | [`docs/70-delivery/`](docs/70-delivery/) | Quy hoạch repository, kế hoạch hiện thực, chiến lược kiểm thử và quản lý rủi ro |
-| [`docs/submission/`](docs/submission/) | Hồ sơ nộp bài, kịch bản thuyết trình và artifact demo hackathon |
+| [`docs/submission/`](docs/submission/) | Hồ sơ nộp bài, kịch bản thuyết trình và slide hackathon |
+| [`docs/submission/report/`](docs/submission/report/) | Bộ 7 báo cáo kỹ thuật nộp bài và bảng đối chiếu 12 hạng mục |
 | [`docs/v1-compact/`](docs/v1-compact/) | Bản tóm tắt cô đọng dành cho người đọc nhanh |
 | [`docs/assets/`](docs/assets/) | Tài nguyên media, ảnh chụp màn hình dashboards và console |
 

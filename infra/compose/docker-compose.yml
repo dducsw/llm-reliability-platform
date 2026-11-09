@@ -7,7 +7,7 @@ x-python: &python
       required: false
   environment: &pyenv
     REFLEX_ENV: ${REFLEX_ENV:-local}
-    MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/?directConnection=true}
+    MONGODB_URI: ${MONGODB_URI}
     # Địa chỉ nội bộ compose; code mặc định localhost (chạy ngoài Docker) → phải đặt ở đây
     CHAOS_PROXY_URL: ${CHAOS_PROXY_URL:-http://chaos-proxy:8070}
     MOCK_LLM_URL: ${MOCK_LLM_URL:-http://mock-llm:8060}
@@ -61,6 +61,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+    ports:
+      - "8125:8125/udp"
+      - "8126:8126/tcp"
 
   mock-llm:
     <<: *python

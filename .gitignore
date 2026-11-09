@@ -37,4 +37,5 @@ infra/compose/nginx/allow/*.conf
 
 .github/context-mode/
 infra/terraform/tfplan
-kich-ban.md
+kich-ban.*
+demo.md
