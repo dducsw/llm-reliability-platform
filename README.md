@@ -100,13 +100,148 @@ Chi tiết: [repository-structure](docs/70-delivery/repository-structure.md).
 
 ---
 
-## Quickstart
+## Hướng dẫn cài đặt & chạy
 
-Yêu cầu: Python 3.12+, [uv](https://docs.astral.sh/uv/), [Task](https://taskfile.dev), Docker, Node 22 + pnpm.
+### 1. Yêu cầu môi trường
+
+| Công cụ | Phiên bản | Ghi chú |
+| :--- | :--- | :--- |
+| Python | 3.12+ | quản lý bằng [uv](https://docs.astral.sh/uv/) |
+| [Task](https://taskfile.dev) | 3.x | chạy mọi lệnh trong `Taskfile.yml` (`task --list` để xem hết) |
+| Docker + Docker Compose v2 | mới | khuyến nghị ≥ 8 GB RAM nếu chạy cả Mongo local |
+| Node.js + pnpm | Node 22, pnpm 10 | chỉ cần để build/dev Console |
+| Terraform | 1.x | chỉ cần để tạo dashboard/monitor/SLO Datadog |
+
+Tài khoản bên ngoài:
+
+- **MongoDB**: dùng container `mongodb-atlas-local` (không cần tài khoản, gồm cả Vector/Atlas Search) hoặc một cluster **MongoDB Atlas** (M0 miễn phí là đủ cho demo).
+- **Datadog** (trial): cần `DD_API_KEY`, `DD_APP_KEY` và `DD_SITE`. Stack vẫn chạy khi thiếu Datadog, nhưng dashboard, monitor và LLM Observability sẽ trống.
+- **LLM API tương thích OpenAI** (tuỳ chọn): chỉ để Cortex suy luận bằng LLM thật. Để trống thì mọi route dùng `mock-llm`, và Cortex chuyển sang chế độ rule-based.
+
+### 2. Cấu hình (`.env`)
 
 ```bash
-cp .env.example .env       # điền MONGODB_URI, DD_API_KEY, …
-task install
-task up && task seed
-task scenario -- silent-brownout
+cp .env.example .env
 ```
+
+| Biến | Bắt buộc | Ý nghĩa |
+| :--- | :---: | :--- |
+| `MONGODB_URI` | khi dùng Atlas | để trống thì compose dùng `mongodb://mongo:27017/?directConnection=true` (container local) |
+| `MONGODB_DB` | | tên database, mặc định `reflex` |
+| `DD_API_KEY`, `DD_SITE` | khuyến nghị | Datadog Agent (APM, logs, DogStatsD); `DD_SITE` ví dụ `datadoghq.com` |
+| `DD_APP_KEY` | khuyến nghị | Cortex đọc logs/spans/metrics và ghi Event; Terraform |
+| `REFLEX_PROFILE` | | `demo` (cửa sổ SLO rút ngắn, mặc định) hoặc `standard` |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | tuỳ chọn | LLM thật cho Cortex; chỉ các route trong `LLM_REAL_ROUTES` (mặc định `cortex.reason`) gọi vendor thật, còn lại vẫn dùng mock |
+| `REFLEX_WEBHOOK_TOKEN`, `REFLEX_WEBHOOK_URL` | khi dùng Terraform/demo | header bí mật và URL công khai tới `/hooks/datadog` (ngrok, Cloudflare Tunnel hoặc nginx TLS) |
+| `REFLEX_CONSOLE_TOKEN`, `REFLEX_LAB_TOKEN` | tuỳ chọn | bearer token cho Console/BFF và cho API chạy scenario từ Console |
+
+> Không commit `.env`. Các key vendor đặt ở `chaos-proxy`, gateway không giữ key.
+
+### 3. Chạy nhanh (local, có Mongo trong Docker)
+
+```bash
+task install            # uv sync (Python) + pnpm install (Console)
+task up                 # build và chạy toàn bộ stack bằng docker compose
+task seed               # migrate Mongo, seed catalog/SLO/policy, nạp bench_ts và 50 sự cố mẫu cho Incident Memory
+task scenario -- silent-brownout   # chạy kịch bản sự cố chính
+```
+
+Nếu dùng **Atlas** thay cho Mongo local (nhẹ hơn): điền `MONGODB_URI` trong `.env`, cho phép IP của bạn ở *Atlas → Network Access*, rồi chạy:
+
+```bash
+task up:atlas -- gateway-1 gateway-2 chaos-proxy mock-llm control-plane cortex prober datadog-agent console
+task seed
+```
+
+Sinh traffic nền (ShopMate, 8 rps) bằng profile `traffic`:
+
+```bash
+docker compose -f infra/compose/docker-compose.yml --profile traffic up -d traffic-gen
+```
+
+Các dịch vụ sau khi `task up`:
+
+| Dịch vụ | Địa chỉ | Vai trò |
+| :--- | :--- | :--- |
+| Reflex Console | http://localhost:5173 | giao diện (sơ đồ mạng, War Room, duyệt action, Time Machine) |
+| Gateway 1 / 2 | http://localhost:8080 / http://localhost:8081 | Data plane, API tương thích OpenAI |
+| Control-plane (BFF) | http://localhost:8090 | Sentinel, Policy Engine, API `/api/*` (OpenAPI tại `/openapi.json`) |
+| MongoDB | `localhost:27017` | chỉ khi dùng Mongo local |
+| `mock-llm`, `chaos-proxy`, `cortex`, `prober` | nội bộ compose | mô phỏng vendor, chèn lỗi, AI SRE, canary |
+
+Lệnh tiện ích: `task logs -- gateway-1` (xem log), `task down` (tắt stack), `task --list` (toàn bộ lệnh).
+
+### 4. Thử gọi gateway
+
+Gateway tương thích OpenAI; chọn route bằng header `x-reflex-route` (bắt buộc, hoặc đặt route vào trường `model`):
+
+```bash
+curl -s http://localhost:8080/healthz
+curl -si http://localhost:8080/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -H 'x-reflex-route: order.extract' \
+  -d '{"messages":[{"role":"user","content":"Đặt 2 áo thun size M giao Hà Nội"}]}'
+```
+
+Header trả về cho biết gateway đã làm gì: `x-reflex-target` (vendor được chọn), `x-reflex-attempts` (số lần thử), `x-reflex-policy-version`, `x-reflex-quality`, `x-reflex-overhead-ms`.
+
+### 5. Chạy kịch bản sự cố (Detect → Investigate → Respond)
+
+```bash
+task scenario -- silent-brownout                 # đầy đủ (~45 phút, SLO profile standard)
+uv run reflex-sim run silent-brownout --fast     # bản rút gọn ~3 phút lỗi, dùng cho demo/E2E
+```
+
+Kịch bản có sẵn trong [`scenarios/`](scenarios/): `silent-brownout`, `its-us`, `429-storm`, `cascading-failover`, `tail-latency`, `real-world-replay`. Trong lúc chạy, mở Console để xem theo thứ tự:
+
+1. Sentinel và Datadog Monitor M3 cùng phát hiện, gộp thành một incident.
+2. Cortex điều tra (các tool call, giả thuyết, bằng chứng) và đề xuất `shift_weight`.
+3. Policy Engine tự duyệt (hoặc chờ bạn duyệt ở màn hình *Actions*), gateway hot-reload policy < 1 giây.
+4. Verifier xuất Recovery Proof (Wilson CI + z-test), sau đó failback 10% → 50% → 100%.
+5. Màn hình *Time Machine* replay sự cố để so sánh static failover với Reflex.
+
+### 6. Kiểm thử
+
+| Lệnh | Nội dung | Điều kiện |
+| :--- | :--- | :--- |
+| `task test` | unit test toàn bộ package/app | không cần Docker |
+| `task test:integration` | pipeline A1–A18, change stream, hot-reload < 1s | cần `mongodb-atlas-local` (`task up` hoặc container riêng) |
+| `task test:e2e` | scenario `--fast` trên compose | cần stack đang chạy |
+| `task lint` | ruff, mypy, import-linter (ranh giới giữa các package) | không cần Docker |
+| `task loadtest` | 50 rps × 30 phút, đo overhead gateway | stack đang chạy; không chạy vào cluster dùng chung |
+| `task chaos:self` | tắt lần lượt Mongo/Datadog/Cortex/control-plane/gateway để kiểm tra fail-safe | stack đang chạy |
+| `task cortex:eval` | đánh giá Cortex (xuất `cortex-eval.md`) | cần LLM key |
+
+Console: `pnpm --dir apps/console dev` (Vite, proxy `/api` tới `localhost:8090`), `pnpm --dir apps/console typecheck`, `pnpm --dir apps/console lint`.
+
+### 7. Triển khai Datadog (dashboard, monitor, SLO, webhook)
+
+```bash
+# .env cần: DD_API_KEY, DD_APP_KEY, DD_SITE, REFLEX_WEBHOOK_TOKEN, REFLEX_WEBHOOK_URL
+task infra:datadog:plan      # terraform plan (infra/terraform, xem terraform.tfvars.example)
+task infra:datadog:apply     # tạo 4 dashboard D1–D4, monitor M1–M13, 4 SLO, webhook
+task infra:datadog:sync -- --yes   # ghi id SLO/monitor Datadog vào Mongo; chạy lại sau mỗi lần `task seed`
+```
+
+`REFLEX_WEBHOOK_URL` phải là URL công khai tới control-plane (`/hooks/datadog`), vì Datadog gọi webhook từ SaaS. Cách nhanh là ngrok hoặc Cloudflare Tunnel trỏ vào cổng 8090.
+
+### 8. Chế độ demo (Atlas + nginx TLS)
+
+```bash
+task demo:up        # compose + override demo: Atlas, nginx TLS (cần REFLEX_WEBHOOK_TOKEN), vendor thật qua chaos-proxy
+task demo:record    # chạy scenario chính ở chế độ quay video
+task demo:reset     # dọn trạng thái runtime giữa các lần quay (dry-run; thêm `-- --yes` để xoá)
+```
+
+Chi tiết các môi trường `local` / `ci` / `demo`, topology và bảo mật webhook: [`docs/20-architecture/deployment.md`](docs/20-architecture/deployment.md).
+
+### 9. Xử lý sự cố thường gặp
+
+| Triệu chứng | Cách xử lý |
+| :--- | :--- |
+| `task seed` báo không kết nối được Mongo | Kiểm tra `MONGODB_URI`; với Atlas, thêm IP vào Network Access; với local, chờ container `mongo` healthy (lần đầu ~2 phút vì khởi động mongod + mongot) |
+| Dashboard Datadog trống | Kiểm tra `DD_API_KEY`/`DD_SITE`, log của `datadog-agent`, và đã chạy `task infra:datadog:apply` |
+| Console báo 401 | Đặt `REFLEX_CONSOLE_TOKEN` trong `.env` rồi `task up` lại (nginx của Console tự gắn bearer token) |
+| Cortex không điều tra bằng LLM | Chưa đặt `LLM_API_KEY`; hệ thống chạy rule-based, đây là hành vi dự kiến |
+| Vector Search / Atlas Search lỗi | Chạy lại `task migrate` (idempotent) để tạo search index; image Mongo local phải là `mongodb-atlas-local` |
+| Monitor không gọi được webhook | `REFLEX_WEBHOOK_URL` phải truy cập được từ Internet và đúng `REFLEX_WEBHOOK_TOKEN` |

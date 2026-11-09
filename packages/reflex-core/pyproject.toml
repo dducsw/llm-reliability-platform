@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.9",
     "fastjsonschema>=2.20",
+    "scipy>=1.14",
 ]
 
 [build-system]
